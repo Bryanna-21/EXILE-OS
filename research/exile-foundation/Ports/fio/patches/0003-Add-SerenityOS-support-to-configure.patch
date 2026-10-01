@@ -1,0 +1,26 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Brian Gianforcaro <b.gianfo@gmail.com>
+Date: Tue, 21 Dec 2021 23:48:09 -0800
+Subject: [PATCH] Add SerenityOS support to configure
+
+This patch implements targetos detection for serenity, and also
+disables shared memory support automatically for serenity, as it's not
+currently supported.
+---
+ configure | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/configure b/configure
+index 664ce2994dd39df76d88593ff22650929f1f0ade..c619965cc0923b2ced34cc9def35d4c814a6bd27 100755
+--- a/configure
++++ b/configure
+@@ -375,6 +375,9 @@ elif check_define _WIN32 ; then
+   targetos='CYGWIN'
+ elif check_define __QNX__ ; then
+   targetos='QNX'
++elif check_define __serenity__ ; then
++  targetos='SerenityOS'
++  no_shm="yes"
+ else
+   targetos=`uname -s`
+ fi

@@ -1,0 +1,22 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Gurkirat Singh <tbhaxor@gmail.com>
+Date: Mon, 21 Aug 2023 05:47:52 +0530
+Subject: [PATCH] Pretend that SerenityOS is Linux-like
+
+---
+ deps/filesystem/filesystem.hpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/deps/filesystem/filesystem.hpp b/deps/filesystem/filesystem.hpp
+index bc417e8cebddea683b00c27e2f5cdb6429d47829..9462c21833a6aba5c0ce9e394694e491751084ab 100644
+--- a/deps/filesystem/filesystem.hpp
++++ b/deps/filesystem/filesystem.hpp
+@@ -37,7 +37,7 @@
+ #ifndef GHC_OS_DETECTED
+ #if defined(__APPLE__) && defined(__MACH__)
+ #define GHC_OS_APPLE
+-#elif defined(__linux__)
++#elif defined(__linux__) || defined(__serenity__)
+ #define GHC_OS_LINUX
+ #if defined(__ANDROID__)
+ #define GHC_OS_ANDROID

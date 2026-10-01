@@ -1,0 +1,32 @@
+{
+    "name": "Exile OS Development",
+    "id": "serenity",
+    "version": "1.0.1",
+    "description": "Enable development of Exile OS and Lagom libraries and applications",
+    "options": {
+        "llvm_version": {
+            "type": "string",
+            "proposals": [
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+                "trunk"
+            ],
+            "default": 20,
+            "description": "Select LLVM compiler version to use"
+        },
+        "enable_ladybird": {
+            "type": "boolean",
+            "default": true,
+            "description": "Install Qt6 packages for Ladybird development"
+        },
+        "enable_exile": {
+            "type": "boolean",
+            "default": true,
+            "description": "Install packages for Exile OS development"
+        }
+    }
+}

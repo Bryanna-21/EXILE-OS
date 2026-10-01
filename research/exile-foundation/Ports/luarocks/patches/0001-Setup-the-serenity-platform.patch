@@ -1,0 +1,44 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Daniel Lemos <xspager@gmail.com>
+Date: Tue, 15 Mar 2022 13:48:34 -0300
+Subject: [PATCH] Setup the serenity platform
+
+Setup serenity as a platform and configure `defaults.variables.UNZIP` to
+work around our `unzip` command not supporting the flag `-n`
+---
+ src/luarocks/core/cfg.lua | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/src/luarocks/core/cfg.lua b/src/luarocks/core/cfg.lua
+index 1c380e1df582e63d44f432c418ab0a8b6fc27b5d..b990e39c5bc1d071aa7a20eb69fa09cb6fe74020 100644
+--- a/src/luarocks/core/cfg.lua
++++ b/src/luarocks/core/cfg.lua
+@@ -42,6 +42,7 @@ local platform_order = {
+    "cygwin",
+    "msys",
+    "haiku",
++   "serenity",
+    -- Windows
+    "windows",
+    "win32",
+@@ -163,6 +164,7 @@ local platform_sets = {
+    netbsd = { unix = true, bsd = true, netbsd = true },
+    haiku = { unix = true, haiku = true },
+    linux = { unix = true, linux = true },
++   serenity = { unix = true, serenity = true },
+    mingw = { windows = true, win32 = true, mingw32 = true, mingw = true },
+    msys = { unix = true, cygwin = true, msys = true },
+    msys2_mingw_w64 = { windows = true, win32 = true, mingw32 = true, mingw = true, msys = true, msys2_mingw_w64 = true },
+@@ -557,6 +559,12 @@ local function make_defaults(lua_version, target_cpu, platforms, home)
+       defaults.variables.MAKE = "gmake"
+    end
+ 
++   if platforms.serenity then
++      defaults.arch = "serenity"..target_cpu
++      defaults.variables.UNZIP = "unzip"
++      defaults.web_browser = "br"
++   end
++
+    -- Expose some more values detected by LuaRocks for use by rockspec authors.
+    defaults.variables.LIB_EXTENSION = defaults.lib_extension
+    defaults.variables.OBJ_EXTENSION = defaults.obj_extension

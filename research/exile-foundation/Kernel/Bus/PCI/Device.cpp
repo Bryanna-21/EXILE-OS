@@ -1,0 +1,219 @@
+/*
+ * Copyright (c) 2020, Liav A. <liavalb@hotmail.co.il>
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
+#include <AK/AnyOf.h>
+#include <Kernel/Arch/Interrupts.h>
+#include <Kernel/Arch/PCIMSI.h>
+#include <Kernel/Bus/PCI/API.h>
+#include <Kernel/Bus/PCI/BarMapping.h>
+#include <Kernel/Bus/PCI/Device.h>
+#include <Kernel/Memory/TypedMapping.h>
+
+namespace Kernel::PCI {
+
+Device::Device(DeviceIdentifier const& pci_identifier)
+    : m_pci_identifier(pci_identifier)
+{
+    m_pci_identifier->initialize();
+    m_interrupt_range.m_start_irq = m_pci_identifier->interrupt_line().value();
+    m_interrupt_range.m_irq_count = 1;
+}
+
+bool Device::is_msi_capable() const
+{
+    // FIXME: Support MSI on aarch64 and riscv64
+#if ARCH(AARCH64) || ARCH(RISCV64)
+    return false;
+#endif
+
+    return m_pci_identifier->is_msi_capable();
+}
+
+bool Device::is_msix_capable() const
+{
+    // FIXME: Support MSIx on aarch64 and riscv64
+#if ARCH(AARCH64) || ARCH(RISCV64)
+    return false;
+#endif
+
+    return m_pci_identifier->is_msix_capable();
+}
+
+void Device::enable_pin_based_interrupts() const
+{
+    PCI::enable_interrupt_line(m_pci_identifier);
+}
+void Device::disable_pin_based_interrupts() const
+{
+    PCI::disable_interrupt_line(m_pci_identifier);
+}
+
+void Device::enable_message_signalled_interrupts()
+{
+    for (auto& capability : m_pci_identifier->capabilities()) {
+        if (capability.id().value() == PCI::Capabilities::ID::MSI)
+            capability.write16(MSI_CONTROL_OFFSET, capability.read16(MSI_CONTROL_OFFSET) | MSI_CONTROL_ENABLE);
+    }
+}
+void Device::disable_message_signalled_interrupts()
+{
+    for (auto& capability : m_pci_identifier->capabilities()) {
+        if (capability.id().value() == PCI::Capabilities::ID::MSI)
+            capability.write16(MSI_CONTROL_OFFSET, capability.read16(MSI_CONTROL_OFFSET) & ~(MSI_CONTROL_ENABLE));
+    }
+}
+
+void Device::enable_extended_message_signalled_interrupts()
+{
+    for (auto& capability : m_pci_identifier->capabilities()) {
+        if (capability.id().value() == PCI::Capabilities::ID::MSIX)
+            capability.write16(MSI_CONTROL_OFFSET, capability.read16(MSI_CONTROL_OFFSET) | MSIX_CONTROL_ENABLE);
+    }
+}
+
+void Device::disable_extended_message_signalled_interrupts()
+{
+    for (auto& capability : m_pci_identifier->capabilities()) {
+        if (capability.id().value() == PCI::Capabilities::ID::MSIX)
+            capability.write16(MSI_CONTROL_OFFSET, capability.read16(MSI_CONTROL_OFFSET) & ~(MSIX_CONTROL_ENABLE));
+    }
+}
+
+PCI::InterruptType Device::get_interrupt_type()
+{
+    return m_interrupt_range.m_type;
+}
+
+// Reserve `numbers_of_irqs` for this device. Returns the interrupt type
+// that was reserved. It is a noop for pin based interrupts as there
+// is nothing left to do.
+ErrorOr<InterruptType> Device::reserve_irqs(size_t number_of_irqs, AllowedInterruptTypes allowed_interrupt_types)
+{
+    // Let us not allow partial allocation of IRQs for MSIx.
+    if (has_flag(allowed_interrupt_types, AllowedInterruptTypes::MSIX) && is_msix_capable()) {
+        m_interrupt_range.m_start_irq = TRY(reserve_interrupt_handlers(number_of_irqs));
+        m_interrupt_range.m_irq_count = number_of_irqs;
+        m_interrupt_range.m_type = InterruptType::MSIX;
+        // If MSIx is available, disable the pin based interrupts
+        disable_pin_based_interrupts();
+        enable_extended_message_signalled_interrupts();
+        return m_interrupt_range.m_type;
+    }
+
+    if (has_flag(allowed_interrupt_types, AllowedInterruptTypes::MSI) && is_msi_capable()
+        && number_of_irqs == 1 // TODO: Add MME support. Fallback to pin-based until this support is added.
+    ) {
+        m_interrupt_range.m_start_irq = TRY(reserve_interrupt_handlers(number_of_irqs));
+        m_interrupt_range.m_irq_count = number_of_irqs;
+        m_interrupt_range.m_type = InterruptType::MSI;
+        disable_pin_based_interrupts();
+        return m_interrupt_range.m_type;
+    }
+
+    if (has_flag(allowed_interrupt_types, AllowedInterruptTypes::Pin)) {
+        return m_interrupt_range.m_type;
+    }
+
+    return ENOTSUP;
+}
+
+PhysicalAddress Device::msix_table_entry_address(InterruptNumber irq)
+{
+    auto index = static_cast<int>(irq.value()) - m_interrupt_range.m_start_irq.value();
+
+    VERIFY(index < m_interrupt_range.m_irq_count);
+    auto table_bar_paddr = PCI::get_bar_address(device_identifier(), static_cast<PCI::HeaderType0BaseRegister>(m_pci_identifier->get_msix_table_bar())).release_value_but_fixme_should_propagate_errors();
+    auto table_offset = m_pci_identifier->get_msix_table_offset();
+
+    return table_bar_paddr.offset(table_offset + (index * 16));
+}
+
+// This function is used to allocate an irq at an index and returns
+// the actual IRQ that was programmed at that index. This function is
+// mainly useful for MSI/MSIx based interrupt mechanism where the driver
+// needs to program. If the PCI device doesn't support MSIx interrupts, then
+// this function will just return the irq used for pin based interrupt.
+ErrorOr<InterruptNumber> Device::allocate_irq(size_t index)
+{
+    if (Checked<size_t>::addition_would_overflow(m_interrupt_range.m_start_irq.value(), index))
+        return Error::from_errno(EINVAL);
+
+    if ((m_interrupt_range.m_type == InterruptType::MSIX) && is_msix_capable()) {
+        auto entry_ptr = TRY(Memory::map_typed_writable<MSIxTableEntry volatile>(msix_table_entry_address(index + m_interrupt_range.m_start_irq.value())));
+        entry_ptr->data = msi_data_register(m_interrupt_range.m_start_irq.value() + index, false, false);
+        // TODO: we map all the IRQs to cpu 0 by default. We could attach
+        //  cpu affinity in the future where specific LAPIC id could be used.
+        u64 addr = msi_address_register(0, false, false);
+        entry_ptr->address_low = addr & 0xffffffff;
+        entry_ptr->address_high = addr >> 32;
+
+        u32 vector_ctrl = msix_vector_control_register(entry_ptr->vector_control, true);
+        entry_ptr->vector_control = vector_ctrl;
+
+        return m_interrupt_range.m_start_irq + index;
+    } else if ((m_interrupt_range.m_type == InterruptType::MSI) && is_msi_capable()) {
+        // TODO: Add MME support.
+        if (index > 0)
+            return Error::from_errno(EINVAL);
+
+        auto data = msi_data_register(m_interrupt_range.m_start_irq.value() + index, false, false);
+        auto addr = msi_address_register(0, false, false);
+        for (auto& capability : m_pci_identifier->capabilities()) {
+            if (capability.id().value() == PCI::Capabilities::ID::MSI) {
+                capability.write32(MSI_ADDRESS_LOW_OFFSET, addr & 0xffffffff);
+
+                if (!m_pci_identifier->is_msi_64bit_address_format()) {
+                    capability.write16(MSI_ADDRESS_HIGH_OR_DATA_OFFSET, data);
+                    break;
+                }
+
+                capability.write32(MSI_ADDRESS_HIGH_OR_DATA_OFFSET, addr >> 32);
+                capability.write16(MSI_DATA_OFFSET, data);
+            }
+        }
+        return m_interrupt_range.m_start_irq + index;
+    }
+    // For pin based interrupts, we share the IRQ.
+    return m_interrupt_range.m_start_irq;
+}
+
+void Device::enable_interrupt(InterruptNumber irq)
+{
+    if ((m_interrupt_range.m_type == InterruptType::MSIX) && is_msix_capable()) {
+        auto entry = Memory::map_typed_writable<MSIxTableEntry volatile>(PhysicalAddress(msix_table_entry_address(irq)));
+
+        if (entry.is_error()) {
+            dmesgln_pci(*this, "Unable to map the MSIx table area");
+            return;
+        }
+
+        auto entry_ptr = entry.release_value();
+        u32 vector_ctrl = msix_vector_control_register(entry_ptr->vector_control, false);
+        entry_ptr->vector_control = vector_ctrl;
+    } else if ((m_interrupt_range.m_type == InterruptType::MSI) && is_msi_capable()) {
+        enable_message_signalled_interrupts();
+    }
+}
+
+void Device::disable_interrupt(InterruptNumber irq)
+{
+    if ((m_interrupt_range.m_type == InterruptType::MSIX) && is_msix_capable()) {
+        auto entry = Memory::map_typed_writable<MSIxTableEntry volatile>(PhysicalAddress(msix_table_entry_address(irq)));
+
+        if (entry.is_error()) {
+            dmesgln_pci(*this, "Unable to map the MSIx table area");
+            return;
+        }
+
+        auto entry_ptr = entry.release_value();
+        u32 vector_ctrl = msix_vector_control_register(entry_ptr->vector_control, true);
+        entry_ptr->vector_control = vector_ctrl;
+    } else if ((m_interrupt_range.m_type == InterruptType::MSI) && is_msi_capable()) {
+        disable_message_signalled_interrupts();
+    }
+}
+
+}

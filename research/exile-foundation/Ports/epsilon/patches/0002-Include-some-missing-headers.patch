@@ -1,0 +1,37 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Joachim Le Fournis <joachimlf@pm.me>
+Date: Tue, 13 Jul 2021 21:17:44 +0200
+Subject: [PATCH] Include some missing headers
+
+---
+ ion/src/simulator/linux/platform_files.cpp  | 1 +
+ ion/src/simulator/linux/platform_images.cpp | 2 ++
+ 2 files changed, 3 insertions(+)
+
+diff --git a/ion/src/simulator/linux/platform_files.cpp b/ion/src/simulator/linux/platform_files.cpp
+index b866fe05cc5555b6c7e74e92a26fc3a79b6d0f78..cc31edc2ba3490ae3185543e97c07d99f0c28741 100644
+--- a/ion/src/simulator/linux/platform_files.cpp
++++ b/ion/src/simulator/linux/platform_files.cpp
+@@ -1,4 +1,5 @@
+ #include "../shared/platform.h"
++#include <cstdio>
+ 
+ namespace Ion {
+ namespace Simulator {
+diff --git a/ion/src/simulator/linux/platform_images.cpp b/ion/src/simulator/linux/platform_images.cpp
+index 0fb23867bc7b85c9d5ac98722e0a043fd4d23a56..94ed16c4a0b57607b81bc009b44be9b27ab7bb97 100644
+--- a/ion/src/simulator/linux/platform_images.cpp
++++ b/ion/src/simulator/linux/platform_images.cpp
+@@ -1,10 +1,12 @@
+ #include "../shared/platform.h"
+ 
+ #include <assert.h>
++#include <stdio.h>
+ #include <jpeglib.h>
+ #include <png.h>
+ #include <SDL.h>
+ #include <stdlib.h>
++#include <cstring>
+ 
+ #include <ion/src/simulator/linux/platform_images.h>
+ 

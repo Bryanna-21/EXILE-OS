@@ -1,0 +1,16 @@
+[binaries]
+c = '@EXILE_ARCH@-serenity-gcc'
+cpp = '@EXILE_ARCH@-serenity-g++'
+ar = '@EXILE_ARCH@-serenity-ar'
+ranlib = '@EXILE_ARCH@-serenity-ranlib'
+pkgconfig = 'pkg-config'
+
+[properties]
+sys_root = '@EXILE_BUILD_DIR@/Root'
+needs_exe_wrapper = true
+
+[host_machine]
+system = 'serenity'
+cpu_family = '@EXILE_ARCH@'
+cpu = '@EXILE_ARCH@'
+endian = 'little'

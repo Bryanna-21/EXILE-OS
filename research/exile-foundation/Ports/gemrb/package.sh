@@ -1,0 +1,41 @@
+#!/usr/bin/env -S bash ../.port_include.sh
+port='gemrb'
+version='0.9.5'
+useconfigure='true'
+files=(
+    "https://github.com/gemrb/gemrb/archive/refs/tags/v${version}.tar.gz#cf9528f5e2fcaf70a9addc02222ba58f9d814e7e1522a41000e0d4de19dbd3ae"
+)
+depends=(
+    'freetype'
+    'libiconv'
+    'python3'
+    'SDL2'
+    'SDL2_mixer'
+    'zlib'
+)
+configopts=(
+    "-DCMAKE_TOOLCHAIN_FILE=${EXILE_BUILD_DIR}/CMakeToolchain.txt"
+    '-DCMAKE_BUILD_TYPE=Release'
+    '-DDISABLE_WERROR=1'
+    '-DSTATIC_LINK=ON'
+    '-DSDL_BACKEND=SDL2'
+)
+icon_file='artwork/gemrb-logo.ico'
+launcher_name='GemRB'
+launcher_category='&Games'
+launcher_command='/usr/local/bin/gemrb'
+
+configure() {
+    mkdir -p "${PORT_BUILD_DIR}/gemrb-${version}-build"
+    cd "${PORT_BUILD_DIR}/gemrb-${version}-build"
+    cmake -G Ninja "${configopts[@]}" "${PORT_BUILD_DIR}/gemrb-${version}"
+}
+
+build() {
+    ninja -C "${PORT_BUILD_DIR}/gemrb-${version}-build"
+}
+
+install() {
+    export DESTDIR="${SERENITY_INSTALL_ROOT}"
+    ninja -C "${PORT_BUILD_DIR}/gemrb-${version}-build" install
+}

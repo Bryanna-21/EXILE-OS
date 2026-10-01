@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Brian Callahan <bcallah@openbsd.org>
+Date: Sun, 10 May 2020 11:50:31 -0400
+Subject: [PATCH] Replace a use of wait3() with waitpid() in the job control
+
+wait3() does not exist on serenity.
+---
+ src/jobs.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/jobs.c b/src/jobs.c
+index 914b383a953d1e24c72e713ffa67d58895ea26b0..3e2f63ad60025339cf66a65c20c8cf26562a50d8 100644
+--- a/src/jobs.c
++++ b/src/jobs.c
+@@ -1208,7 +1208,7 @@ waitproc(int block, int *status)
+ #ifdef HAVE_WAIT3
+ 			err = wait3(status, flags, NULL);
+ #else
+-			err = waitpid((pid_t)-1, status, flags, NULL);
++			err = waitpid((pid_t)-1, status, flags);
+ #endif
+ 		while (err < 0 && errno == EINTR);
+ 

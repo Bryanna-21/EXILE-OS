@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?kleines=20Filmr=C3=B6llchen?= <filmroellchen@serenityos.org>
+Date: Sat, 16 Sep 2023 11:09:57 +0200
+Subject: [PATCH] Only check error codes on platforms where they exist
+
+---
+ absl/status/status.cc | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/absl/status/status.cc b/absl/status/status.cc
+index 155c5d8676f1f07e87fe3df461950b6d61334dee..33985500ac04148ee1cbec8ea873b3a091dedda0 100644
+--- a/absl/status/status.cc
++++ b/absl/status/status.cc
+@@ -381,7 +381,9 @@ StatusCode ErrnoToStatusCode(int error_number) {
+     case ENETRESET:     // Connection aborted by network
+     case ENETUNREACH:   // Network unreachable
+     case ENOLCK:        // No locks available
++#ifdef ENOLINK
+     case ENOLINK:       // Link has been severed
++#endif
+ #ifdef ENONET
+     case ENONET:  // Machine is not on the network
+ #endif

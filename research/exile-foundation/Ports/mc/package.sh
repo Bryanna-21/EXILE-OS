@@ -1,0 +1,26 @@
+#!/usr/bin/env -S bash ../.port_include.sh
+port='mc'
+version='4.8.33'
+useconfigure='true'
+files=(
+    "http://ftp.midnight-commander.org/mc-${version}.tar.xz#cae149d42f844e5185d8c81d7db3913a8fa214c65f852200a9d896b468af164c"
+)
+depends=(
+    'gettext'
+    'glib'
+    'ncurses'
+    'vim'
+)
+configopts=(
+    "--with-sysroot=${SERENITY_INSTALL_ROOT}"
+    '--disable-largefile'
+    '--disable-vfs'
+    '--without-edit'
+    '--without-x'
+    '--with-homedir'
+    '--with-screen=ncurses'
+)
+use_fresh_config_sub='true'
+config_sub_paths=(
+    'config/config.sub'
+)

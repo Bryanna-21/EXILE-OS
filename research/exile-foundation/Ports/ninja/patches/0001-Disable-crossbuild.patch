@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Nico Weber <thakis@chromium.org>
+Date: Sun, 21 Jun 2020 18:41:01 -0400
+Subject: [PATCH] Disable crossbuild
+
+(?)
+---
+ configure.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/configure.py b/configure.py
+index 03b5ce42721540f9a056b82c5c0d639e8b84828d..fb3a4356dba0a737657b14f6518ad8d0e386039c 100755
+--- a/configure.py
++++ b/configure.py
+@@ -783,7 +783,7 @@ n.build('all', 'phony', all_targets)
+ n.close()  # type: ignore # Item "Bootstrap" of "Writer | Bootstrap" has no attribute "close"
+ print('wrote %s.' % BUILD_FILENAME)
+ 
+-if options.bootstrap:
++if options.bootstrap and False:
+     print('bootstrap complete.  rebuilding...')
+ 
+     rebuild_args = []

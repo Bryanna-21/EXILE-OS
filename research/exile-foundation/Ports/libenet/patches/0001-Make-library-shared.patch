@@ -1,0 +1,22 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: surrealegg <surrealegg@pm.me>
+Date: Thu, 21 Sep 2023 16:35:39 +0400
+Subject: [PATCH] Make library shared
+
+---
+ CMakeLists.txt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index c6459b62d356e10f2987542e136bb97bcf8de61f..8fe22cb5c95d4499e71697ba4ad397f51a4c84ca 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -84,7 +84,7 @@ set(SOURCE_FILES
+ source_group(include FILES ${INCLUDE_FILES})
+ source_group(source FILES ${SOURCE_FILES})
+ 
+-add_library(enet STATIC
++add_library(enet SHARED
+     ${INCLUDE_FILES}
+     ${SOURCE_FILES}
+ )

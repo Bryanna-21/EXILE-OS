@@ -1,0 +1,46 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Federico Guerinoni <41150432+guerinoni@users.noreply.github.com>
+Date: Fri, 16 Apr 2021 17:38:54 +0200
+Subject: [PATCH] Remove some unimplemented function calls
+
+i.e. f(un)lockfile stubs and setitimer.
+---
+ progress.c | 14 --------------
+ 1 file changed, 14 deletions(-)
+
+diff --git a/progress.c b/progress.c
+index 8315bdc3d4a77a1fcfac494c914bfe10ee4d5936..c5064f7b7d616ac92a49fc5d5209085cdcfcef9a 100644
+--- a/progress.c
++++ b/progress.c
+@@ -72,7 +72,6 @@ static void progress_interval(int signum UNUSED)
+ static void set_progress_signal(void)
+ {
+ 	struct sigaction sa;
+-	struct itimerval v;
+ 
+ 	if (progress_testing)
+ 		return;
+@@ -84,23 +83,10 @@ static void set_progress_signal(void)
+ 	sigemptyset(&sa.sa_mask);
+ 	sa.sa_flags = SA_RESTART;
+ 	sigaction(SIGALRM, &sa, NULL);
+-
+-	v.it_interval.tv_sec = 1;
+-	v.it_interval.tv_usec = 0;
+-	v.it_value = v.it_interval;
+-	setitimer(ITIMER_REAL, &v, NULL);
+ }
+ 
+ static void clear_progress_signal(void)
+ {
+-	struct itimerval v = {{0,},};
+-
+-	if (progress_testing)
+-		return;
+-
+-	setitimer(ITIMER_REAL, &v, NULL);
+-	signal(SIGALRM, SIG_IGN);
+-	progress_update = 0;
+ }
+ 
+ static int is_foreground_fd(int fd)

@@ -1,0 +1,30 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: implicitfield <114500360+implicitfield@users.noreply.github.com>
+Date: Mon, 5 Feb 2024 01:05:50 +0400
+Subject: [PATCH] Install examples
+
+---
+ example/meson.build | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/example/meson.build b/example/meson.build
+index 152961da86af529d59d0fc2794b65ae219b86a2e..5101a21aa9828780b18a35ef28e494254fe9a3af 100644
+--- a/example/meson.build
++++ b/example/meson.build
+@@ -24,14 +24,14 @@ threaded_examples = [ 'notify_inval_inode',
+ foreach ex : examples
+     executable(ex, ex + '.c',
+                dependencies: [ libfuse_dep ],
+-               install: false)
++               install: true)
+ endforeach
+ 
+ 
+ foreach ex : threaded_examples
+     executable(ex, ex + '.c',
+                dependencies: [ thread_dep, libfuse_dep ],
+-               install: false)
++               install: true)
+ endforeach
+ 
+ if platform != 'dragonfly' and platform != 'serenity' and add_languages('cpp', required : false)

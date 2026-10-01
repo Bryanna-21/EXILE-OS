@@ -1,0 +1,98 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?S=C3=B6nke=20Holz?= <soenke.holz@serenityos.org>
+Date: Wed, 28 May 2025 12:27:55 +0200
+Subject: [PATCH] [RISCV] Implement __init_riscv_feature_bits for SerenityOS
+
+The SerenityOS dynamic linker provides a magic function
+"__get_riscv_feature_bits" that populates __riscv_feature_bits
+and __riscv_cpu_model.
+---
+ .../clang/Basic/DiagnosticFrontendKinds.td    |  2 +-
+ clang/lib/CodeGen/CodeGenFunction.cpp         |  5 ++-
+ compiler-rt/lib/builtins/cpu_model/riscv.c    | 44 +++++++++++++++++++
+ 3 files changed, 48 insertions(+), 3 deletions(-)
+
+diff --git a/clang/include/clang/Basic/DiagnosticFrontendKinds.td b/clang/include/clang/Basic/DiagnosticFrontendKinds.td
+index a688b298f2bbd88f1af3db877a12e8a0f1716cc0..fb520dc8c8756def52779ae89e69e428ecf90a73 100644
+--- a/clang/include/clang/Basic/DiagnosticFrontendKinds.td
++++ b/clang/include/clang/Basic/DiagnosticFrontendKinds.td
+@@ -478,7 +478,7 @@ def err_ast_action_on_llvm_ir : Error<
+ def err_invalid_llvm_ir : Error<"invalid LLVM IR input: %0">;
+ 
+ def err_os_unsupport_riscv_fmv : Error<
+-  "function multiversioning is currently only supported on Linux">;
++  "function multiversioning is currently only supported on Linux and SerenityOS">;
+ 
+ def warn_unreachable_version
+     : Warning<"function version '%0' is unreachable; ignoring version">,
+diff --git a/clang/lib/CodeGen/CodeGenFunction.cpp b/clang/lib/CodeGen/CodeGenFunction.cpp
+index 119aebb673789fec3dcda0c1d8f82340d7ae274f..b199c440125430e70a55cebe4b12ef8147aa1a7b 100644
+--- a/clang/lib/CodeGen/CodeGenFunction.cpp
++++ b/clang/lib/CodeGen/CodeGenFunction.cpp
+@@ -3176,8 +3176,9 @@ void CodeGenFunction::EmitPPCAIXMultiVersionResolver(
+ void CodeGenFunction::EmitRISCVMultiVersionResolver(
+     llvm::Function *Resolver, ArrayRef<FMVResolverOption> Options) {
+ 
+-  if (getContext().getTargetInfo().getTriple().getOS() !=
+-      llvm::Triple::OSType::Linux) {
++  llvm::Triple::OSType OS = getContext().getTargetInfo().getTriple().getOS();
++  if (OS != llvm::Triple::OSType::Linux &&
++      OS != llvm::Triple::OSType::Serenity) {
+     CGM.getDiags().Report(diag::err_os_unsupport_riscv_fmv);
+     return;
+   }
+diff --git a/compiler-rt/lib/builtins/cpu_model/riscv.c b/compiler-rt/lib/builtins/cpu_model/riscv.c
+index 8b4cc957a97840d72b2b4f3d47bf2cb5b2d6c8d4..85dcf8b8b494624ec027217c451d8bfbcfb150ad 100644
+--- a/compiler-rt/lib/builtins/cpu_model/riscv.c
++++ b/compiler-rt/lib/builtins/cpu_model/riscv.c
+@@ -28,6 +28,50 @@ struct {
+ // clang-format off
+ #if defined(__linux__)
+ #include "riscv/hwprobe.inc"
++#elif defined(__serenity__)
++
++extern void __get_riscv_feature_bits(void *, void *) __attribute__((weak));
++
++static void initRISCVFeature(void) {
++  if (__get_riscv_feature_bits) {
++    __riscv_feature_bits.length = RISCV_FEATURE_BITS_LENGTH;
++    __get_riscv_feature_bits(&__riscv_feature_bits, &__riscv_cpu_model);
++  } else {
++    __riscv_feature_bits.length = 0;
++    __riscv_cpu_model.mvendorid = 0;
++    __riscv_cpu_model.marchid = 0;
++    __riscv_cpu_model.mimpid = 0;
++  }
++}
++
++static int FeaturesBitCached = 0;
++
++void __init_riscv_feature_bits(void *);
++static void __init_riscv_feature_bits_ctor(void) CONSTRUCTOR_ATTRIBUTE;
++
++// A constructor function that sets __riscv_feature_bits
++// to the right values.  This needs to run only once.  This constructor is given
++// the highest priority and it should run before constructors without the
++// priority set.  However, it still runs after ifunc initializers and needs to
++// be called explicitly there.
++
++static void CONSTRUCTOR_ATTRIBUTE __init_riscv_feature_bits_ctor(void) {
++  __init_riscv_feature_bits(0);
++}
++
++// PlatformArgs allows the platform to provide pre-computed data and access it
++// without extra effort. For example, Linux could pass the vDSO object to avoid
++// an extra system call.
++void __init_riscv_feature_bits(void *PlatformArgs) {
++
++  if (FeaturesBitCached)
++    return;
++
++  initRISCVFeature();
++
++  FeaturesBitCached = 1;
++}
++
+ #else
+ #include "riscv/unimplemented.inc"
+ #endif

@@ -1,0 +1,31 @@
+declare_args() {
+  # Serenity architecture to build for
+  exile_arch = "x86_64"
+
+  # Serenity compiler to use, Clang or GNU
+  exile_toolchain = "GNU"
+}
+
+if (exile_toolchain == "GNU") {
+  toolchain_root =
+      rebase_path("//Toolchain/Local/$exile_arch/", root_build_dir)
+  toolchain_bin = toolchain_root + "bin/"
+
+  exile_cc = toolchain_bin + exile_arch + "-serenity-gcc"
+  exile_cxx = toolchain_bin + exile_arch + "-serenity-g++"
+  serenity_ld = exile_cxx
+  exile_nm = toolchain_bin + exile_arch + "-serenity-nm"
+  exile_objcopy = toolchain_bin + exile_arch + "-serenity-objcopy"
+  exile_compiler_version = "13.1.0"
+} else {
+  assert(exile_toolchain == "Clang",
+         "Expected GNU or Clang for exile_toolchain")
+  toolchain_root = rebase_path("//Toolchain/Local/clang/", root_build_dir)
+  toolchain_bin = toolchain_root + "bin/"
+  exile_cc = toolchain_bin + exile_arch + "-serenity-clang"
+  exile_cxx = toolchain_bin + exile_arch + "-serenity-clang++"
+  serenity_ld = exile_cxx
+  exile_nm = toolchain_bin + "llvm-nm"
+  exile_objcopy = toolchain_bin + "llvm-objcopy"
+  exile_compiler_version = "16"
+}

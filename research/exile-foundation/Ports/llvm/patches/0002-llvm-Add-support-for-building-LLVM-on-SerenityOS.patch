@@ -1,0 +1,132 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Daniel Bertalan <dani@danielbertalan.dev>
+Date: Thu, 14 Apr 2022 09:54:22 +0200
+Subject: [PATCH] [llvm] Add support for building LLVM on SerenityOS
+
+Adds SerenityOS `#ifdef`s for platform-specific code.
+
+We stub out wait4, as SerenityOS doesn't support querying a child
+process's resource usage information.
+
+POSIX shm is not supported by SerenityOS yet, so disable it in Orc.
+
+Serenity gives each thread a default of 1MiB of stack. Increase the
+default stack size for llvm applications when running on SerenityOS.
+
+Co-Authored-By: sin-ack <sin-ack@users.noreply.github.com>
+Co-Authored-By: Tim Schumacher <timschumi@gmx.de>
+---
+ llvm/cmake/modules/HandleLLVMOptions.cmake               | 3 +++
+ llvm/include/llvm/ADT/bit.h                              | 3 ++-
+ llvm/lib/ExecutionEngine/Orc/MemoryMapper.cpp            | 3 ++-
+ .../TargetProcess/ExecutorSharedMemoryMapperService.cpp  | 3 ++-
+ llvm/lib/Support/Unix/Path.inc                           | 5 ++++-
+ llvm/lib/Support/Unix/Program.inc                        | 9 ++++++++-
+ 6 files changed, 21 insertions(+), 5 deletions(-)
+
+diff --git a/llvm/cmake/modules/HandleLLVMOptions.cmake b/llvm/cmake/modules/HandleLLVMOptions.cmake
+index e046ddf4d1a71785d8ed9130c512cff43b94a2da..7e239dca4104ec8a401a8d6e2028e66bfc1292b8 100644
+--- a/llvm/cmake/modules/HandleLLVMOptions.cmake
++++ b/llvm/cmake/modules/HandleLLVMOptions.cmake
+@@ -584,6 +584,9 @@ elseif(MINGW OR CYGWIN)
+   if (NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+     append("-Wa,-mbig-obj" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+   endif()
++elseif(SERENITYOS)
++  # SerenityOS sets a very low default stack size value, so increase it to 4MB manually.
++  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,stack-size=4194304")
+ endif()
+ 
+ option(LLVM_ENABLE_WARNINGS "Enable compiler warnings." ON)
+diff --git a/llvm/include/llvm/ADT/bit.h b/llvm/include/llvm/ADT/bit.h
+index 3ac23d6d48cc4bb25396fb226125134c566a3166..e25ec802ad42cc86f2bdedf657dddc4f46cac118 100644
+--- a/llvm/include/llvm/ADT/bit.h
++++ b/llvm/include/llvm/ADT/bit.h
+@@ -30,7 +30,8 @@
+ 
+ #if defined(__linux__) || defined(__GNU__) || defined(__HAIKU__) ||            \
+     defined(__Fuchsia__) || defined(__EMSCRIPTEN__) || defined(__NetBSD__) ||  \
+-    defined(__OpenBSD__) || defined(__DragonFly__) || defined(__managarm__)
++    defined(__OpenBSD__) || defined(__DragonFly__) || defined(__managarm__) || \
++    defined(__serenity__)
+ #include <endian.h>
+ #elif defined(_AIX)
+ #include <sys/machine.h>
+diff --git a/llvm/lib/ExecutionEngine/Orc/MemoryMapper.cpp b/llvm/lib/ExecutionEngine/Orc/MemoryMapper.cpp
+index 77768886f72a8cc865dc3405bcb2997504504669..1dc09c29fc730c849b7e2c11609e49e356d219d6 100644
+--- a/llvm/lib/ExecutionEngine/Orc/MemoryMapper.cpp
++++ b/llvm/lib/ExecutionEngine/Orc/MemoryMapper.cpp
+@@ -220,7 +220,8 @@ SharedMemoryMapper::Create(ExecutorProcessControl &EPC, SymbolAddrs SAs) {
+ 
+ void SharedMemoryMapper::reserve(size_t NumBytes,
+                                  OnReservedFunction OnReserved) {
+-#if (defined(LLVM_ON_UNIX) && !defined(__ANDROID__)) || defined(_WIN32)
++#if (defined(LLVM_ON_UNIX) && !(defined(__ANDROID__) || defined(__serenity__))) \
++    || defined(_WIN32)
+ 
+   int SharedMemoryId = -1;
+   EPC.callSPSWrapperAsync<
+diff --git a/llvm/lib/ExecutionEngine/Orc/TargetProcess/ExecutorSharedMemoryMapperService.cpp b/llvm/lib/ExecutionEngine/Orc/TargetProcess/ExecutorSharedMemoryMapperService.cpp
+index 423a1bd496c96b89d517187ab794f70eb8091bbc..7a2b7bba0fc7c25f41d6413f1ab09610a59b9a7b 100644
+--- a/llvm/lib/ExecutionEngine/Orc/TargetProcess/ExecutorSharedMemoryMapperService.cpp
++++ b/llvm/lib/ExecutionEngine/Orc/TargetProcess/ExecutorSharedMemoryMapperService.cpp
+@@ -50,7 +50,8 @@ static DWORD getWindowsProtectionFlags(MemProt MP) {
+ 
+ Expected<std::pair<ExecutorAddr, std::string>>
+ ExecutorSharedMemoryMapperService::reserve(uint64_t Size) {
+-#if (defined(LLVM_ON_UNIX) && !defined(__ANDROID__)) || defined(_WIN32)
++#if (defined(LLVM_ON_UNIX) && !(defined(__ANDROID__) || defined(__serenity__))) \
++    || defined(_WIN32)
+ 
+ #if defined(LLVM_ON_UNIX)
+ 
+diff --git a/llvm/lib/Support/Unix/Path.inc b/llvm/lib/Support/Unix/Path.inc
+index f5b01357565dfc76307bf9dd6fdd4968546f8a4c..72b1afa40dbd3010ac61dd944faca8d568cb2c63 100644
+--- a/llvm/lib/Support/Unix/Path.inc
++++ b/llvm/lib/Support/Unix/Path.inc
+@@ -111,7 +111,7 @@ typedef uint_t uint;
+ #endif
+ 
+ #if defined(__NetBSD__) || defined(__DragonFly__) || defined(__GNU__) ||       \
+-    defined(__MVS__)
++    defined(__MVS__) || defined(__serenity__)
+ #define STATVFS_F_FLAG(vfs) (vfs).f_flag
+ #else
+ #define STATVFS_F_FLAG(vfs) (vfs).f_flags
+@@ -525,6 +525,9 @@ static bool is_local_impl(struct STATVFS &Vfs) {
+ #elif defined(__HAIKU__)
+   // Haiku doesn't expose this information.
+   return false;
++#elif defined(__serenity__)
++  // Serenity doesn't yet support remote filesystem mounts.
++  return false;
+ #elif defined(__sun)
+   // statvfs::f_basetype contains a null-terminated FSType name of the mounted
+   // target
+diff --git a/llvm/lib/Support/Unix/Program.inc b/llvm/lib/Support/Unix/Program.inc
+index 489ca03b3067069e527a4416758e1a215aadda9e..b3e76af711c5e3ddaa74ea68b1d48f30c1749310 100644
+--- a/llvm/lib/Support/Unix/Program.inc
++++ b/llvm/lib/Support/Unix/Program.inc
+@@ -334,7 +334,7 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
+ namespace llvm {
+ namespace sys {
+ 
+-#if defined(_AIX)
++#if defined(_AIX) || defined(__serenity__)
+ static pid_t(wait4)(pid_t pid, int *status, int options, struct rusage *usage);
+ #elif !defined(__Fuchsia__)
+ using ::wait4;
+@@ -377,6 +377,13 @@ pid_t(llvm::sys::wait4)(pid_t pid, int *status, int options,
+ }
+ #endif
+ 
++#ifdef __serenity__
++pid_t (llvm::sys::wait4)(pid_t pid, int *status, int options,
++                         struct rusage*) {
++  return ::waitpid(pid, status, options);
++}
++#endif
++
+ ProcessInfo llvm::sys::Wait(const ProcessInfo &PI,
+                             std::optional<unsigned> SecondsToWait,
+                             std::string *ErrMsg,

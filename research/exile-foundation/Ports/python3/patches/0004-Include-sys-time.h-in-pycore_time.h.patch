@@ -1,0 +1,28 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Linus Groh <mail@linusgroh.de>
+Date: Fri, 18 Oct 2024 22:14:10 +0100
+Subject: [PATCH] Include `sys/time.h in `pycore_time.h`
+
+Our version/configuration of GCC also complains about this, and various
+other things end up complaining about the size of `struct timeval` being
+unknown.
+---
+ Include/internal/pycore_time.h | 5 +----
+ 1 file changed, 1 insertion(+), 4 deletions(-)
+
+diff --git a/Include/internal/pycore_time.h b/Include/internal/pycore_time.h
+index 23312471c6584efee837e0b5c51cf6401391afa5..ac0a58bf5e47510569d9a72b93eb495b965adea9 100644
+--- a/Include/internal/pycore_time.h
++++ b/Include/internal/pycore_time.h
+@@ -58,10 +58,7 @@ extern "C" {
+ #endif
+ 
+ #include "pycore_runtime_structs.h" // _PyTimeFraction
+-
+-#ifdef __clang__
+-struct timeval;
+-#endif
++#include <sys/time.h>
+ 
+ #define _SIZEOF_PYTIME_T 8
+ 
