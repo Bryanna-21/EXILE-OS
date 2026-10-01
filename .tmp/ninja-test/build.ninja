@@ -1,0 +1,10 @@
+rule cc
+  command = TMPDIR=C:/Users/USER/Downloads/EXILE-OS/.tmp/win-temp TEMP=C:/Users/USER/Downloads/EXILE-OS/.tmp/win-temp TMP=C:/Users/USER/Downloads/EXILE-OS/.tmp/win-temp /c/msys64/mingw64/bin/gcc.exe -c test.c -o test.o
+
+rule link
+  command = TMPDIR=C:/Users/USER/Downloads/EXILE-OS/.tmp/win-temp TEMP=C:/Users/USER/Downloads/EXILE-OS/.tmp/win-temp TMP=C:/Users/USER/Downloads/EXILE-OS/.tmp/win-temp /c/msys64/mingw64/bin/gcc.exe test.o -o test.exe
+
+build test.o: cc test.c
+build test.exe: link test.o
+
+default test.exe

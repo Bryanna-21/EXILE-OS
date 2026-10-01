@@ -1,12 +1,15 @@
 find_library(MPFR_LIBRARY
     NAMES mpfr
-    REQUIRED
 )
 
 find_path(MPFR_INCLUDE_DIR
     NAMES mpfr.h
-    REQUIRED
 )
+
+if (NOT MPFR_LIBRARY OR NOT MPFR_INCLUDE_DIR)
+    message(STATUS "MPFR not found; disabling CompareAKMathAgainstMPFR")
+    return()
+endif()
 
 set(SOURCES
     main.cpp

@@ -15,6 +15,7 @@ add_subdirectory(CodeGenerators)
 add_subdirectory(CompareAKMathAgainstMPFR)
 add_subdirectory(ConfigureComponents)
 add_subdirectory(PrekernelPEImageGenerator)
+add_subdirectory(ExileBootManifest)
 add_subdirectory(IPCMagicLinter)
 
 if (APPLE)
