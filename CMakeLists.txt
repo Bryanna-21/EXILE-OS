@@ -11,7 +11,7 @@ if(NOT "${CMAKE_BUILD_TYPE}" STREQUAL "")
     "and that's all there is.")
 endif()
 
-if(NOT CMAKE_SYSTEM_NAME STREQUAL "ExileOS")
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "SerenityOS")
     message(FATAL_ERROR "System name is not the expected Exile OS platform, this is unsupported.\n"
             "Please re-read the BuildInstructions documentation, and use the superbuild configuration\n")
 endif()
