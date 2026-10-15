@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "keys": [
+    {
+      "keyId": "exile-dev-2026",
+      "publisherId": "org.exile.devsamples",
+      "algorithm": "ed25519",
+      "publicKey": "4254280fbc70f0a46796400a6a8e5d229a304f9f68af34f8cc174a6a9949ede7"
+    }
+  ]
+}

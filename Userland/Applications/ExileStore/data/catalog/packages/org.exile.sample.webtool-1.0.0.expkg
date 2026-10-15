@@ -1,0 +1,7 @@
+EXPKG1
+file 90 README.txt
+file 41 bin/sample.txt
+data
+Sample Web Tool 1.0.0
+This is a development sample payload. It is not a real application.
+placeholder for org.exile.sample.webtool

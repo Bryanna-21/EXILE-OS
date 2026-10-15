@@ -1,0 +1,25 @@
+Exile Store
+===========
+
+Attribution
+-----------
+This source tree was written from scratch for the Exile project. No code from
+SerenityOS or any other upstream project was copied into it, because no Exile OS /
+Serenity-derived repository was available when it was created (see docs/AUDIT.md).
+If it is merged into a Serenity-derived tree, that tree's own LICENSE and
+third-party notices continue to apply to the combined work and must be preserved.
+
+License
+-------
+No license has been chosen for these files. The project owner needs to pick one that
+is compatible with the Exile OS tree this will be merged into (a Serenity-derived
+tree is typically BSD-2-Clause) before this code is distributed.
+
+Third-party dependencies
+------------------------
+- OpenSSL (libcrypto): Ed25519 signature verification and key generation in the
+  developer tool. Not bundled. Linked from the system. See https://www.openssl.org/
+  for its license terms.
+
+No other third-party code is included. The JSON parser, SHA-256, semantic version
+comparison and package container are original implementations in src/core/.

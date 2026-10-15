@@ -1,0 +1,529 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-10",
+  "categories": [
+    {
+      "id": "productivity",
+      "name": "Productivity"
+    },
+    {
+      "id": "education",
+      "name": "Education"
+    },
+    {
+      "id": "communication",
+      "name": "Communication"
+    },
+    {
+      "id": "internet-and-browsing",
+      "name": "Internet and Browsing"
+    },
+    {
+      "id": "development",
+      "name": "Development"
+    },
+    {
+      "id": "creativity-and-design",
+      "name": "Creativity and Design"
+    },
+    {
+      "id": "photos-and-video",
+      "name": "Photos and Video"
+    },
+    {
+      "id": "music-and-audio",
+      "name": "Music and Audio"
+    },
+    {
+      "id": "games",
+      "name": "Games"
+    },
+    {
+      "id": "security-and-privacy",
+      "name": "Security and Privacy"
+    },
+    {
+      "id": "utilities",
+      "name": "Utilities"
+    },
+    {
+      "id": "system-tools",
+      "name": "System Tools"
+    }
+  ],
+  "apps": [
+    {
+      "appId": "org.exile.sample.notes",
+      "name": "Sample Notes",
+      "summary": "A tiny notes app used to try out the store.",
+      "description": "This is a development sample, not a real product. It exists so every part of the store (compatibility, permissions, installing, updating) has something honest to work with.",
+      "publisher": {
+        "id": "org.exile.devsamples",
+        "name": "Exile Development Samples"
+      },
+      "categories": [
+        "productivity"
+      ],
+      "keywords": [
+        "notes",
+        "text",
+        "write"
+      ],
+      "currentVersion": "1.1.0",
+      "releaseNotes": "Development update used to test the update flow.",
+      "license": "Sample data, no license",
+      "publishedAt": "2026-09-01",
+      "updatedAt": "2026-10-10",
+      "featured": true,
+      "permissions": [
+        {
+          "id": "documents",
+          "reason": "Saves your notes as files."
+        }
+      ],
+      "packages": [
+        {
+          "id": "main",
+          "kind": "native",
+          "devices": [
+            "desktop"
+          ],
+          "architectures": [
+            "x86_64",
+            "aarch64"
+          ],
+          "channel": "stable",
+          "url": "packages/org.exile.sample.notes-1.1.0.expkg",
+          "sha256": "19f40b89428f6f576ee4a4fb75149d95408e6b7685f5c63478fb913f464a45d7",
+          "downloadSize": 180,
+          "packageSize": 360,
+          "signature": {
+            "keyId": "exile-dev-2026",
+            "algorithm": "ed25519",
+            "signature": "3e24d5bb2d289bbd0e0b8d44514b06bdf6b76716b44ab9a2cc8f382b280b30eece4af0beb333b87af9417aa47f03e879bd4ccf9f6ab724447505a32b8c897702"
+          }
+        }
+      ]
+    },
+    {
+      "appId": "org.exile.sample.codecs",
+      "name": "Sample Codecs",
+      "summary": "Shared media library that Sample Player needs.",
+      "description": "A development sample library used to test dependency checks.",
+      "publisher": {
+        "id": "org.exile.devsamples",
+        "name": "Exile Development Samples"
+      },
+      "categories": [
+        "system-tools"
+      ],
+      "keywords": [
+        "library",
+        "codec"
+      ],
+      "currentVersion": "1.0.0",
+      "releaseNotes": "Initial development release.",
+      "license": "Sample data, no license",
+      "publishedAt": "2026-09-01",
+      "updatedAt": "2026-10-01",
+      "permissions": [],
+      "packages": [
+        {
+          "id": "main",
+          "kind": "native",
+          "devices": [
+            "desktop",
+            "mobile",
+            "tablet"
+          ],
+          "architectures": [
+            "x86_64",
+            "aarch64"
+          ],
+          "channel": "stable",
+          "url": "packages/org.exile.sample.codecs-1.0.0.expkg",
+          "sha256": "c5e786cb44b0e655d8eb1f361a50d23249f522f16b904d30e262825724d013e8",
+          "downloadSize": 182,
+          "packageSize": 364,
+          "signature": {
+            "keyId": "exile-dev-2026",
+            "algorithm": "ed25519",
+            "signature": "72fc564c508e7dd91a57432af63ff40dc900cf540d33b89d321b34f5fded4395bbf6cc5aaf5b56455250d5705769ac924e78ae7e81f7cf9ca06d575279a8dd00"
+          }
+        }
+      ]
+    },
+    {
+      "appId": "org.exile.sample.player",
+      "name": "Sample Player",
+      "summary": "Plays audio. Needs Sample Codecs; works on desktop and mobile.",
+      "description": "A development sample with one shared listing and two builds, showing how one app can serve several device types.",
+      "publisher": {
+        "id": "org.exile.devsamples",
+        "name": "Exile Development Samples"
+      },
+      "categories": [
+        "music-and-audio"
+      ],
+      "keywords": [
+        "music",
+        "audio",
+        "player"
+      ],
+      "currentVersion": "1.0.0",
+      "releaseNotes": "Initial development release.",
+      "license": "Sample data, no license",
+      "publishedAt": "2026-09-01",
+      "updatedAt": "2026-10-01",
+      "featured": true,
+      "permissions": [
+        {
+          "id": "network",
+          "reason": "Streams from the address you give it."
+        },
+        {
+          "id": "microphone",
+          "reason": "Records audio if you choose to."
+        }
+      ],
+      "packages": [
+        {
+          "id": "desktop",
+          "kind": "native",
+          "devices": [
+            "desktop"
+          ],
+          "architectures": [
+            "x86_64",
+            "aarch64"
+          ],
+          "channel": "stable",
+          "url": "packages/org.exile.sample.player-1.0.0.expkg",
+          "sha256": "76bb564c35d68e30533024f00e2e8ba6ff48b99e6def21187f9584d4af43e024",
+          "downloadSize": 182,
+          "packageSize": 364,
+          "dependencies": [
+            {
+              "appId": "org.exile.sample.codecs",
+              "minVersion": "1.0.0"
+            }
+          ],
+          "signature": {
+            "keyId": "exile-dev-2026",
+            "algorithm": "ed25519",
+            "signature": "b478aeb810fb47a07dc0e1ba0cd2ed0620971f5c2a3555a53daaf61bdc61dede043b65ed6242915b997978f8a708f9b0bc82a0f4cffb1578edde3e53b2db9c0c"
+          }
+        },
+        {
+          "id": "mobile",
+          "kind": "native",
+          "devices": [
+            "mobile"
+          ],
+          "architectures": [
+            "x86_64",
+            "aarch64"
+          ],
+          "channel": "stable",
+          "url": "packages/org.exile.sample.player-1.0.0.expkg",
+          "sha256": "76bb564c35d68e30533024f00e2e8ba6ff48b99e6def21187f9584d4af43e024",
+          "downloadSize": 182,
+          "packageSize": 364,
+          "dependencies": [
+            {
+              "appId": "org.exile.sample.codecs",
+              "minVersion": "1.0.0"
+            }
+          ],
+          "signature": {
+            "keyId": "exile-dev-2026",
+            "algorithm": "ed25519",
+            "signature": "3dbd809226c27df6377d34f90e929adfc06179e62298e8ff01a4fed8d5fab5e74d539cd7728328248e910663238b5612a635953a1df6a0cdd41d30517a839b0e"
+          }
+        }
+      ]
+    },
+    {
+      "appId": "org.exile.sample.pocketclock",
+      "name": "Sample Pocket Clock",
+      "summary": "A phone-only clock, to show how incompatible apps are handled.",
+      "description": "Built for phones only. On a desktop it can be browsed but not installed.",
+      "publisher": {
+        "id": "org.exile.devsamples",
+        "name": "Exile Development Samples"
+      },
+      "categories": [
+        "utilities"
+      ],
+      "keywords": [
+        "clock",
+        "alarm"
+      ],
+      "currentVersion": "1.0.0",
+      "releaseNotes": "Initial development release.",
+      "license": "Sample data, no license",
+      "publishedAt": "2026-09-01",
+      "updatedAt": "2026-10-01",
+      "permissions": [
+        {
+          "id": "notifications",
+          "reason": "Rings alarms."
+        },
+        {
+          "id": "background",
+          "reason": "Alarms must fire while closed."
+        }
+      ],
+      "packages": [
+        {
+          "id": "main",
+          "kind": "native",
+          "devices": [
+            "mobile"
+          ],
+          "architectures": [
+            "aarch64"
+          ],
+          "channel": "stable",
+          "url": "packages/org.exile.sample.pocketclock-1.0.0.expkg",
+          "sha256": "78f59b2f6c1ddbfba962a458f623b25258ece469fcb6d1df493ff930e20603df",
+          "downloadSize": 193,
+          "packageSize": 386,
+          "signature": {
+            "keyId": "exile-dev-2026",
+            "algorithm": "ed25519",
+            "signature": "d49e8a73f7dd7ab6f2f451195d0e1def9d54cf716e52b2d18d4a2fa14aca223aa5eb42b0ad88291b67d2f0503dbbd191abb2f3f8967fa2039746f9c8ca77690c"
+          }
+        }
+      ]
+    },
+    {
+      "appId": "org.exile.sample.webtool",
+      "name": "Sample Web Tool",
+      "summary": "A web app, labelled as one rather than passed off as native.",
+      "description": "Delivered as a web app wrapper. The store says so on its page.",
+      "publisher": {
+        "id": "org.exile.devsamples",
+        "name": "Exile Development Samples"
+      },
+      "categories": [
+        "internet-and-browsing"
+      ],
+      "keywords": [
+        "web",
+        "pwa"
+      ],
+      "currentVersion": "1.0.0",
+      "releaseNotes": "Initial development release.",
+      "license": "Sample data, no license",
+      "publishedAt": "2026-09-01",
+      "updatedAt": "2026-10-01",
+      "permissions": [],
+      "packages": [
+        {
+          "id": "main",
+          "kind": "web",
+          "devices": [
+            "desktop",
+            "mobile",
+            "tablet",
+            "tv"
+          ],
+          "architectures": [
+            "any"
+          ],
+          "channel": "stable",
+          "url": "packages/org.exile.sample.webtool-1.0.0.expkg",
+          "sha256": "25d0effaceeecf96b6cdf41dfd297416d1cca514126d071d5fb28e53a6bc7ffa",
+          "downloadSize": 185,
+          "packageSize": 370,
+          "signature": {
+            "keyId": "exile-dev-2026",
+            "algorithm": "ed25519",
+            "signature": "8bc9e5850c494bafd356560aadac9d5013b5f8ed5fd523f2c732e242d61fe0201d993f978a4e1ee11202bd4bb2d1718952bf78ff55985aaf61633e4d0c988a04"
+          }
+        }
+      ]
+    },
+    {
+      "appId": "org.exile.sample.windows-tool",
+      "name": "Sample Compat Tool",
+      "summary": "Runs through a compatibility layer on desktop.",
+      "description": "Shows how an app delivered through a verified compatibility layer is labelled.",
+      "publisher": {
+        "id": "org.exile.devsamples",
+        "name": "Exile Development Samples"
+      },
+      "categories": [
+        "utilities"
+      ],
+      "keywords": [
+        "compat",
+        "windows"
+      ],
+      "currentVersion": "1.0.0",
+      "releaseNotes": "Initial development release.",
+      "license": "Sample data, no license",
+      "publishedAt": "2026-09-01",
+      "updatedAt": "2026-10-01",
+      "permissions": [],
+      "packages": [
+        {
+          "id": "main",
+          "kind": "compat-layer",
+          "devices": [
+            "desktop"
+          ],
+          "architectures": [
+            "x86_64"
+          ],
+          "channel": "stable",
+          "url": "packages/org.exile.sample.windows-tool-1.0.0.expkg",
+          "sha256": "d41faed904165453a5e403b0025f1fca3522748ac6141a86be789b0553915eea",
+          "downloadSize": 193,
+          "packageSize": 386,
+          "signature": {
+            "keyId": "exile-dev-2026",
+            "algorithm": "ed25519",
+            "signature": "b574d62c4b485c267a9840d9666993a8dda1b084700e465ff146c6e213c07d18853d6a23f6e7f60aa45bed3ee4998e5a56993730842f12901535605ab458960f"
+          }
+        }
+      ]
+    },
+    {
+      "appId": "org.exile.sample.untrusted",
+      "name": "Sample Untrusted Publisher",
+      "summary": "Signed by a key this device does not trust; install is refused.",
+      "description": "Exists to demonstrate that a package with a signature from an unknown key is rejected.",
+      "publisher": {
+        "id": "org.exile.devsamples",
+        "name": "Exile Development Samples"
+      },
+      "categories": [
+        "utilities"
+      ],
+      "keywords": [
+        "untrusted",
+        "test"
+      ],
+      "currentVersion": "1.0.0",
+      "releaseNotes": "Initial development release.",
+      "license": "Sample data, no license",
+      "publishedAt": "2026-09-01",
+      "updatedAt": "2026-10-01",
+      "permissions": [],
+      "packages": [
+        {
+          "id": "main",
+          "kind": "native",
+          "devices": [
+            "desktop"
+          ],
+          "architectures": [
+            "x86_64",
+            "aarch64"
+          ],
+          "channel": "stable",
+          "url": "packages/org.exile.sample.untrusted-1.0.0.expkg",
+          "sha256": "ea461352be03083347dca8dd7f35ceffb583a435f30a21217d36c96511edb1d1",
+          "downloadSize": 199,
+          "packageSize": 398,
+          "signature": {
+            "keyId": "unknown-key-1",
+            "algorithm": "ed25519",
+            "signature": "3edcc78f5b232f4041672cc0a4e29236f40723a6870e21f6232a3c4ab358a913941a37d231dcede7d6468c29889f61ec5826a879d9ac41368de1d07ee15a7d0b"
+          }
+        }
+      ]
+    },
+    {
+      "appId": "org.exile.sample.futureos",
+      "name": "Sample Future OS App",
+      "summary": "Needs a newer Exile OS than this device has.",
+      "description": "Shows the 'OS too old' explanation.",
+      "publisher": {
+        "id": "org.exile.devsamples",
+        "name": "Exile Development Samples"
+      },
+      "categories": [
+        "development"
+      ],
+      "keywords": [
+        "future"
+      ],
+      "currentVersion": "1.0.0",
+      "releaseNotes": "Initial development release.",
+      "license": "Sample data, no license",
+      "publishedAt": "2026-09-01",
+      "updatedAt": "2026-10-01",
+      "permissions": [],
+      "packages": [
+        {
+          "id": "main",
+          "kind": "native",
+          "devices": [
+            "desktop"
+          ],
+          "architectures": [
+            "x86_64",
+            "aarch64"
+          ],
+          "minimumOsVersion": "9.0.0",
+          "channel": "stable",
+          "url": "packages/org.exile.sample.futureos-1.0.0.expkg",
+          "sha256": "599597fdafcaefcdd855c7599a381150aa7910b6a1b3d03af61c8063a6e0f169",
+          "downloadSize": 191,
+          "packageSize": 382,
+          "signature": {
+            "keyId": "exile-dev-2026",
+            "algorithm": "ed25519",
+            "signature": "fd81f21934d236fbe6f208757a2e46aac46efc2a245d20ce5adb5e191295795972742822818563fb5658a411e5c8358896623926a0c095213323f7270c12b206"
+          }
+        }
+      ]
+    },
+    {
+      "appId": "org.exile.sample.betaonly",
+      "name": "Sample Beta Tool",
+      "summary": "Only in the beta channel; hidden unless --beta is set.",
+      "description": "Beta channel sample.",
+      "publisher": {
+        "id": "org.exile.devsamples",
+        "name": "Exile Development Samples"
+      },
+      "categories": [
+        "development"
+      ],
+      "keywords": [],
+      "currentVersion": "1.0.0",
+      "releaseNotes": "Initial development release.",
+      "license": "Sample data, no license",
+      "publishedAt": "2026-09-01",
+      "updatedAt": "2026-10-01",
+      "permissions": [],
+      "packages": [
+        {
+          "id": "main",
+          "kind": "native",
+          "devices": [
+            "desktop"
+          ],
+          "architectures": [
+            "x86_64",
+            "aarch64"
+          ],
+          "channel": "beta",
+          "url": "packages/org.exile.sample.betaonly-1.0.0.expkg",
+          "sha256": "32cda235cf8f36a375ef8bbb1b966cc527def0e72b9e359babfd875cc711cc46",
+          "downloadSize": 187,
+          "packageSize": 374,
+          "signature": {
+            "keyId": "exile-dev-2026",
+            "algorithm": "ed25519",
+            "signature": "7132b9d42f694d48853f54d12316fb2ec28a5cbb6803f36ff4269d3ed8c8a60e3212e663f85cf903f7ce57ce783fd7794ef3e53f669586a6662e55d040bbda0e"
+          }
+        }
+      ]
+    }
+  ]
+}

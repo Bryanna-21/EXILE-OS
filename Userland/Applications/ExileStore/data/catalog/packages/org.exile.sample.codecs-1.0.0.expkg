@@ -1,0 +1,7 @@
+EXPKG1
+file 88 README.txt
+file 40 bin/sample.txt
+data
+Sample Codecs 1.0.0
+This is a development sample payload. It is not a real application.
+placeholder for org.exile.sample.codecs

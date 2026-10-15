@@ -1,0 +1,7 @@
+EXPKG1
+file 94 README.txt
+file 45 bin/sample.txt
+data
+Sample Pocket Clock 1.0.0
+This is a development sample payload. It is not a real application.
+placeholder for org.exile.sample.pocketclock

@@ -1,0 +1,7 @@
+EXPKG1
+file 87 README.txt
+file 39 bin/sample.txt
+data
+Sample Notes 1.1.0
+This is a development sample payload. It is not a real application.
+placeholder for org.exile.sample.notes
