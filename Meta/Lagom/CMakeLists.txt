@@ -316,7 +316,7 @@ function(exile_bin name)
     add_executable(Lagom::${name} ALIAS ${name})
     target_link_libraries(${name} PUBLIC GenericClangPlugin)
     install(
-        TARGETS ${target_name}
+        TARGETS ${name}
         EXPORT LagomTargets
         RUNTIME #
             COMPONENT Lagom_Runtime
@@ -332,8 +332,8 @@ function(exile_bin name)
 endfunction()
 
 function(exile_lib name fs_name)
-    cmake_parse_arguments(PARSE_ARGV 2 SERENITY_LIB "" "TYPE" "")
-    lagom_lib(${name} ${fs_name} LIBRARY_TYPE ${SERENITY_LIB_TYPE} SOURCES ${SOURCES} ${GENERATED_SOURCES})
+    cmake_parse_arguments(PARSE_ARGV 2 EXILE_LIB "" "TYPE" "")
+    lagom_lib(${name} ${fs_name} LIBRARY_TYPE ${EXILE_LIB_TYPE} SOURCES ${SOURCES} ${GENERATED_SOURCES})
 endfunction()
 
 function(exile_install_headers dir)

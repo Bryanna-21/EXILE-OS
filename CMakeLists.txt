@@ -186,7 +186,7 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/AK/Debug.h" DESTINATION "${CMAKE_INST
 # This will need to be revisited when the Loader supports RPATH/RUN_PATH.
 set(CMAKE_SKIP_RPATH TRUE)
 
-include(serenity_compile_options)
+include(exile_compile_options)
 
 add_link_options(LINKER:-z,text)
 add_link_options(LINKER:--no-allow-shlib-undefined)
