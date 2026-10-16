@@ -56,6 +56,23 @@ TEST(compat_across_all_device_classes) {
     CHECK(!resolveCompatibility(app, device(DeviceClass::Mobile, Arch::Riscv64)).ok());
 }
 
+TEST(compat_universal_device_build_runs_on_every_device_class) {
+    Fixture f;
+    PkgSpec s;
+    s.devices = "\"any\"";
+    s.archs = "\"any\"";
+    Catalog c = f.catalog({f.build(s).json});
+    const AppEntry& app = *c.find(s.appId);
+    for (DeviceClass d : {DeviceClass::Desktop, DeviceClass::Mobile, DeviceClass::Tablet, DeviceClass::Tv, DeviceClass::Other})
+        CHECK(resolveCompatibility(app, device(d, Arch::Riscv64)).ok());
+    // A universal build is still subject to the other rules.
+    PkgSpec old = s;
+    old.extraPkg = ",\"minimumOsVersion\":\"5.0.0\"";
+    Catalog c2 = f.catalog({f.build(old).json});
+    CHECK_EQ(resolveCompatibility(*c2.find(old.appId), device(DeviceClass::Tv, Arch::Aarch64, "1.0.0")).status, CompatStatus::OsTooOld);
+    CHECK_EQ(toString(DeviceClass::Any), std::string_view("any"));
+}
+
 TEST(compat_any_architecture_matches_everything) {
     Fixture f;
     PkgSpec s;

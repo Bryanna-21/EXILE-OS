@@ -26,6 +26,11 @@ std::string hexEncode(const uint8_t* data, size_t size);
 std::string humanSize(uint64_t bytes);
 std::string nowIso8601();
 
+// Per-user data directory ($XDG_DATA_HOME/exile-store or ~/.local/share/exile-store).
+std::filesystem::path defaultDataDir();
+// First existing catalog among the usual development and install locations.
+std::filesystem::path findDefaultCatalog();
+
 // Reads a whole file, refusing files larger than maxBytes.
 std::optional<std::string> readFile(const std::filesystem::path& path, uint64_t maxBytes, std::string* error = nullptr);
 // Writes to "<path>.tmp" then renames over `path`.

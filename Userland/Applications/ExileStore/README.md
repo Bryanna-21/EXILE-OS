@@ -16,9 +16,12 @@ This repository contains:
 |---|---|
 | `src/core/` | UI-independent store logic: catalog model + validation, compatibility resolver, search, trust/signature verification, package transport, install pipeline, local library, update detection |
 | `src/ui/` | Pure renderers (state in, text out), responsive layout (sidebar vs bottom navigation), and a navigation controller |
-| `src/main.cpp` | Terminal front-end and CLI (`exile-store`) |
+| `src/app/` | `Engine`: thread-safe wrapper around the core (immutable snapshots + one install worker) |
+| `src/server/` | Loopback HTTP server, JSON API and request-security checks for the web UI |
+| `web/` | **The universal UI**: one responsive page (phone, tablet, desktop, TV) compiled into the binary |
+| `src/main.cpp` | Terminal front-end and CLI (`exile-store`), plus `serve` for the web UI |
 | `tools/expkg_tool.cpp` | Developer tool: build `.expkg` dev packages, sign, generate the sample catalog |
-| `tests/` | 153 unit tests + a CLI smoke test |
+| `tests/` | 176 unit tests + a CLI smoke test; browser-driven checks were run by hand (see below) |
 | `data/` | A small **clearly-labelled sample catalog** (signed, development only) |
 
 The core library has no UI dependency, so a graphical front-end for Exile OS (or the future mobile/tablet/TV stores) can reuse it unchanged.
@@ -38,6 +41,33 @@ Regenerate the sample catalog (new throw-away signing key each time):
 ```sh
 ./build/expkg-tool devcatalog data     # writes data/catalog and data/trust
 ```
+
+## The universal UI (phones, tablets, PCs, TVs and anything with a browser)
+
+```sh
+./build/exile-store --catalog data/catalog/catalog.json serve        # prints a link; default port 7878
+./build/exile-store --device tv --arch aarch64 serve                 # a TV's view of the same catalog
+```
+
+Open the printed `http://127.0.0.1:PORT/#t=...` link in any browser or web view **on the same device**. One page adapts itself:
+
+| Device | Layout | Input |
+|---|---|---|
+| Phone (< 600 px) | bottom navigation, single column | touch, 48 px+ targets |
+| Tablet (600 to 1023 px) | left rail, two or three columns | touch |
+| PC (1024 px and up) | labelled sidebar, grid | mouse and keyboard (`/` searches) |
+| TV (device class `tv`, a TV browser, or `#t=...&ui=tv`) | large type, dark, labelled sidebar | D-pad / remote: arrow keys move focus spatially, Enter selects, Back/Esc returns |
+
+Same four destinations everywhere (Home, Explore, Search, Library) plus the app page with one obvious action. Apps that cannot run on the device are listed but marked, and never offer Install. A catalog build whose `devices` is `["any"]` is a **universal app** (shown as "Works on all devices"); it still has to pass the architecture, OS, channel and signature checks.
+
+How "universal" works here: the store is one executable. The UI is HTML/CSS/JS compiled into it, so any OS that has a browser or web view can show it; the native pieces (catalog, trust, installer) stay in C++. A device whose OS has no browser or web view cannot show this UI, and a shell for it (a launcher that opens the link in a web view) does not exist in this repository.
+
+Limits you should know: the service listens on **127.0.0.1 only**. It is *not* a way to browse the store from another device on your network, on purpose. Opening it from a phone while it runs on a PC needs a deliberate, authenticated remote mode that is not built. See `docs/SECURITY.md`, "Local web service".
+
+## Look and feel
+
+- **Icon**: an original "X" mark (blue bar under a green arrow) in `branding/`; see `branding/README.md` for files and usage rules.
+- **Loading**: first load of a tab shows a short branded splash where the mark draws itself (about 0.9 s, once per tab, skipped when the user prefers reduced motion). After that every screen shows layout-matched skeleton placeholders instead of a spinner, new content eases in, installs show four named steps (Check, Download, Verify, Install) with a progress bar, and a finished install draws a check mark. All motion is replaced by static states under `prefers-reduced-motion`.
 
 ## Try it
 

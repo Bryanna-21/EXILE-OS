@@ -259,6 +259,17 @@ JobResult InstallJob::run() {
     }
     if (cancel_.cancelled()) return cancelled(version);
 
+    // Re-verify the exact bytes about to be installed: the verified file could have
+    // been replaced on disk between the integrity check above and this point.
+    {
+        std::string herr;
+        auto digest = sha256FileHex(part, &herr);
+        if (!digest) return failWith("The package could not be re-read before installing: " + herr, version);
+        if (*digest != build.sha256) {
+            fs::remove(part, ec);
+            return failWith("The package changed on disk after it was verified, so it was discarded and not installed.", version);
+        }
+    }
     // ---- 6. install through the backend; success only after the backend confirms ----
     transition(JobState::Installing, "Installing");
     InstallRequest req{app->appId, version, build.id, part};

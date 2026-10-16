@@ -20,7 +20,7 @@ Responsibilities map one-to-one onto the brief's list:
 
 | Responsibility | Code |
 |---|---|
-| Presentation layer | `ui/render.*`, `ui/controller.*`, `ui/text.*`, `main.cpp` |
+| Presentation layer | `web/` (universal UI), `ui/render.*`, `ui/controller.*`, `ui/text.*`, `main.cpp` (terminal) |
 | Catalog client | `core/catalogclient.*` (offline fallback, cache never poisoned by bad data) |
 | Search and filtering | `core/search.*` |
 | Compatibility resolver | `core/device.*` |
@@ -65,14 +65,29 @@ Cancellation is cooperative and safe: allowed until the backend starts working. 
 
 `LocalPrefixBackend` unpacks `.expkg` files into a user-owned prefix with: path validation before anything is written, symlink refusal, a staging directory, atomic swap with a `previous` rollback copy, crash recovery (`recoverInterrupted`), and a reserved receipt file that packages cannot forge. It runs unprivileged and is a stand-in for the real system installer (see `INTEGRATION.md`).
 
+## Universal front-end (web UI + local service)
+
+```
+ browser / web view  ->  127.0.0.1  ->  server/http   (parsing, limits)
+   web/ (HTML+CSS+JS)                    server/api    (host/origin/token checks, JSON)
+   compiled into the binary              app/engine    (snapshots + one worker thread)
+                                         core/*        (same code the terminal UI uses)
+```
+
+* **Engine**: catalog and library are published as immutable `shared_ptr<const>` snapshots; request threads only read them. All mutation (install, update, uninstall) runs on one worker thread that owns the live library and backend, then publishes a new snapshot. Jobs queue; one runs at a time; duplicates for the same app are refused. Cancellation and progress reuse `InstallJob`.
+* **API**: `GET /api/{session,home,apps,apps/<id>,library,tasks,tasks/<id>}`, `POST /api/{install,update,update-all,uninstall,refresh,tasks/<id>/cancel}`. The API only forwards *intents*; whether an install is allowed is still decided by the installer pipeline (compatibility, dependencies, digest, signature, backend confirmation), so the web layer cannot widen what the CLI can do.
+* **UI**: layout (`compact`, `medium`, `expanded`, `tv`) and input mode (`touch`, `pointer`, `remote`) are chosen from the device class reported by the service, the user agent and the viewport. Remote mode adds spatial arrow-key navigation, a visible focus ring, TV back keys (Esc, Backspace, Tizen 10009, webOS 461, Android 4) and enlarged type. Server data is only ever inserted with `textContent`.
+* **Universal builds**: `DeviceClass::Any` (`"any"` in the catalog) may appear only in a build's device list, never as a device's own class.
+
 ## Multi-device design
 
 - One catalog, per-build device/architecture targeting, so a shared app with separate desktop and mobile builds is a single listing (see `org.exile.sample.player`).
 - The device is a runtime `DeviceProfile` (class, architecture, OS version, enabled channels). `--device mobile --arch aarch64` demonstrates a phone's view of the same catalog with the same code.
 - Layout is chosen by width: **sidebar** at 72+ columns, **bottom navigation bar** below it; all content wraps to the available width (tested from 40 to 140 columns, no overflow).
+- The web UI above is the cross-device front-end; the terminal layout rules below remain for the CLI.
 - Resizing a terminal is **not** a claim of mobile support. Real mobile support needs a mobile OS build, drivers, packages for that architecture, input services, and a touch GUI front-end, none of which exist in this repository.
 - Keyboard-first on desktop (number selection, single-key commands, `/` search). Touch targets belong to the future GUI front-end; the controller's command set (`Install`, `Update`, `Uninstall`, ...) is input-agnostic.
 
 ## Visual identity
 
-Black/white base, green for primary actions and success, blue for headings. No purple. Color is opt-in (`--color`) and a test asserts no purple/magenta escape codes are ever emitted.
+Black/white base, green for primary actions and success, blue for headings and links. No purple (a test scans the web assets for purple names and hues). Motion rules for the web UI: purposeful and short, never required to understand state, and every animation has a static fallback under `prefers-reduced-motion`; a background refresh never replays an entrance animation. Color is opt-in (`--color`) and a test asserts no purple/magenta escape codes are ever emitted.

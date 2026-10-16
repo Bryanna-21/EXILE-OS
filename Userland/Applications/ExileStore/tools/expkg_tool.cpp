@@ -162,7 +162,7 @@ bool buildCatalog(const fs::path& out, const std::string& tag, const std::string
         a.category = "internet-and-browsing";
         a.keywords = {"web", "pwa"};
         a.kind = "web";
-        a.devices = {"desktop", "mobile", "tablet", "tv"};
+        a.devices = {"any"};   // universal: adapts to any screen
         a.archs = {"any"};
         apps.push_back(a);
     }

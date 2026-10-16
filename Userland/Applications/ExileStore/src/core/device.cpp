@@ -51,7 +51,7 @@ bool archExact(const PackageBuild& b, Arch deviceArch) {
 // Order in which a build is checked; the build that gets furthest decides which
 // explanation the user sees.
 CompatStatus statusFor(const PackageBuild& b, const DeviceProfile& dev) {
-    if (!contains(b.devices, dev.deviceClass)) return CompatStatus::WrongDevice;
+    if (!contains(b.devices, dev.deviceClass) && !contains(b.devices, DeviceClass::Any)) return CompatStatus::WrongDevice;
     if (!archMatches(b, dev.arch)) return CompatStatus::WrongArchitecture;
     if (!b.minimumOsVersion.empty() && compareVersionStrings(dev.osVersion, b.minimumOsVersion) < 0) return CompatStatus::OsTooOld;
     if (!dev.channelEnabled(b.channel)) return CompatStatus::ChannelNotEnabled;

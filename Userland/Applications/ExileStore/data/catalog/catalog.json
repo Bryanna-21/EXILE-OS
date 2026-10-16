@@ -100,7 +100,7 @@
           "signature": {
             "keyId": "exile-dev-2026",
             "algorithm": "ed25519",
-            "signature": "82467f2d8df7ea8e3a21394935be99d34e7172e75be1a852614b19659f5741704ac5bbde823b72372ec233f91d0e31e374d400fd18cfa90ac8dc2d29febdce07"
+            "signature": "c6a9eb0b20a206d4baa5bf6f8e110b2f0044c98aa1f3087f45bad8751d4911b827cce11eee2f6886aa71cccc6676f4a9a197ea015720e46e4cd8fd4018a81105"
           }
         }
       ]
@@ -148,7 +148,7 @@
           "signature": {
             "keyId": "exile-dev-2026",
             "algorithm": "ed25519",
-            "signature": "72fc564c508e7dd91a57432af63ff40dc900cf540d33b89d321b34f5fded4395bbf6cc5aaf5b56455250d5705769ac924e78ae7e81f7cf9ca06d575279a8dd00"
+            "signature": "4a1e0e486020fea50728e0d5970829563f9d8fedf9a4b7709012a6ca7568cae304c5c5e971d440acc1afe69dc2feaa636eea827081f0d7cf8d837b2a5311c706"
           }
         }
       ]
@@ -211,7 +211,7 @@
           "signature": {
             "keyId": "exile-dev-2026",
             "algorithm": "ed25519",
-            "signature": "b478aeb810fb47a07dc0e1ba0cd2ed0620971f5c2a3555a53daaf61bdc61dede043b65ed6242915b997978f8a708f9b0bc82a0f4cffb1578edde3e53b2db9c0c"
+            "signature": "67d0a5f125e6ce8c2e4c4c8d4e15bb55a4a320ff5e057c458c5b14ceb56917d8fefa6ac2731daa826149aa05cb686d29ef6f16a202e5e49f19da25bbc21e9100"
           }
         },
         {
@@ -238,7 +238,7 @@
           "signature": {
             "keyId": "exile-dev-2026",
             "algorithm": "ed25519",
-            "signature": "3dbd809226c27df6377d34f90e929adfc06179e62298e8ff01a4fed8d5fab5e74d539cd7728328248e910663238b5612a635953a1df6a0cdd41d30517a839b0e"
+            "signature": "1bec2e98f61dcd65806e77959c4d2100da8d6b98c6180608c07133f8d34f0dc3a56057386e35ccca31fb681db291ab8636fd4b4b88e0490da375f59dbca7e00a"
           }
         }
       ]
@@ -292,7 +292,7 @@
           "signature": {
             "keyId": "exile-dev-2026",
             "algorithm": "ed25519",
-            "signature": "d49e8a73f7dd7ab6f2f451195d0e1def9d54cf716e52b2d18d4a2fa14aca223aa5eb42b0ad88291b67d2f0503dbbd191abb2f3f8967fa2039746f9c8ca77690c"
+            "signature": "3986b39da3ee41e6711ad4119cdb4e4de96e2e132e979b2279458ad62f8d165bc33580969e049d3dde3f50a2e97ea336a27f80fb7ff43227ee4d5deada672408"
           }
         }
       ]
@@ -324,10 +324,7 @@
           "id": "main",
           "kind": "web",
           "devices": [
-            "desktop",
-            "mobile",
-            "tablet",
-            "tv"
+            "any"
           ],
           "architectures": [
             "any"
@@ -340,7 +337,7 @@
           "signature": {
             "keyId": "exile-dev-2026",
             "algorithm": "ed25519",
-            "signature": "8bc9e5850c494bafd356560aadac9d5013b5f8ed5fd523f2c732e242d61fe0201d993f978a4e1ee11202bd4bb2d1718952bf78ff55985aaf61633e4d0c988a04"
+            "signature": "a4f32fdf5de8b2062d0c9d0809218106dba71a0cd2277c685cde0510bc14961e28ecd4364e7feeeb440ef6b2a0a699d05c8c804e555aa0036232ce042bf2690a"
           }
         }
       ]
@@ -385,7 +382,7 @@
           "signature": {
             "keyId": "exile-dev-2026",
             "algorithm": "ed25519",
-            "signature": "b574d62c4b485c267a9840d9666993a8dda1b084700e465ff146c6e213c07d18853d6a23f6e7f60aa45bed3ee4998e5a56993730842f12901535605ab458960f"
+            "signature": "a6bfffd72e5257008dac338a8385b6af841dbc7912dbe5aa20b4b0dddcfb4a30be0fdbedc34c71710c3e3eceddc5b4de8f8959518a00bbe9b7d2614dd3514b0a"
           }
         }
       ]
@@ -431,7 +428,7 @@
           "signature": {
             "keyId": "unknown-key-1",
             "algorithm": "ed25519",
-            "signature": "3edcc78f5b232f4041672cc0a4e29236f40723a6870e21f6232a3c4ab358a913941a37d231dcede7d6468c29889f61ec5826a879d9ac41368de1d07ee15a7d0b"
+            "signature": "c178406d668a641c51a6f85c7a31d3963b0f327b0f69569f09bde05b58f3cbf4e5eef4578dc4a5bb32bd20c37b1c5bca33a296c4bf6ad7e7407aabb02d9a0404"
           }
         }
       ]
@@ -477,7 +474,7 @@
           "signature": {
             "keyId": "exile-dev-2026",
             "algorithm": "ed25519",
-            "signature": "fd81f21934d236fbe6f208757a2e46aac46efc2a245d20ce5adb5e191295795972742822818563fb5658a411e5c8358896623926a0c095213323f7270c12b206"
+            "signature": "4f1b5684f2ff3385245bd2152793c0979c90b2f8adcbe5e48a8785ee9af678a7785978dd9c62f1b9e865b6ce24e6a577298750b287aedad215478da81397cf0a"
           }
         }
       ]
@@ -520,7 +517,7 @@
           "signature": {
             "keyId": "exile-dev-2026",
             "algorithm": "ed25519",
-            "signature": "7132b9d42f694d48853f54d12316fb2ec28a5cbb6803f36ff4269d3ed8c8a60e3212e663f85cf903f7ce57ce783fd7794ef3e53f669586a6662e55d040bbda0e"
+            "signature": "8b2969d444a9a2ee9f3cc2936e504ecfb2a13309253f497ac4db8164cb4fde59f049ec11a4b8b1ca46bd084f260c058951d1cce4e4127fedfcb7119f848e1405"
           }
         }
       ]

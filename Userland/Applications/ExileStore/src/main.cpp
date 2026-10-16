@@ -12,6 +12,7 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "core/appstate.h"
@@ -26,6 +27,12 @@
 #include "core/version.h"
 #include "ui/controller.h"
 
+#ifdef EXILE_HAVE_SERVER
+#include "app/engine.h"
+#include "server/api.h"
+#include "server/http.h"
+#endif
+
 #if defined(__unix__) || defined(__APPLE__)
 #include <unistd.h>
 #define EXILE_HAVE_ISATTY 1
@@ -35,6 +42,9 @@ namespace fs = std::filesystem;
 using namespace exile;
 
 namespace {
+
+std::atomic<bool> g_stopServe{false};
+extern "C" void onStopSignal(int) { g_stopServe.store(true); }
 
 std::atomic<CancelToken*> g_cancel{nullptr};
 extern "C" void onSigint(int) {
@@ -71,7 +81,12 @@ void usage(std::ostream& os) {
           "  update <appId> | --all   update one app or every app with an update\n"
           "  uninstall <appId> [--force]\n"
           "  library                  show installed apps and updates\n"
-          "  status                   show environment and security posture\n\n"
+          "  status                   show environment and security posture\n"
+#ifdef EXILE_HAVE_SERVER
+          "  serve [port]             run the touch/remote/mouse web UI for this device (default port 7878,\n"
+          "                           0 = any free port); open the printed link in a browser or web view\n"
+#endif
+          "\n"
           "Options:\n"
           "  --catalog <file>         catalog JSON (default: $EXILE_STORE_CATALOG or data/catalog/catalog.json)\n"
           "  --trust <file>           trusted publisher keys (default: ../trust/trusted-keys.json next to the catalog)\n"
@@ -107,7 +122,7 @@ bool parseArgs(int argc, char** argv, Options& o, std::string& err) {
         else if (a == "--device") {
             if (!next(v)) return false;
             auto d = parseDeviceClass(v);
-            if (!d) { err = "unknown device class '" + v + "'"; return false; }
+            if (!d || *d == DeviceClass::Any) { err = "unknown device class '" + v + "'"; return false; }
             o.device.deviceClass = *d;
         } else if (a == "--arch") {
             if (!next(v)) return false;
@@ -130,22 +145,6 @@ bool parseArgs(int argc, char** argv, Options& o, std::string& err) {
         else o.command.push_back(a);
     }
     return true;
-}
-
-fs::path defaultDataDir() {
-    if (const char* x = std::getenv("XDG_DATA_HOME")) return fs::path(x) / "exile-store";
-    if (const char* h = std::getenv("HOME")) return fs::path(h) / ".local/share/exile-store";
-    return fs::path(".exile-store");
-}
-
-fs::path findDefaultCatalog() {
-    for (fs::path p : {fs::path("data/catalog/catalog.json"), fs::path("../data/catalog/catalog.json"),
-                       fs::path("/usr/local/share/exile-store/catalog/catalog.json"),
-                       fs::path("/usr/share/exile-store/catalog/catalog.json")}) {
-        std::error_code ec;
-        if (fs::exists(p, ec)) return p;
-    }
-    return "data/catalog/catalog.json";
 }
 
 // Everything the front-end needs, with stable addresses.
@@ -190,8 +189,8 @@ struct App {
 
 void setup(App& app) {
     Options& o = app.opts;
-    if (o.dataDir.empty()) o.dataDir = defaultDataDir();
-    if (o.catalog.empty()) o.catalog = findDefaultCatalog();
+    if (o.dataDir.empty()) o.dataDir = util::defaultDataDir();
+    if (o.catalog.empty()) o.catalog = util::findDefaultCatalog();
     if (o.trust.empty()) {
         fs::path base = o.catalog.has_parent_path() ? o.catalog.parent_path() : fs::path(".");
         o.trust = base.parent_path() / "trust" / "trusted-keys.json";
@@ -356,6 +355,51 @@ int cmdStatus(const App& app, std::ostream& out) {
     return 0;
 }
 
+#ifdef EXILE_HAVE_SERVER
+// Runs the local web front-end until interrupted. Loopback only; the access token is
+// printed once, inside the URL fragment so it is never sent in a request line.
+int cmdServe(const Options& o, const std::vector<std::string>& c) {
+    unsigned long port = 7878;
+    if (c.size() > 1) {
+        if (c[1].empty() || c[1].size() > 5 || c[1].find_first_not_of("0123456789") != std::string::npos ||
+            std::stoul(c[1]) > 65535) {
+            std::cerr << "usage: serve [port]   (0-65535)\n";
+            return 2;
+        }
+        port = std::stoul(c[1]);
+    }
+    app::EngineConfig cfg;
+    cfg.catalog = o.catalog;
+    cfg.trust = o.trust;
+    cfg.dataDir = o.dataDir;
+    cfg.device = o.device;
+    cfg.allowFileUrls = o.allowFileUrls;
+    app::Engine engine(cfg);
+    for (const auto& n : engine.startupNotices()) std::cerr << n << "\n";
+
+    std::string err;
+    std::string token = server::Api::makeToken(err);
+    if (token.empty()) { std::cerr << "exile-store: " << err << "\n"; return 1; }
+    server::Api api(engine, token);
+    server::Server srv([&api](const server::Request& r) { return api.handle(r); });
+    if (!srv.listen(static_cast<unsigned short>(port), err)) { std::cerr << "exile-store: " << err << "\n"; return 1; }
+    api.setPort(srv.port());
+    srv.start();
+
+    std::signal(SIGINT, onStopSignal);
+    std::signal(SIGTERM, onStopSignal);
+    std::cout << "Exile Store is running for: " << o.device.describe() << "\n"
+              << "Open this link in a browser or web view on this device:\n\n"
+              << "    http://127.0.0.1:" << srv.port() << "/#t=" << token << "\n\n"
+              << "The link contains a one-time access key for this run; anyone with it can use the store as you.\n"
+              << "Only this device can connect. Press Ctrl+C to stop.\n" << std::flush;
+    while (!g_stopServe.load()) std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    std::cout << "\nStopping...\n";
+    srv.stop();
+    return 0;
+}
+#endif
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -365,6 +409,12 @@ int main(int argc, char** argv) {
         std::cerr << "exile-store: " << err << "\n\n";
         usage(std::cerr);
         return 2;
+    }
+    {
+        std::vector<std::string> c0 = app.opts.command;
+#ifdef EXILE_HAVE_SERVER
+        if (!c0.empty() && c0[0] == "serve") return cmdServe(app.opts, c0);
+#endif
     }
     setup(app);
     if (!app.libraryNotice.empty()) std::cerr << app.libraryNotice << "\n";

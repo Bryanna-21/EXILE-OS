@@ -19,6 +19,21 @@
 | Ratings/popularity not treated as safety | UI says a signature shows who published, not that an app is safe; no popularity sort | `test_ui.cpp` |
 | Memory safety of parsers | Strict JSON and package parsers with depth/size limits; full suite clean under ASan + UBSan | CI-style run, see report |
 
+## Local web service (`exile-store serve`)
+
+| Threat | Mitigation | Test |
+|---|---|---|
+| Reachable from the network | Binds `127.0.0.1` only; no option to change this | `server_binds_loopback_...` |
+| DNS rebinding | `Host` must be exactly `127.0.0.1:<port>` or `localhost:<port>` | `api_refuses_wrong_host_header` |
+| Another local web page driving the store (CSRF) | Per-run 256-bit bearer token required on every `/api/*` call, constant-time compare; `Origin` and `Sec-Fetch-Site` must be same-origin; POST must be `application/json` | `api_requires_the_access_token`, `api_refuses_cross_origin_...`, `api_post_needs_json_...` |
+| Token leakage | Printed once in a URL *fragment* (never sent in a request line or Referer), removed from the address bar on load, kept only in the tab's session storage; not accepted in query strings | `api_requires_the_access_token` |
+| XSS from catalog text | Strict CSP (`default-src 'none'; script-src 'self'; style-src 'self'; ...`), no inline script/style/handlers, all data inserted with `textContent`, JSON served as JSON | `api_responses_carry_hardening_headers`, `api_app_text_is_data_...` |
+| File disclosure / traversal | Only compiled-in assets are served; nothing is read from disk by path | `api_serves_only_embedded_assets_...` |
+| Request smuggling, oversized or malformed input | One request per connection, no chunked bodies, duplicate Host/Content-Length refused, header/body caps, I/O timeouts, connection cap | `http_rejects_...`, `server_binds_loopback_serves_and_survives_garbage` |
+| Web layer widening what installs are allowed | It only submits intents; the installer pipeline decides | `api_cannot_install_what_the_pipeline_refuses` |
+
+Limits of this model: any process running as the same user can read the printed link (or the process's memory) and use the store as that user; the token only stops *other web pages and other machines*, not local malware. There is no TLS (loopback only). Remote access from another device is deliberately not offered. The library snapshot and installer are still the unprivileged development ones described below. Run under AddressSanitizer, UndefinedBehaviorSanitizer and ThreadSanitizer: the suite is clean.
+
 ## Known limitations (do not ship until addressed)
 
 1. **No sandbox or permission enforcement.** Permissions are displayed and explained but nothing enforces them; that is the OS's job and the OS service is not here.

@@ -31,7 +31,7 @@ Keep it a static-friendly, signed-metadata design so it can be hosted anywhere a
 ## 3. Multi-device extension points
 
 - **Catalog**: unchanged; add `device` values or architectures to the enums in `core/model.*` and the parsers pick them up.
-- **Phones/tablets/TV**: write a front-end that owns input and drawing and calls the same controller commands and renderers' data (`computeStatus`, `searchCatalog`, `findUpdates`, `InstallJob`). Bottom navigation is already the layout used below 72 columns; the destinations (Home, Explore, Search, Library, App Details) are the same on every device.
+- **Phones/tablets/TV/PC**: the web UI in `web/` is already the shared front-end. To ship it on a device, the OS needs (1) a web view or browser, (2) a small launcher that starts `exile-store serve 0`, reads the printed link and opens it in a web view (consider a `--link-file` option so it need not parse stdout), and (3) the device class and OS version reported through `DeviceProfile` (today `--device`, `--arch`, `--os` flags). For a native GUI instead, call `app::Engine`, which is UI-independent.
 - **Touch**: the controller exposes semantic commands, not key codes; targets and gestures belong in the GUI layer.
 - **Shared apps**: model one app with several builds (see `org.exile.sample.player`).
 - **Universal Launcher**: the store consumes only `DeviceProfile` and the catalog; it needs no launcher API except `IPackageBackend::launch`.
@@ -40,5 +40,5 @@ Keep it a static-friendly, signed-metadata design so it can be hosted anywhere a
 
 1. Re-run the repository audit against the real Exile OS tree and map `IPackageBackend` onto its installer service (privileged, with TOCTOU-safe hand-off of verified bytes).
 2. Plug in an HTTPS `ITransport` and make the catalog signed with expiry.
-3. Port the front-end to the real GUI toolkit using `src/ui` as the state/logic layer.
+3. Write the launcher/web-view shell for each device family (or port the front-end to the native toolkit via `app::Engine`).
 4. Replace the dev trust file with the OS root of trust.

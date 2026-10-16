@@ -10,7 +10,9 @@
 
 namespace exile {
 
-enum class DeviceClass { Desktop, Mobile, Tablet, Tv, Other };
+// "Any" is only valid in a build's device list (a universal build, e.g. a web app that
+// adapts to any screen). A DeviceProfile is always one concrete class.
+enum class DeviceClass { Desktop, Mobile, Tablet, Tv, Other, Any };
 enum class Arch { X86_64, Aarch64, Riscv64, Any };
 enum class PackageKind { Native, CompatibilityLayer, Web };
 enum class ReleaseChannel { Stable, Beta, Nightly };

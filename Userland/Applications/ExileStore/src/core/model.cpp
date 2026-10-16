@@ -13,6 +13,7 @@ std::string_view toString(DeviceClass v) {
         case DeviceClass::Tablet: return "tablet";
         case DeviceClass::Tv: return "tv";
         case DeviceClass::Other: return "other";
+        case DeviceClass::Any: return "any";
     }
     return "other";
 }
@@ -52,6 +53,7 @@ std::string displayName(DeviceClass v) {
         case DeviceClass::Tablet: return "Tablet";
         case DeviceClass::Tv: return "TV";
         case DeviceClass::Other: return "Other";
+        case DeviceClass::Any: return "All devices";
     }
     return "Other";
 }
@@ -66,7 +68,7 @@ std::string displayName(PackageKind v) {
 }
 
 std::optional<DeviceClass> parseDeviceClass(std::string_view s) {
-    for (DeviceClass d : {DeviceClass::Desktop, DeviceClass::Mobile, DeviceClass::Tablet, DeviceClass::Tv, DeviceClass::Other})
+    for (DeviceClass d : {DeviceClass::Desktop, DeviceClass::Mobile, DeviceClass::Tablet, DeviceClass::Tv, DeviceClass::Other, DeviceClass::Any})
         if (toString(d) == s) return d;
     return std::nullopt;
 }

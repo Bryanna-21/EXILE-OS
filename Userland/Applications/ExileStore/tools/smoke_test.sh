@@ -55,4 +55,24 @@ mv "$CAT" "$CAT.gone"
 run home | grep -q "saved catalog data" || fail "offline cache notice missing"
 mv "$CAT.gone" "$CAT"
 
+# web service: loopback, token required, real install through the API
+if "$STORE" --help 2>&1 | grep -q "serve \[port\]" && command -v curl >/dev/null 2>&1; then
+    SLOG="$WORK/serve.log"
+    "$STORE" --catalog "$CAT" --data-dir "$WORK/state-web" serve 0 >"$SLOG" 2>&1 &
+    SPID=$!
+    i=0; while [ $i -lt 50 ] && ! grep -q "#t=" "$SLOG" 2>/dev/null; do sleep 0.1; i=$((i+1)); done
+    URL=$(grep -o 'http://127.0.0.1:[0-9]*' "$SLOG" | head -1)
+    TOK=$(grep -o '#t=[0-9a-f]*' "$SLOG" | head -1 | cut -c4-)
+    [ -n "$URL" ] && [ -n "$TOK" ] || { kill $SPID 2>/dev/null; fail "serve did not start"; }
+    [ "$(curl -s -o /dev/null -w '%{http_code}' "$URL/api/session")" = 401 ] || { kill $SPID; fail "api open without token"; }
+    [ "$(curl -s -o /dev/null -w '%{http_code}' "$URL/")" = 200 ] || { kill $SPID; fail "ui not served"; }
+    curl -s -X POST -H "Authorization: Bearer $TOK" -H "Content-Type: application/json" -d '{"appId":"org.exile.sample.notes"}' "$URL/api/install" >/dev/null
+    i=0; while [ $i -lt 100 ]; do
+        curl -s -H "Authorization: Bearer $TOK" "$URL/api/library" | grep -q "org.exile.sample.notes" && break
+        sleep 0.1; i=$((i+1))
+    done
+    kill $SPID 2>/dev/null; wait $SPID 2>/dev/null || true
+    [ -d "$WORK/state-web/prefix/apps/org.exile.sample.notes" ] || fail "web install did not land"
+fi
+
 echo "smoke test passed"

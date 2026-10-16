@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include "core/util.h"
 
 #include <algorithm>
@@ -182,6 +183,24 @@ bool containsIgnoreCase(std::string_view haystack, std::string_view needle) {
     if (needle.empty())
         return true;
     return toLower(haystack).find(toLower(needle)) != std::string::npos;
+}
+
+std::filesystem::path defaultDataDir() {
+    namespace fs = std::filesystem;
+    if (const char* x = std::getenv("XDG_DATA_HOME")) return fs::path(x) / "exile-store";
+    if (const char* h = std::getenv("HOME")) return fs::path(h) / ".local/share/exile-store";
+    return fs::path(".exile-store");
+}
+
+std::filesystem::path findDefaultCatalog() {
+    namespace fs = std::filesystem;
+    for (fs::path p : {fs::path("data/catalog/catalog.json"), fs::path("../data/catalog/catalog.json"),
+                       fs::path("/usr/local/share/exile-store/catalog/catalog.json"),
+                       fs::path("/usr/share/exile-store/catalog/catalog.json")}) {
+        std::error_code ec;
+        if (fs::exists(p, ec)) return p;
+    }
+    return "data/catalog/catalog.json";
 }
 
 }  // namespace exile::util
