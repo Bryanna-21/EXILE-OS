@@ -48,3 +48,6 @@ Tests/LibWeb/WPT/MANIFEST.json
 
 # Keep last to ensure .DS_Store is never tracked, even if otherwise allowed by any exception above.
 .DS_Store
+
+# Local compiler and build experiments
+.tmp/
