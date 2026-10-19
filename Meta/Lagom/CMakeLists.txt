@@ -745,6 +745,7 @@ if (BUILD_LAGOM)
 
         # LibCore
         lagom_test(../../Tests/LibCore/TestLibCoreArgsParser.cpp)
+        lagom_test(../../Tests/LibCore/TestLibCoreMimeData.cpp LIBS LibCore)
 
         if ((LINUX OR APPLE) AND NOT EMSCRIPTEN)
             lagom_test(../../Tests/LibCore/TestLibCoreFileWatcher.cpp)

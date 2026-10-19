@@ -47,7 +47,6 @@ void MimeData::set_text(ByteString const& text)
 
 // FIXME: Share this, TextEditor and HackStudio language detection somehow.
 static Array constexpr s_plaintext_suffixes = {
-    // Extensions
     ".c"sv,
     ".cpp"sv,
     ".gml"sv,
@@ -56,10 +55,11 @@ static Array constexpr s_plaintext_suffixes = {
     ".ini"sv,
     ".ipc"sv,
     ".txt"sv,
+};
 
-    // Base names
+static Array constexpr s_plaintext_base_names = {
     ".history"sv,
-    ".shellrc"sv
+    ".shellrc"sv,
     "CMakeLists.txt"sv,
 };
 
@@ -76,7 +76,7 @@ static Array const s_registered_mime_type = {
     MimeType { .name = "application/vnd.iccprofile"sv, .common_extensions = { ".icc"sv }, .description = "ICC color profile"sv, .magic_bytes = Vector<u8> { 'a', 'c', 's', 'p' }, .offset = 36 },
     MimeType { .name = "application/vnd.sqlite3"sv, .common_extensions = { ".sqlite"sv }, .description = "SQLite database"sv, .magic_bytes = Vector<u8> { 'S', 'Q', 'L', 'i', 't', 'e', ' ', 'f', 'o', 'r', 'm', 'a', 't', ' ', '3', 0x00 } },
     MimeType { .name = "application/wasm"sv, .common_extensions = { ".wasm"sv }, .description = "WebAssembly bytecode"sv, .magic_bytes = Vector<u8> { 0x00, 'a', 's', 'm' } },
-    MimeType { .name = "application/x-7z-compressed"sv, .common_extensions = { "7z"sv }, .description = "7-Zip archive"sv, .magic_bytes = Vector<u8> { 0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C } },
+    MimeType { .name = "application/x-7z-compressed"sv, .common_extensions = { ".7z"sv }, .description = "7-Zip archive"sv, .magic_bytes = Vector<u8> { 0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C } },
     MimeType { .name = "application/x-blender"sv, .common_extensions = { ".blend"sv, ".blended"sv }, .description = "Blender project file"sv, .magic_bytes = Vector<u8> { 'B', 'L', 'E', 'N', 'D', 'E', 'R' } },
     MimeType { .name = "application/x-bzip2"sv, .common_extensions = { ".bz2"sv }, .description = "BZIP2 compressed data"sv, .magic_bytes = Vector<u8> { 'B', 'Z', 'h' } },
     MimeType { .name = "application/x-sheets+json"sv, .common_extensions = { ".sheets"sv }, .description = "Serenity Spreadsheet document"sv },
@@ -109,10 +109,10 @@ static Array const s_registered_mime_type = {
     MimeType { .name = "extra/win-31x-compressed"sv, .description = "Windows 3.1X compressed file"sv, .magic_bytes = Vector<u8> { 'K', 'W', 'A', 'J' } },
     MimeType { .name = "extra/win-95-compressed"sv, .description = "Windows 95 compressed file"sv, .magic_bytes = Vector<u8> { 'S', 'Z', 'D', 'D' } },
 
-    MimeType { .name = "font/otf"sv, .common_extensions = { "otf"sv }, .description = "OpenType font"sv, .magic_bytes = Vector<u8> { 'O', 'T', 'T', 'F' } },
-    MimeType { .name = "font/ttf"sv, .common_extensions = { "ttf"sv }, .description = "TrueType font"sv, .magic_bytes = Vector<u8> { 0x00, 0x01, 0x00, 0x00, 0x00 } },
-    MimeType { .name = "font/woff"sv, .common_extensions = { "woff"sv }, .description = "WOFF font"sv, .magic_bytes = Vector<u8> { 'W', 'O', 'F', 'F' } },
-    MimeType { .name = "font/woff2"sv, .common_extensions = { "woff2"sv }, .description = "WOFF2 font"sv, .magic_bytes = Vector<u8> { 'W', 'O', 'F', '2' } },
+    MimeType { .name = "font/otf"sv, .common_extensions = { ".otf"sv }, .description = "OpenType font"sv, .magic_bytes = Vector<u8> { 'O', 'T', 'T', 'F' } },
+    MimeType { .name = "font/ttf"sv, .common_extensions = { ".ttf"sv }, .description = "TrueType font"sv, .magic_bytes = Vector<u8> { 0x00, 0x01, 0x00, 0x00, 0x00 } },
+    MimeType { .name = "font/woff"sv, .common_extensions = { ".woff"sv }, .description = "WOFF font"sv, .magic_bytes = Vector<u8> { 'W', 'O', 'F', 'F' } },
+    MimeType { .name = "font/woff2"sv, .common_extensions = { ".woff2"sv }, .description = "WOFF2 font"sv, .magic_bytes = Vector<u8> { 'W', 'O', 'F', '2' } },
 
     MimeType { .name = "image/bmp"sv, .common_extensions = { ".bmp"sv }, .description = "BMP image data"sv, .magic_bytes = Vector<u8> { 'B', 'M' } },
     MimeType { .name = "image/gif"sv, .common_extensions = { ".gif"sv }, .description = "GIF image data"sv, .magic_bytes = Vector<u8> { 'G', 'I', 'F', '8', '7', 'a' } },
@@ -152,9 +152,18 @@ static Array const s_registered_mime_type = {
 
 StringView guess_mime_type_based_on_filename(StringView path)
 {
+    auto filename = path.find_last_split_view('/');
+
+    for (auto const base_name : s_plaintext_base_names) {
+        if (filename == base_name)
+            return "text/plain"sv;
+    }
+
     for (auto const& mime_type : s_registered_mime_type) {
         for (auto const possible_extension : mime_type.common_extensions) {
-            if (path.ends_with(possible_extension))
+            if (possible_extension == "/"sv)
+                continue;
+            if (filename.ends_with(possible_extension, CaseSensitivity::CaseInsensitive))
                 return mime_type.name;
         }
     }
