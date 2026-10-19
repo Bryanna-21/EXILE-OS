@@ -9,6 +9,7 @@
 #include <Kernel/Bus/PCI/API.h>
 #include <Kernel/Devices/GPU/3dfx/GraphicsAdapter.h>
 #include <Kernel/Devices/GPU/Bochs/GraphicsAdapter.h>
+#include <Kernel/Devices/GPU/Console/BootSplash/BootSplash.h>
 #include <Kernel/Devices/GPU/Intel/NativeGraphicsAdapter.h>
 #include <Kernel/Devices/GPU/Management.h>
 #include <Kernel/Devices/GPU/VMWare/GraphicsAdapter.h>
@@ -140,6 +141,8 @@ UNMAP_AFTER_INIT bool GraphicsManagement::initialize()
             // framebuffer console we can simply re-use it.
             if (auto* boot_console = g_boot_console.load()) {
                 m_console = *boot_console;
+                // The boot console now serves as the real text console, so it must show text, not the splash.
+                boot_console->splash_end(Graphics::BootSplash::EndReason::Handoff);
                 boot_console->unref(); // Drop the leaked reference from Kernel::init()
             }
         }

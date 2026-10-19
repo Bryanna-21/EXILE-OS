@@ -125,6 +125,18 @@ UNMAP_AFTER_INIT bool CommandLine::is_early_boot_console_disabled() const
     PANIC("Unknown early_boot_console setting: {}", value);
 }
 
+UNMAP_AFTER_INIT bool CommandLine::is_boot_splash_disabled() const
+{
+    auto value = lookup("boot_splash"sv).value_or("on"sv);
+    if (value == "on"sv)
+        return false;
+    if (value == "off"sv)
+        return true;
+    // NOTE: A cosmetic setting must never stop the system from booting, so don't PANIC on a typo; show the text console.
+    dbgln("Unknown boot_splash setting: {}, disabling the boot splash", value);
+    return true;
+}
+
 UNMAP_AFTER_INIT bool CommandLine::i8042_enable_first_port_translation() const
 {
     // FIXME: Disable first port translation when the keyboard works OK.

@@ -37,6 +37,7 @@ target_link_libraries(fuzz-syscalls PRIVATE LibSystem)
 exile_test("crash.cpp" Kernel MAIN_ALREADY_DEFINED)
 
 set(LIBTEST_BASED_SOURCES
+    TestBootSplash.cpp
     TestEFault.cpp
     TestEmptyPrivateInodeVMObject.cpp
     TestEmptySharedInodeVMObject.cpp

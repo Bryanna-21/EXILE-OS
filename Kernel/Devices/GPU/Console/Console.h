@@ -12,6 +12,11 @@
 
 namespace Kernel::Graphics {
 
+namespace BootSplash {
+enum class Milestone : u8;
+enum class EndReason : u8;
+}
+
 class Console : public AtomicRefCounted<Console> {
 public:
     // Stanadard VGA text mode colors
@@ -56,6 +61,12 @@ public:
     virtual void write(size_t x, size_t y, char ch, bool critical = false) = 0;
     virtual void write(char ch, bool critical = false) = 0;
     virtual void flush(size_t x, size_t y, size_t width, size_t height) = 0;
+
+    // Early boot splash hooks. Only the bootloader framebuffer console implements these; for every
+    // other console they are intentionally no-ops, so callers never need to know which console they hold.
+    virtual void splash_begin() { }
+    virtual void splash_milestone(BootSplash::Milestone) { }
+    virtual void splash_end(BootSplash::EndReason) { }
 
     virtual ~Console() = default;
 
