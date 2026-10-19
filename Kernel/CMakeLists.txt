@@ -79,6 +79,7 @@ set(KERNEL_SOURCES
     Devices/GPU/Bochs/GraphicsAdapter.cpp
     Devices/GPU/Bochs/QEMUDisplayConnector.cpp
     Devices/GPU/Console/BootFramebufferConsole.cpp
+    Devices/GPU/Console/BootSplash/BootSplash.cpp
     Devices/GPU/Console/GenericFramebufferConsole.cpp
     Devices/GPU/Console/ContiguousFramebufferConsole.cpp
     Devices/GPU/DisplayConnector.cpp

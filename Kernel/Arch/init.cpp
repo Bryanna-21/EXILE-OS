@@ -22,6 +22,7 @@
 #include <Kernel/Devices/FUSEDevice.h>
 #include <Kernel/Devices/GPU/Console/BootDummyConsole.h>
 #include <Kernel/Devices/GPU/Console/BootFramebufferConsole.h>
+#include <Kernel/Devices/GPU/Console/BootSplash/BootSplash.h>
 #include <Kernel/Devices/GPU/Management.h>
 #include <Kernel/Devices/Generic/DeviceControlDevice.h>
 #include <Kernel/Devices/Generic/FullDevice.h>
@@ -134,6 +135,14 @@ ALWAYS_INLINE static Processor& bsp_processor()
 
 Atomic<Graphics::Console*> g_boot_console;
 
+// Reports a real startup milestone to the early boot splash. This is a no-op once the boot console
+// has been handed over (or if there never was a splash), so call sites need no further checks.
+static void report_boot_milestone(Graphics::BootSplash::Milestone milestone)
+{
+    if (auto* boot_console = g_boot_console.load())
+        boot_console->splash_milestone(milestone);
+}
+
 READONLY_AFTER_INIT static StringView s_kernel_cmdline;
 
 READONLY_AFTER_INIT constinit BootInfo g_boot_info;
@@ -198,6 +207,11 @@ extern "C" [[noreturn]] UNMAP_AFTER_INIT NO_SANITIZE_COVERAGE void init(BootInfo
             g_boot_console = &try_make_lock_ref_counted<Graphics::BootDummyConsole>().value().leak_ref();
         }
     }
+    if (!kernel_command_line().is_boot_splash_disabled()) {
+        if (auto* boot_console = g_boot_console.load())
+            boot_console->splash_begin();
+    }
+
     dmesgln("Starting Exile OS...");
     dmesgln("Kernel Commandline: {}", kernel_command_line().string());
     dmesgln("Boot method: {}", boot_info.boot_method);
@@ -233,15 +247,18 @@ extern "C" [[noreturn]] UNMAP_AFTER_INIT NO_SANITIZE_COVERAGE void init(BootInfo
 #endif
 
     InterruptManagement::initialize();
+    report_boot_milestone(Graphics::BootSplash::Milestone::InterruptsConfigured);
 
 #if ARCH(AARCH64) || ARCH(RISCV64)
     MUST(DeviceTree::Management::the().probe_drivers(DeviceTree::Driver::ProbeStage::Early));
 #endif
 
     ACPI::initialize();
+    report_boot_milestone(Graphics::BootSplash::Milestone::HardwareDetected);
 
     // Initialize TimeManagement before using randomness!
     TimeManagement::initialize(0);
+    report_boot_milestone(Graphics::BootSplash::Milestone::TimersReady);
 
     SysFSComponentRegistry::initialize();
 
@@ -256,6 +273,7 @@ extern "C" [[noreturn]] UNMAP_AFTER_INIT NO_SANITIZE_COVERAGE void init(BootInfo
     Process::initialize();
 
     Scheduler::initialize();
+    report_boot_milestone(Graphics::BootSplash::Milestone::SchedulerReady);
 
 #if ARCH(X86_64)
     // FIXME: Add an abstraction for the smp related functions, instead of using ifdefs in this file.
@@ -334,6 +352,7 @@ void init_stage2(void*)
     PCI::initialize();
     if (!PCI::Access::is_disabled())
         MUST(PCI::Access::the().probe_drivers());
+    report_boot_milestone(Graphics::BootSplash::Milestone::BusesProbed);
 
 #if ARCH(X86_64)
     if (!is_serial_debug_enabled())
@@ -350,6 +369,8 @@ void init_stage2(void*)
     MUST(InputManagement::the().initialize_i8042_controller());
 #endif
 
+    // NOTE: GraphicsManagement takes over the screen from the boot console, which ends the splash.
+    report_boot_milestone(Graphics::BootSplash::Milestone::PreparingGraphics);
     GraphicsManagement::the().initialize();
     VirtualConsole::initialize_consoles();
 

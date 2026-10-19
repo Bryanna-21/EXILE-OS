@@ -398,6 +398,15 @@ void GenericFramebufferConsole::disable()
 
 void GenericFramebufferConsole::write(size_t x, size_t y, char ch, Color background, Color foreground, bool critical)
 {
+    if (critical) {
+        InterruptsState previous_interrupts_state;
+        if (!m_lock.try_lock(previous_interrupts_state))
+            return;
+        GenericFramebufferConsoleImpl::write(x, y, ch, background, foreground, critical);
+        m_lock.unlock(previous_interrupts_state);
+        return;
+    }
+
     SpinlockLocker lock(m_lock);
     GenericFramebufferConsoleImpl::write(x, y, ch, background, foreground, critical);
 }

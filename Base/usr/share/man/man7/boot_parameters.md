@@ -37,6 +37,13 @@ List of options:
     or framebuffer console, based on what the Multiboot bootloader specified on the physical address, width, height
     and bit color depth.
 
+-   **`boot_splash`** - This parameter expects **`on`** or **`off`** and is by default set to **`on`**.
+    When set to **`on`** and the bootloader provided a usable framebuffer, the kernel shows the Exile OS boot splash
+    instead of kernel messages until the graphics subsystem takes over the screen. Kernel messages are still written to
+    the serial port and the kernel log, and a panic or other fatal error always replaces the splash with diagnostics.
+    When set to **`off`**, or when the value is not recognized, the kernel shows the plain early boot console.
+    This has no effect when **`early_boot_console`** is **`off`**.
+
 -   **`enable_ioapic`** - This parameter expects **`on`** or **`off`** and is by default set to **`on`**.
     When set to **`off`**, the kernel will initialize the two i8259 PICs.
     When set to **`on`**, the kernel will try to initialize the IOAPIC (or IOAPICs if there's more than one),

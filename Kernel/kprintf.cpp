@@ -14,6 +14,7 @@
 #include <Kernel/Devices/BaseDevices.h>
 #include <Kernel/Devices/Device.h>
 #include <Kernel/Devices/GPU/Console/BootFramebufferConsole.h>
+#include <Kernel/Devices/GPU/Console/BootSplash/BootSplash.h>
 #include <Kernel/Devices/GPU/Management.h>
 #include <Kernel/Devices/Generic/ConsoleDevice.h>
 #include <Kernel/Devices/Serial/16550/PCISerial16550.h>
@@ -64,6 +65,10 @@ static void pci_serial_putch(char ch)
 
 static void critical_console_out(char ch)
 {
+    // Fatal output (panics, failed assertions) must never be hidden behind the boot splash.
+    if (auto* boot_console = g_boot_console.load())
+        boot_console->splash_end(Graphics::BootSplash::EndReason::FatalError);
+
     if (s_serial_debug_enabled)
         serial_putch(ch);
 

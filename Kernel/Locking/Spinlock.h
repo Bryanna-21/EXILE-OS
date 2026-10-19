@@ -32,6 +32,23 @@ public:
         return previous_interrupts_state;
     }
 
+    [[nodiscard]] bool try_lock(InterruptsState& previous_interrupts_state)
+    {
+        previous_interrupts_state = Processor::interrupts_state();
+        Processor::enter_critical();
+        Processor::disable_interrupts();
+
+        u8 expected = 0;
+        if (!m_lock.compare_exchange_strong(expected, 1, AK::memory_order_acquire)) {
+            Processor::leave_critical();
+            Processor::restore_interrupts_state(previous_interrupts_state);
+            return false;
+        }
+
+        track_lock_acquire(m_rank);
+        return true;
+    }
+
     void unlock(InterruptsState previous_interrupts_state)
     {
         VERIFY(is_locked());
