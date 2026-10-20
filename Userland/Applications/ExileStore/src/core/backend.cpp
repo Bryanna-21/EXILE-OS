@@ -1,47 +1,61 @@
-#include "core/backend.h"
+/*
+ * Copyright (c) 2026, the Exile OS developers
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
+#include "backend.h"
 
 #include <system_error>
 
-#include "core/catalog.h"
-#include "core/expkg.h"
-#include "core/json.h"
-#include "core/util.h"
-#include "core/version.h"
+#include "catalog.h"
+#include "expkg.h"
+#include "json.h"
+#include "util.h"
+#include "version.h"
 
 namespace fs = std::filesystem;
 
 namespace exile {
 
 namespace {
-constexpr const char* kMetaName = ".exile-install.json";
+constexpr char const* kMetaName = ".exile-install.json";
 
-BackendResult fail(std::string msg) { return {false, std::move(msg)}; }
-}  // namespace
+BackendResult fail(std::string msg) { return { false, std::move(msg) }; }
+} // namespace
 
-LocalPrefixBackend::LocalPrefixBackend(fs::path prefix) : prefix_(std::move(prefix)) {
+LocalPrefixBackend::LocalPrefixBackend(fs::path prefix)
+    : prefix_(std::move(prefix))
+{
     std::error_code ec;
     fs::create_directories(prefix_, ec);
 }
 
-fs::path LocalPrefixBackend::installDir(const std::string& appId) const { return prefix_ / "apps" / appId / "current"; }
+fs::path LocalPrefixBackend::installDir(std::string const& appId) const { return prefix_ / "apps" / appId / "current"; }
 
-BackendResult LocalPrefixBackend::install(const InstallRequest& req) {
+BackendResult LocalPrefixBackend::install(InstallRequest const& req)
+{
     // Defense in depth: the store validated these already, the backend does not rely on that.
-    if (!isValidAppId(req.appId)) return fail("invalid application id");
-    if (!parseVersion(req.version)) return fail("invalid version");
+    if (!isValidAppId(req.appId))
+        return fail("invalid application id");
+    if (!parseVersion(req.version))
+        return fail("invalid version");
 
     std::string err;
-    auto manifest = parseExpkg(req.packageFile, ExpkgLimits{}, err);
-    if (!manifest) return fail("package rejected: " + err);
-    for (const auto& e : manifest->entries)
-        if (e.path.rfind(".exile-", 0) == 0) return fail("package rejected: reserved file name " + e.path);
+    auto manifest = parseExpkg(req.packageFile, ExpkgLimits {}, err);
+    if (!manifest)
+        return fail("package rejected: " + err);
+    for (auto const& e : manifest->entries)
+        if (e.path.rfind(".exile-", 0) == 0)
+            return fail("package rejected: reserved file name " + e.path);
 
     std::error_code ec;
     fs::path appDir = prefix_ / "apps" / req.appId;
     fs::path stage = prefix_ / "staging" / (req.appId + "-" + req.version);
     fs::remove_all(stage, ec);
     fs::create_directories(appDir, ec);
-    if (ec) return fail("cannot create install folder: " + ec.message());
+    if (ec)
+        return fail("cannot create install folder: " + ec.message());
 
     if (!extractExpkg(req.packageFile, *manifest, stage, nullptr, err)) {
         fs::remove_all(stage, ec);
@@ -63,59 +77,77 @@ BackendResult LocalPrefixBackend::install(const InstallRequest& req) {
     bool hadCurrent = fs::exists(current, ec);
     if (hadCurrent) {
         fs::rename(current, previous, ec);
-        if (ec) { fs::remove_all(stage, ec); return fail("cannot replace the existing version: " + ec.message()); }
+        if (ec) {
+            fs::remove_all(stage, ec);
+            return fail("cannot replace the existing version: " + ec.message());
+        }
     }
     fs::rename(stage, current, ec);
     if (ec) {
         std::string why = ec.message();
-        if (hadCurrent) fs::rename(previous, current, ec);  // roll back
+        if (hadCurrent)
+            fs::rename(previous, current, ec); // roll back
         fs::remove_all(stage, ec);
         return fail("could not activate the new version (previous version restored): " + why);
     }
-    if (hadCurrent) fs::remove_all(previous, ec);
-    return {true, {}};
+    if (hadCurrent)
+        fs::remove_all(previous, ec);
+    return { true, {} };
 }
 
-BackendResult LocalPrefixBackend::uninstall(const std::string& appId) {
-    if (!isValidAppId(appId)) return fail("invalid application id");
+BackendResult LocalPrefixBackend::uninstall(std::string const& appId)
+{
+    if (!isValidAppId(appId))
+        return fail("invalid application id");
     std::error_code ec;
     fs::path appDir = prefix_ / "apps" / appId;
-    if (!fs::exists(appDir, ec)) return fail("not installed");
+    if (!fs::exists(appDir, ec))
+        return fail("not installed");
     fs::remove_all(appDir, ec);
-    if (ec) return fail("could not remove files: " + ec.message());
-    return {true, {}};
+    if (ec)
+        return fail("could not remove files: " + ec.message());
+    return { true, {} };
 }
 
-bool LocalPrefixBackend::isInstalled(const std::string& appId, const std::string& version) const {
-    if (!isValidAppId(appId)) return false;
+bool LocalPrefixBackend::isInstalled(std::string const& appId, std::string const& version) const
+{
+    if (!isValidAppId(appId))
+        return false;
     auto text = util::readFile(installDir(appId) / kMetaName, 64 * 1024);
-    if (!text) return false;
+    if (!text)
+        return false;
     try {
         json::Value v = json::parse(*text);
-        const json::Value* id = v.find("appId");
-        const json::Value* ver = v.find("version");
+        json::Value const* id = v.find("appId");
+        json::Value const* ver = v.find("version");
         return id && id->string() && *id->string() == appId && ver && ver->string() && *ver->string() == version;
-    } catch (const json::ParseError&) {
+    } catch (json::ParseError const&) {
         return false;
     }
 }
 
-BackendResult LocalPrefixBackend::launch(const std::string&) {
+BackendResult LocalPrefixBackend::launch(std::string const&)
+{
     return fail("The development backend cannot start apps; launching needs the Exile OS app service.");
 }
 
-void LocalPrefixBackend::recoverInterrupted() {
+void LocalPrefixBackend::recoverInterrupted()
+{
     std::error_code ec;
     fs::remove_all(prefix_ / "staging", ec);
     fs::path apps = prefix_ / "apps";
-    if (!fs::is_directory(apps, ec)) return;
-    for (const auto& dir : fs::directory_iterator(apps, ec)) {
+    if (!fs::is_directory(apps, ec))
+        return;
+    for (auto const& dir : fs::directory_iterator(apps, ec)) {
         fs::path current = dir.path() / "current";
         fs::path previous = dir.path() / "previous";
-        if (!fs::exists(previous, ec)) continue;
-        if (!fs::exists(current, ec)) fs::rename(previous, current, ec);  // crash between the two renames
-        else fs::remove_all(previous, ec);
+        if (!fs::exists(previous, ec))
+            continue;
+        if (!fs::exists(current, ec))
+            fs::rename(previous, current, ec); // crash between the two renames
+        else
+            fs::remove_all(previous, ec);
     }
 }
 
-}  // namespace exile
+} // namespace exile

@@ -1,5 +1,11 @@
-#include "core/catalog.h"
-#include "core/catalogclient.h"
+/*
+ * Copyright (c) 2026, the Exile OS developers
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
+#include "../src/core/catalog.h"
+#include "../src/core/catalogclient.h"
 #include "testing.h"
 
 using namespace exile;
@@ -8,32 +14,35 @@ using testing::PkgSpec;
 
 namespace {
 
-const char* kSha = "0000000000000000000000000000000000000000000000000000000000000000";
+char const* kSha = "0000000000000000000000000000000000000000000000000000000000000000";
 
 // A hand-written minimal valid app, with a hook to break individual fields.
-std::string appJson(const std::string& id = "org.t.one", const std::string& pkgExtra = "", const std::string& appExtra = "") {
+std::string appJson(std::string const& id = "org.t.one", std::string const& pkgExtra = "", std::string const& appExtra = "")
+{
     return std::string("{\"appId\":\"") + id + "\",\"name\":\"One\",\"summary\":\"s\",\"publisher\":{\"id\":\"org.t\",\"name\":\"T\"},"
-           "\"categories\":[\"utilities\"],\"currentVersion\":\"1.0.0\"" + appExtra +
-           ",\"packages\":[{\"id\":\"main\",\"devices\":[\"desktop\"],\"architectures\":[\"x86_64\"],\"url\":\"p/one.expkg\",\"sha256\":\"" +
-           kSha + "\"" + pkgExtra + "}]}";
+                                               "\"categories\":[\"utilities\"],\"currentVersion\":\"1.0.0\""
+        + appExtra + ",\"packages\":[{\"id\":\"main\",\"devices\":[\"desktop\"],\"architectures\":[\"x86_64\"],\"url\":\"p/one.expkg\",\"sha256\":\"" + kSha + "\"" + pkgExtra + "}]}";
 }
 
-CatalogLoadResult load(const std::vector<std::string>& apps) { return parseCatalog(Fixture::catalogJson(apps), "/base"); }
+CatalogLoadResult load(std::vector<std::string> const& apps) { return parseCatalog(Fixture::catalogJson(apps), "/base"); }
 
-bool hasIssue(const CatalogLoadResult& r, const std::string& needle) {
-    for (const auto& i : r.issues)
-        if (i.message.find(needle) != std::string::npos) return true;
+bool hasIssue(CatalogLoadResult const& r, std::string const& needle)
+{
+    for (auto const& i : r.issues)
+        if (i.message.find(needle) != std::string::npos)
+            return true;
     return false;
 }
 
-}  // namespace
+} // namespace
 
-TEST(catalog_parses_valid_document) {
-    auto r = load({appJson("org.t.one", ",\"downloadSize\":100,\"packageSize\":300,\"minimumOsVersion\":\"1.2.0\"",
-                           ",\"rating\":{\"average\":4.5,\"count\":12},\"featured\":true,\"permissions\":[{\"id\":\"network\",\"reason\":\"sync\"}]")});
+TEST(catalog_parses_valid_document)
+{
+    auto r = load({ appJson("org.t.one", ",\"downloadSize\":100,\"packageSize\":300,\"minimumOsVersion\":\"1.2.0\"",
+        ",\"rating\":{\"average\":4.5,\"count\":12},\"featured\":true,\"permissions\":[{\"id\":\"network\",\"reason\":\"sync\"}]") });
     CHECK(r.ok());
     CHECK(r.issues.empty());
-    const AppEntry* a = r.catalog->find("org.t.one");
+    AppEntry const* a = r.catalog->find("org.t.one");
     CHECK(a != nullptr);
     CHECK_EQ(a->name, std::string("One"));
     CHECK(a->featured);
@@ -45,12 +54,14 @@ TEST(catalog_parses_valid_document) {
     CHECK_EQ(r.catalog->baseDir, std::string("/base"));
 }
 
-TEST(catalog_without_rating_has_no_rating) {
-    auto r = load({appJson()});
+TEST(catalog_without_rating_has_no_rating)
+{
+    auto r = load({ appJson() });
     CHECK(!r.catalog->find("org.t.one")->rating.has_value());
 }
 
-TEST(catalog_malformed_json_gives_no_catalog) {
+TEST(catalog_malformed_json_gives_no_catalog)
+{
     auto r = parseCatalog("{ not json", "/b");
     CHECK(!r.ok());
     CHECK(!r.issues.empty());
@@ -58,7 +69,8 @@ TEST(catalog_malformed_json_gives_no_catalog) {
     CHECK(!parseCatalog("", "/b").ok());
 }
 
-TEST(catalog_rejects_wrong_or_missing_schema_version) {
+TEST(catalog_rejects_wrong_or_missing_schema_version)
+{
     CHECK(!parseCatalog(R"({"schemaVersion":2,"categories":[],"apps":[]})", "/b").ok());
     CHECK(!parseCatalog(R"({"categories":[],"apps":[]})", "/b").ok());
     CHECK(!parseCatalog(R"({"schemaVersion":"1","categories":[],"apps":[]})", "/b").ok());
@@ -66,8 +78,9 @@ TEST(catalog_rejects_wrong_or_missing_schema_version) {
     CHECK(!parseCatalog(R"({"schemaVersion":1,"apps":[]})", "/b").ok());
 }
 
-TEST(catalog_skips_bad_app_but_keeps_good_ones) {
-    auto r = load({appJson("org.t.good"), "{\"appId\":\"org.t.bad\"}", appJson("org.t.good2"), "42"});
+TEST(catalog_skips_bad_app_but_keeps_good_ones)
+{
+    auto r = load({ appJson("org.t.good"), "{\"appId\":\"org.t.bad\"}", appJson("org.t.good2"), "42" });
     CHECK(r.ok());
     CHECK_EQ(r.catalog->apps.size(), size_t(2));
     CHECK(r.catalog->find("org.t.good") != nullptr);
@@ -75,44 +88,51 @@ TEST(catalog_skips_bad_app_but_keeps_good_ones) {
     CHECK(!r.issues.empty());
 }
 
-TEST(catalog_ignores_duplicate_app_ids) {
-    auto r = load({appJson("org.t.dup"), appJson("org.t.dup")});
+TEST(catalog_ignores_duplicate_app_ids)
+{
+    auto r = load({ appJson("org.t.dup"), appJson("org.t.dup") });
     CHECK_EQ(r.catalog->apps.size(), size_t(1));
     CHECK(hasIssue(r, "duplicate appId"));
 }
 
-TEST(catalog_rejects_invalid_identifiers) {
-    for (const char* id : {"noDots", "Upper.Case", "a..b", ".a.b", "a.b.", "a.b c", "a.b/c", "a._b", "../x.y"}) {
-        auto r = load({appJson(id)});
-        if (!r.catalog->apps.empty()) throw testing::Failure{std::string("accepted app id: ") + id};
+TEST(catalog_rejects_invalid_identifiers)
+{
+    for (char const* id : { "noDots", "Upper.Case", "a..b", ".a.b", "a.b.", "a.b c", "a.b/c", "a._b", "../x.y" }) {
+        auto r = load({ appJson(id) });
+        if (!r.catalog->apps.empty())
+            throw testing::Failure { std::string("accepted app id: ") + id };
     }
     CHECK(isValidAppId("org.exile.notes"));
     CHECK(isValidAppId("a.b"));
     CHECK(!isValidAppId(""));
 }
 
-TEST(catalog_rejects_unknown_category_and_missing_fields) {
+TEST(catalog_rejects_unknown_category_and_missing_fields)
+{
     auto bad = appJson();
     size_t pos = bad.find("\"utilities\"");
     bad.replace(pos, 11, "\"nonexistent\"");
-    CHECK(load({bad}).catalog->apps.empty());
-    CHECK(load({"{\"appId\":\"org.t.x\",\"name\":\"x\"}"}).catalog->apps.empty());
+    CHECK(load({ bad }).catalog->apps.empty());
+    CHECK(load({ "{\"appId\":\"org.t.x\",\"name\":\"x\"}" }).catalog->apps.empty());
 }
 
-TEST(catalog_rejects_unsafe_package_urls) {
-    for (const char* url : {"http://example.com/a.expkg", "ftp://x/a", "javascript:alert(1)", "data:text/plain,hi", "../escape.expkg",
-                            "/abs/path.expkg", "a/../../b.expkg", "https://user:pw@host/a", "https:///nohost", "file://relative",
-                            "file:///a/../b", "a b.expkg"}) {
+TEST(catalog_rejects_unsafe_package_urls)
+{
+    for (char const* url : { "http://example.com/a.expkg", "ftp://x/a", "javascript:alert(1)", "data:text/plain,hi", "../escape.expkg",
+             "/abs/path.expkg", "a/../../b.expkg", "https://user:pw@host/a", "https:///nohost", "file://relative",
+             "file:///a/../b", "a b.expkg" }) {
         std::string pkg = std::string(",\"url\":\"") + url + "\"";
         std::string json = appJson();
         size_t p = json.find("\"url\":\"p/one.expkg\"");
         json.replace(p, std::string("\"url\":\"p/one.expkg\"").size(), pkg.substr(1));
-        auto r = load({json});
-        if (!r.catalog->apps.empty()) throw testing::Failure{std::string("accepted unsafe url: ") + url};
+        auto r = load({ json });
+        if (!r.catalog->apps.empty())
+            throw testing::Failure { std::string("accepted unsafe url: ") + url };
     }
 }
 
-TEST(source_url_validator_accepts_expected_forms) {
+TEST(source_url_validator_accepts_expected_forms)
+{
     CHECK(isAcceptableSourceUrl("https://store.exile.example/pkg/a.expkg"));
     CHECK(isAcceptableSourceUrl("packages/a.expkg"));
     CHECK(isAcceptableSourceUrl("file:///opt/pkgs/a.expkg"));
@@ -121,54 +141,59 @@ TEST(source_url_validator_accepts_expected_forms) {
     CHECK(!why.empty());
 }
 
-TEST(catalog_rejects_bad_digest_version_and_numbers) {
+TEST(catalog_rejects_bad_digest_version_and_numbers)
+{
     auto badSha = appJson();
     badSha.replace(badSha.find(kSha), 64, "XYZ");
-    CHECK(load({badSha}).catalog->apps.empty());
+    CHECK(load({ badSha }).catalog->apps.empty());
     auto upper = appJson();
     upper.replace(upper.find(kSha), 64, std::string(64, 'A'));
-    CHECK(load({upper}).catalog->apps.size() == 1);  // uppercase hex is normalised, not rejected
-    CHECK(load({appJson("org.t.x", ",\"downloadSize\":-5")}).catalog->apps.empty());
-    CHECK(load({appJson("org.t.x", ",\"downloadSize\":1.5")}).catalog->apps.empty());
-    CHECK(load({appJson("org.t.x", ",\"minimumOsVersion\":\"banana\"")}).catalog->apps.empty());
-    CHECK(load({appJson("org.t.x", ",\"channel\":\"weekly\"")}).catalog->apps.empty());
-    CHECK(load({appJson("org.t.x", ",\"kind\":\"magic\"")}).catalog->apps.empty());
+    CHECK(load({ upper }).catalog->apps.size() == 1); // uppercase hex is normalised, not rejected
+    CHECK(load({ appJson("org.t.x", ",\"downloadSize\":-5") }).catalog->apps.empty());
+    CHECK(load({ appJson("org.t.x", ",\"downloadSize\":1.5") }).catalog->apps.empty());
+    CHECK(load({ appJson("org.t.x", ",\"minimumOsVersion\":\"banana\"") }).catalog->apps.empty());
+    CHECK(load({ appJson("org.t.x", ",\"channel\":\"weekly\"") }).catalog->apps.empty());
+    CHECK(load({ appJson("org.t.x", ",\"kind\":\"magic\"") }).catalog->apps.empty());
 }
 
-TEST(catalog_rejects_fake_or_inconsistent_ratings) {
-    CHECK(load({appJson("org.t.a", "", ",\"rating\":{\"average\":9,\"count\":3}")}).catalog->apps.empty());
-    CHECK(load({appJson("org.t.b", "", ",\"rating\":{\"average\":4,\"count\":0}")}).catalog->apps.empty());
-    CHECK(load({appJson("org.t.c", "", ",\"rating\":{\"average\":4}")}).catalog->apps.empty());
+TEST(catalog_rejects_fake_or_inconsistent_ratings)
+{
+    CHECK(load({ appJson("org.t.a", "", ",\"rating\":{\"average\":9,\"count\":3}") }).catalog->apps.empty());
+    CHECK(load({ appJson("org.t.b", "", ",\"rating\":{\"average\":4,\"count\":0}") }).catalog->apps.empty());
+    CHECK(load({ appJson("org.t.c", "", ",\"rating\":{\"average\":4}") }).catalog->apps.empty());
 }
 
-TEST(catalog_rejects_control_characters_and_oversized_text) {
+TEST(catalog_rejects_control_characters_and_oversized_text)
+{
     std::string withCtl = appJson();
     withCtl.replace(withCtl.find("\"One\""), 5, "\"On\\u0001e\"");
-    CHECK(load({withCtl}).catalog->apps.empty());
+    CHECK(load({ withCtl }).catalog->apps.empty());
     std::string longName = appJson();
     longName.replace(longName.find("\"One\""), 5, "\"" + std::string(500, 'x') + "\"");
-    CHECK(load({longName}).catalog->apps.empty());
+    CHECK(load({ longName }).catalog->apps.empty());
 }
 
-TEST(catalog_requires_packages_with_devices_and_architectures) {
+TEST(catalog_requires_packages_with_devices_and_architectures)
+{
     auto noPkgs = appJson();
     noPkgs = noPkgs.substr(0, noPkgs.find(",\"packages\"")) + ",\"packages\":[]}";
-    CHECK(load({noPkgs}).catalog->apps.empty());
+    CHECK(load({ noPkgs }).catalog->apps.empty());
     auto noArch = appJson();
     noArch.replace(noArch.find("[\"x86_64\"]"), 10, "[]");
-    CHECK(load({noArch}).catalog->apps.empty());
+    CHECK(load({ noArch }).catalog->apps.empty());
     auto badDev = appJson();
     badDev.replace(badDev.find("\"desktop\""), 9, "\"toaster\"");
-    CHECK(load({badDev}).catalog->apps.empty());
+    CHECK(load({ badDev }).catalog->apps.empty());
 }
 
-TEST(catalog_derived_views_merge_builds) {
+TEST(catalog_derived_views_merge_builds)
+{
     Fixture f;
     PkgSpec s;
     s.devices = "\"desktop\",\"mobile\"";
     s.archs = "\"x86_64\",\"aarch64\"";
-    Catalog c = f.catalog({f.build(s).json});
-    const AppEntry* a = c.find(s.appId);
+    Catalog c = f.catalog({ f.build(s).json });
+    AppEntry const* a = c.find(s.appId);
     CHECK_EQ(a->supportedDevices().size(), size_t(2));
     CHECK_EQ(a->supportedArchitectures().size(), size_t(2));
     CHECK_EQ(a->minimumOsVersion(), std::string());
@@ -181,20 +206,25 @@ class FakeSource final : public ICatalogSource {
 public:
     std::string text;
     bool reachable = true;
-    bool fetch(std::string& out, std::string& error) override {
-        if (!reachable) { error = "network unreachable"; return false; }
+    bool fetch(std::string& out, std::string& error) override
+    {
+        if (!reachable) {
+            error = "network unreachable";
+            return false;
+        }
         out = text;
         return true;
     }
     std::filesystem::path baseDir() const override { return "/base"; }
     std::string describe() const override { return "fake"; }
 };
-}  // namespace
+} // namespace
 
-TEST(catalog_client_online_loads_and_caches) {
+TEST(catalog_client_online_loads_and_caches)
+{
     testing::TempDir d;
     FakeSource src;
-    src.text = Fixture::catalogJson({appJson()});
+    src.text = Fixture::catalogJson({ appJson() });
     CatalogState st = loadCatalog(src, d / "cache.json");
     CHECK(st.catalog.has_value());
     CHECK(!st.fromCache);
@@ -202,10 +232,11 @@ TEST(catalog_client_online_loads_and_caches) {
     CHECK(std::filesystem::exists(d / "cache.json"));
 }
 
-TEST(catalog_client_offline_falls_back_to_cache_with_notice) {
+TEST(catalog_client_offline_falls_back_to_cache_with_notice)
+{
     testing::TempDir d;
     FakeSource src;
-    src.text = Fixture::catalogJson({appJson()});
+    src.text = Fixture::catalogJson({ appJson() });
     loadCatalog(src, d / "cache.json");
     src.reachable = false;
     CatalogState st = loadCatalog(src, d / "cache.json");
@@ -216,7 +247,8 @@ TEST(catalog_client_offline_falls_back_to_cache_with_notice) {
     CHECK(st.catalog->find("org.t.one") != nullptr);
 }
 
-TEST(catalog_client_offline_without_cache_explains_and_has_no_catalog) {
+TEST(catalog_client_offline_without_cache_explains_and_has_no_catalog)
+{
     testing::TempDir d;
     FakeSource src;
     src.reachable = false;
@@ -226,10 +258,11 @@ TEST(catalog_client_offline_without_cache_explains_and_has_no_catalog) {
     CHECK_CONTAINS(st.notice, "Library");
 }
 
-TEST(catalog_client_invalid_fresh_catalog_never_overwrites_good_cache) {
+TEST(catalog_client_invalid_fresh_catalog_never_overwrites_good_cache)
+{
     testing::TempDir d;
     FakeSource src;
-    src.text = Fixture::catalogJson({appJson()});
+    src.text = Fixture::catalogJson({ appJson() });
     loadCatalog(src, d / "cache.json");
     std::string good = testing::readAll(d / "cache.json");
     src.text = "{ corrupt";
@@ -239,7 +272,8 @@ TEST(catalog_client_invalid_fresh_catalog_never_overwrites_good_cache) {
     CHECK_EQ(testing::readAll(d / "cache.json"), good);
 }
 
-TEST(catalog_client_corrupt_cache_and_dead_source_gives_clear_failure) {
+TEST(catalog_client_corrupt_cache_and_dead_source_gives_clear_failure)
+{
     testing::TempDir d;
     testing::writeFile(d / "cache.json", "garbage");
     FakeSource src;
@@ -249,9 +283,10 @@ TEST(catalog_client_corrupt_cache_and_dead_source_gives_clear_failure) {
     CHECK(!st.notice.empty());
 }
 
-TEST(file_catalog_source_reads_and_reports_missing_file) {
+TEST(file_catalog_source_reads_and_reports_missing_file)
+{
     testing::TempDir d;
-    testing::writeFile(d / "c.json", Fixture::catalogJson({appJson()}));
+    testing::writeFile(d / "c.json", Fixture::catalogJson({ appJson() }));
     auto r = loadCatalogFile(d / "c.json");
     CHECK(r.ok());
     CHECK_EQ(r.catalog->baseDir, d.path().string());

@@ -1,4 +1,5 @@
 add_subdirectory(AK)
+add_subdirectory(ExileBoot)
 add_subdirectory(Kernel)
 add_subdirectory(LibAudio)
 add_subdirectory(LibC)

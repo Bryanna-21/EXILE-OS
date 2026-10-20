@@ -1,9 +1,15 @@
-#include "core/sha256.h"
+/*
+ * Copyright (c) 2026, the Exile OS developers
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
+#include "sha256.h"
 
 #include <cstring>
 #include <fstream>
 
-#include "core/util.h"
+#include "util.h"
 
 namespace exile {
 
@@ -16,18 +22,21 @@ constexpr uint32_t K[64] = {
     0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
     0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
     0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
-    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2};
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+};
 
 inline uint32_t rotr(uint32_t x, unsigned n) { return (x >> n) | (x << (32 - n)); }
-}  // namespace
+} // namespace
 
-Sha256::Sha256() {
-    static const uint32_t init[8] = {0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
-                                     0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
+Sha256::Sha256()
+{
+    static uint32_t const init[8] = { 0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
+        0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19 };
     std::memcpy(h_, init, sizeof h_);
 }
 
-void Sha256::block(const uint8_t* p) {
+void Sha256::block(uint8_t const* p)
+{
     uint32_t w[64];
     for (int i = 0; i < 16; ++i)
         w[i] = (uint32_t(p[i * 4]) << 24) | (uint32_t(p[i * 4 + 1]) << 16) | (uint32_t(p[i * 4 + 2]) << 8) | p[i * 4 + 3];
@@ -44,32 +53,55 @@ void Sha256::block(const uint8_t* p) {
         uint32_t S0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
         uint32_t mj = (a & b) ^ (a & c) ^ (b & c);
         uint32_t t2 = S0 + mj;
-        h = g; g = f; f = e; e = d + t1; d = c; c = b; b = a; a = t1 + t2;
+        h = g;
+        g = f;
+        f = e;
+        e = d + t1;
+        d = c;
+        c = b;
+        b = a;
+        a = t1 + t2;
     }
-    h_[0] += a; h_[1] += b; h_[2] += c; h_[3] += d; h_[4] += e; h_[5] += f; h_[6] += g; h_[7] += h;
+    h_[0] += a;
+    h_[1] += b;
+    h_[2] += c;
+    h_[3] += d;
+    h_[4] += e;
+    h_[5] += f;
+    h_[6] += g;
+    h_[7] += h;
 }
 
-void Sha256::update(const void* data, size_t size) {
-    const uint8_t* p = static_cast<const uint8_t*>(data);
+void Sha256::update(void const* data, size_t size)
+{
+    uint8_t const* p = static_cast<uint8_t const*>(data);
     total_ += size;
     while (size > 0) {
         size_t take = std::min(size, sizeof buf_ - bufLen_);
         std::memcpy(buf_ + bufLen_, p, take);
-        bufLen_ += take; p += take; size -= take;
-        if (bufLen_ == 64) { block(buf_); bufLen_ = 0; }
+        bufLen_ += take;
+        p += take;
+        size -= take;
+        if (bufLen_ == 64) {
+            block(buf_);
+            bufLen_ = 0;
+        }
     }
 }
 
-std::array<uint8_t, 32> Sha256::finish() {
+std::array<uint8_t, 32> Sha256::finish()
+{
     uint64_t bits = total_ * 8;
     uint8_t pad = 0x80;
     update(&pad, 1);
     uint8_t zero = 0;
-    while (bufLen_ != 56) update(&zero, 1);
+    while (bufLen_ != 56)
+        update(&zero, 1);
     uint8_t len[8];
-    for (int i = 0; i < 8; ++i) len[i] = static_cast<uint8_t>(bits >> (56 - 8 * i));
+    for (int i = 0; i < 8; ++i)
+        len[i] = static_cast<uint8_t>(bits >> (56 - 8 * i));
     update(len, 8);
-    std::array<uint8_t, 32> out{};
+    std::array<uint8_t, 32> out {};
     for (int i = 0; i < 8; ++i) {
         out[i * 4] = static_cast<uint8_t>(h_[i] >> 24);
         out[i * 4 + 1] = static_cast<uint8_t>(h_[i] >> 16);
@@ -79,21 +111,25 @@ std::array<uint8_t, 32> Sha256::finish() {
     return out;
 }
 
-std::string Sha256::finishHex() {
+std::string Sha256::finishHex()
+{
     auto d = finish();
     return util::hexEncode(d.data(), d.size());
 }
 
-std::string sha256Hex(std::string_view data) {
+std::string sha256Hex(std::string_view data)
+{
     Sha256 s;
     s.update(data.data(), data.size());
     return s.finishHex();
 }
 
-std::optional<std::string> sha256FileHex(const std::filesystem::path& path, std::string* error) {
+std::optional<std::string> sha256FileHex(std::filesystem::path const& path, std::string* error)
+{
     std::ifstream in(path, std::ios::binary);
     if (!in) {
-        if (error) *error = "cannot open " + path.string();
+        if (error)
+            *error = "cannot open " + path.string();
         return std::nullopt;
     }
     Sha256 s;
@@ -103,10 +139,11 @@ std::optional<std::string> sha256FileHex(const std::filesystem::path& path, std:
         s.update(buf, static_cast<size_t>(in.gcount()));
     }
     if (in.bad()) {
-        if (error) *error = "read error on " + path.string();
+        if (error)
+            *error = "read error on " + path.string();
         return std::nullopt;
     }
     return s.finishHex();
 }
 
-}  // namespace exile
+} // namespace exile

@@ -115,7 +115,7 @@ lines will boot Exile OS in self-test mode, run tests, and exit. Note that CI al
 the default value `halt` keeps qemu around, which allows you to inspect the state.
 
 ```sh
-export SERENITY_RUN=ci
-export SERENITY_KERNEL_CMDLINE="graphics_subsystem_mode=off system_mode=self-test"
+export EXILE_RUN=ci
+export EXILE_KERNEL_CMDLINE="graphics_subsystem_mode=off system_mode=self-test"
 ninja run
 ```

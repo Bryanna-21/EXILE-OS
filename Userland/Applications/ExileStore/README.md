@@ -31,10 +31,10 @@ The core library has no UI dependency, so a graphical front-end for Exile OS (or
 Requirements: a C++20 compiler, CMake 3.16+, OpenSSL (for Ed25519 verification; without it the store builds but **refuses all installs**).
 
 ```sh
-cmake -S . -B build
-cmake --build build -j
-cd build && ctest --output-on-failure
+tools/host-build.sh [work-directory]    # stages a copy, builds it and runs the tests
 ```
+
+`CMakeLists.txt` in this directory is the native Exile OS application target; the standalone build is `CMakeLists.host.cmake`, which `tools/host-build.sh` uses. Binaries below are in `<work-directory>/build` (default `/tmp/exile-store-host/build`).
 
 Regenerate the sample catalog (new throw-away signing key each time):
 

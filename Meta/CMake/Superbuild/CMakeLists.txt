@@ -24,7 +24,6 @@ set(EXILE_BUILD_DIR_SUFFIX "")
 if(NOT EXILE_TOOLCHAIN STREQUAL "GNU")
   string(TOLOWER "${EXILE_TOOLCHAIN}" EXILE_BUILD_DIR_SUFFIX)
 endif()
-list(APPEND lagom_options "-DCMAKE_LIBRARY_PATH:STRING=C:/msys64/mingw64/lib")
 set(EXILE_BUILD_DIR "${PROJECT_BINARY_DIR}/../${EXILE_ARCH}${EXILE_BUILD_DIR_SUFFIX}")
 
 # Pkgconf incorrectly discards a sysroot if it doesn't match the start of the path to the
@@ -72,8 +71,11 @@ if (DEFINED CMAKE_CXX_COMPILER)
     set(CMAKE_CXX_COMPILER "${CMAKE_CXX_COMPILER}" CACHE STRING "C++ Compiler to use for host builds")
     list(APPEND lagom_options "-DCMAKE_CXX_COMPILER:STRING=${CMAKE_CXX_COMPILER}")
 endif()
-list(APPEND lagom_options "-DCMAKE_LIBRARY_PATH:STRING=C:/msys64/mingw64/lib")
-list(APPEND lagom_options "-DCMAKE_INCLUDE_PATH:STRING=C:/msys64/mingw64/include")
+# MSYS2 (Windows) hosts keep libraries and headers outside the default search paths.
+if(CMAKE_HOST_WIN32)
+    list(APPEND lagom_options "-DCMAKE_LIBRARY_PATH:STRING=C:/msys64/mingw64/lib")
+    list(APPEND lagom_options "-DCMAKE_INCLUDE_PATH:STRING=C:/msys64/mingw64/include")
+endif()
 
 ExternalProject_Add(
     lagom

@@ -14,6 +14,9 @@
 
 #include <Kernel/EFIPrekernel/Arch/Boot.h>
 #include <Kernel/EFIPrekernel/Arch/MMU.h>
+#ifdef EXILE_BOOT_VERIFICATION
+#    include <Kernel/EFIPrekernel/BootVerification.h>
+#endif
 #include <Kernel/EFIPrekernel/ConfigurationTable.h>
 #include <Kernel/EFIPrekernel/DebugOutput.h>
 #include <Kernel/EFIPrekernel/EFIPrekernel.h>
@@ -314,6 +317,13 @@ extern "C" EFIAPI EFI::Status init(EFI::Handle image_handle, EFI::SystemTable* s
     auto kernel_image_size = bit_cast<PhysicalPtr>(&end_of_kernel_image) - kernel_image_paddr;
 
     Bytes kernel_elf_image_data { bit_cast<u8*>(kernel_image_paddr), kernel_image_size };
+
+#ifdef EXILE_BOOT_VERIFICATION
+    // Authenticate the exact bytes that are about to be mapped and executed. This runs before the image is parsed,
+    // mapped or relocated (relocation rewrites it in place) and does not return unless the signed manifest matches.
+    verify_kernel_image_or_panic(kernel_elf_image_data);
+#endif
+
     ELF::Image kernel_elf_image { kernel_elf_image_data };
 
     // TODO: KASLR

@@ -1,19 +1,28 @@
-#include "core/catalogclient.h"
+/*
+ * Copyright (c) 2026, the Exile OS developers
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
 
-#include "core/util.h"
+#include "catalogclient.h"
+
+#include "util.h"
 
 namespace fs = std::filesystem;
 
 namespace exile {
 
-bool FileCatalogSource::fetch(std::string& text, std::string& error) {
+bool FileCatalogSource::fetch(std::string& text, std::string& error)
+{
     auto data = util::readFile(file_, kMaxCatalogBytes, &error);
-    if (!data) return false;
+    if (!data)
+        return false;
     text = std::move(*data);
     return true;
 }
 
-CatalogState loadCatalog(ICatalogSource& source, const fs::path& cacheFile) {
+CatalogState loadCatalog(ICatalogSource& source, fs::path const& cacheFile)
+{
     CatalogState state;
     std::string text, fetchError;
 
@@ -23,7 +32,7 @@ CatalogState loadCatalog(ICatalogSource& source, const fs::path& cacheFile) {
             state.catalog = std::move(parsed.catalog);
             state.issues = std::move(parsed.issues);
             std::string werr;
-            util::writeFileAtomic(cacheFile, text, werr);  // best effort; failure only costs offline support
+            util::writeFileAtomic(cacheFile, text, werr); // best effort; failure only costs offline support
             return state;
         }
         fetchError = parsed.issues.empty() ? "invalid catalog" : parsed.issues.front().message;
@@ -38,15 +47,13 @@ CatalogState loadCatalog(ICatalogSource& source, const fs::path& cacheFile) {
         if (parsed.ok()) {
             state.catalog = std::move(parsed.catalog);
             state.fromCache = true;
-            state.notice = "You're viewing saved catalog data" +
-                           (state.catalog->generatedAt.empty() ? std::string() : " from " + state.catalog->generatedAt) +
-                           " because the latest catalog couldn't be loaded (" + fetchError + ").";
+            state.notice = "You're viewing saved catalog data" + (state.catalog->generatedAt.empty() ? std::string() : " from " + state.catalog->generatedAt) + " because the latest catalog couldn't be loaded (" + fetchError + ").";
             return state;
         }
     }
     state.notice = "The app catalog could not be loaded (" + fetchError + "), and there is no saved copy to show. "
-                   "Your installed apps are still available in Library.";
+                                                                          "Your installed apps are still available in Library.";
     return state;
 }
 
-}  // namespace exile
+} // namespace exile

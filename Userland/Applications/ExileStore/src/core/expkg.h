@@ -1,4 +1,11 @@
+/*
+ * Copyright (c) 2026, the Exile OS developers
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
 #pragma once
+
 // ".expkg": the development package container used by the local backend.
 //
 // Layout (all ASCII header, then raw bytes):
@@ -19,14 +26,14 @@
 #include <string>
 #include <vector>
 
-#include "core/transport.h"
+#include "transport.h"
 
 namespace exile {
 
 struct ExpkgEntry {
     std::string path;
     uint64_t size = 0;
-    uint64_t offset = 0;  // relative to dataOffset
+    uint64_t offset = 0; // relative to dataOffset
 };
 
 struct ExpkgLimits {
@@ -41,13 +48,13 @@ struct ExpkgManifest {
     uint64_t totalBytes = 0;
 };
 
-std::optional<ExpkgManifest> parseExpkg(const std::filesystem::path& file, const ExpkgLimits& limits, std::string& error);
+std::optional<ExpkgManifest> parseExpkg(std::filesystem::path const& file, ExpkgLimits const& limits, std::string& error);
 
 // Extracts into destDir (created if needed). Returns false and fills `error` on any problem.
-bool extractExpkg(const std::filesystem::path& file, const ExpkgManifest& manifest, const std::filesystem::path& destDir,
-                  const CancelToken* cancel, std::string& error);
+bool extractExpkg(std::filesystem::path const& file, ExpkgManifest const& manifest, std::filesystem::path const& destDir,
+    CancelToken const* cancel, std::string& error);
 
 // Builds a package from a directory (regular files only, sorted => reproducible).
-bool packExpkg(const std::filesystem::path& sourceDir, const std::filesystem::path& outFile, std::string& error);
+bool packExpkg(std::filesystem::path const& sourceDir, std::filesystem::path const& outFile, std::string& error);
 
-}  // namespace exile
+} // namespace exile

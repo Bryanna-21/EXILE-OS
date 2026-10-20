@@ -518,7 +518,7 @@ ErrorOr<Optional<pid_t>> IPCProcess::get_process_pid(StringView process_name, St
 
     auto file = TRY(File::open(pid_path, File::OpenMode::Read));
     auto pid_string = TRY(file->read_until_eof());
-    auto pid = pid_string.to_number<pid_t>();
+    auto pid = StringView { pid_string.span() }.to_number<pid_t>();
 
     if (!pid.has_value())
         return Error::from_errno(EINVAL);

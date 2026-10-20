@@ -1,39 +1,46 @@
-#include "core/trust.h"
+/*
+ * Copyright (c) 2026, the Exile OS developers
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
 
-#include "core/catalog.h"
-#include "core/json.h"
-#include "core/util.h"
+#include "trust.h"
+
+#include "catalog.h"
+#include "json.h"
+#include "util.h"
 
 #ifdef EXILE_HAS_OPENSSL
-#include <openssl/evp.h>
+#    include <openssl/evp.h>
 #endif
 
 namespace exile {
 
-std::optional<TrustStore> TrustStore::parse(std::string_view text, std::string& error) {
+std::optional<TrustStore> TrustStore::parse(std::string_view text, std::string& error)
+{
     json::Value root;
     try {
         root = json::parse(text);
-    } catch (const json::ParseError& ex) {
+    } catch (json::ParseError const& ex) {
         error = ex.what();
         return std::nullopt;
     }
-    const json::Value* sv = root.find("schemaVersion");
+    json::Value const* sv = root.find("schemaVersion");
     if (!sv || sv->unsignedInteger() != 1u) {
         error = "trust store: unsupported or missing schemaVersion";
         return std::nullopt;
     }
-    const json::Value* keys = root.find("keys");
+    json::Value const* keys = root.find("keys");
     if (!keys || !keys->isArray()) {
         error = "trust store: 'keys' must be an array";
         return std::nullopt;
     }
     TrustStore store;
-    for (const json::Value& kv : keys->items()) {
-        const json::Value* id = kv.find("keyId");
-        const json::Value* pub = kv.find("publisherId");
-        const json::Value* alg = kv.find("algorithm");
-        const json::Value* pk = kv.find("publicKey");
+    for (json::Value const& kv : keys->items()) {
+        json::Value const* id = kv.find("keyId");
+        json::Value const* pub = kv.find("publisherId");
+        json::Value const* alg = kv.find("algorithm");
+        json::Value const* pk = kv.find("publicKey");
         if (!id || !id->string() || !pub || !pub->string() || !alg || !alg->string() || !pk || !pk->string()) {
             error = "trust store: every key needs keyId, publisherId, algorithm and publicKey";
             return std::nullopt;
@@ -56,7 +63,8 @@ std::optional<TrustStore> TrustStore::parse(std::string_view text, std::string& 
         k.publisherId = *pub->string();
         k.algorithm = *alg->string();
         k.publicKey = std::move(*bytes);
-        if (const json::Value* r = kv.find("revoked"); r && r->boolean()) k.revoked = *r->boolean();
+        if (json::Value const* r = kv.find("revoked"); r && r->boolean())
+            k.revoked = *r->boolean();
         if (store.find(k.keyId)) {
             error = "trust store: duplicate keyId '" + k.keyId + "'";
             return std::nullopt;
@@ -66,17 +74,21 @@ std::optional<TrustStore> TrustStore::parse(std::string_view text, std::string& 
     return store;
 }
 
-std::optional<TrustStore> TrustStore::loadFile(const std::string& path, std::string& error) {
+std::optional<TrustStore> TrustStore::loadFile(std::string const& path, std::string& error)
+{
     auto text = util::readFile(path, 1 << 20, &error);
-    if (!text) return std::nullopt;
+    if (!text)
+        return std::nullopt;
     return parse(*text, error);
 }
 
 void TrustStore::add(TrustedKey key) { keys_.push_back(std::move(key)); }
 
-const TrustedKey* TrustStore::find(std::string_view keyId) const {
-    for (const auto& k : keys_)
-        if (k.keyId == keyId) return &k;
+TrustedKey const* TrustStore::find(std::string_view keyId) const
+{
+    for (auto const& k : keys_)
+        if (k.keyId == keyId)
+            return &k;
     return nullptr;
 }
 
@@ -86,24 +98,31 @@ class OpenSslVerifier final : public ISignatureVerifier {
 public:
     bool available() const override { return true; }
     std::string name() const override { return "OpenSSL Ed25519"; }
-    bool verifyEd25519(const std::vector<uint8_t>& pub, std::string_view msg, const std::vector<uint8_t>& sig,
-                       std::string& error) const override {
-        if (pub.size() != 32 || sig.size() != 64) { error = "bad key or signature length"; return false; }
+    bool verifyEd25519(std::vector<uint8_t> const& pub, std::string_view msg, std::vector<uint8_t> const& sig,
+        std::string& error) const override
+    {
+        if (pub.size() != 32 || sig.size() != 64) {
+            error = "bad key or signature length";
+            return false;
+        }
         EVP_PKEY* key = EVP_PKEY_new_raw_public_key(EVP_PKEY_ED25519, nullptr, pub.data(), pub.size());
-        if (!key) { error = "could not load public key"; return false; }
+        if (!key) {
+            error = "could not load public key";
+            return false;
+        }
         EVP_MD_CTX* ctx = EVP_MD_CTX_new();
         bool ok = false;
-        if (ctx && EVP_DigestVerifyInit(ctx, nullptr, nullptr, nullptr, key) == 1 &&
-            EVP_DigestVerify(ctx, sig.data(), sig.size(), reinterpret_cast<const unsigned char*>(msg.data()), msg.size()) == 1)
+        if (ctx && EVP_DigestVerifyInit(ctx, nullptr, nullptr, nullptr, key) == 1 && EVP_DigestVerify(ctx, sig.data(), sig.size(), reinterpret_cast<unsigned char const*>(msg.data()), msg.size()) == 1)
             ok = true;
         else
             error = "signature does not match";
-        if (ctx) EVP_MD_CTX_free(ctx);
+        if (ctx)
+            EVP_MD_CTX_free(ctx);
         EVP_PKEY_free(key);
         return ok;
     }
 };
-}  // namespace
+} // namespace
 #endif
 
 namespace {
@@ -111,14 +130,16 @@ class UnavailableVerifier final : public ISignatureVerifier {
 public:
     bool available() const override { return false; }
     std::string name() const override { return "none (built without a crypto backend)"; }
-    bool verifyEd25519(const std::vector<uint8_t>&, std::string_view, const std::vector<uint8_t>&, std::string& error) const override {
+    bool verifyEd25519(std::vector<uint8_t> const&, std::string_view, std::vector<uint8_t> const&, std::string& error) const override
+    {
         error = "no signature verifier is available";
         return false;
     }
 };
-}  // namespace
+} // namespace
 
-std::unique_ptr<ISignatureVerifier> makeDefaultVerifier() {
+std::unique_ptr<ISignatureVerifier> makeDefaultVerifier()
+{
 #ifdef EXILE_HAS_OPENSSL
     return std::make_unique<OpenSslVerifier>();
 #else
@@ -127,7 +148,8 @@ std::unique_ptr<ISignatureVerifier> makeDefaultVerifier() {
 }
 
 std::string signingPayload(std::string_view appId, std::string_view version, std::string_view packageId,
-                           std::string_view sha256, uint64_t downloadSize) {
+    std::string_view sha256, uint64_t downloadSize)
+{
     std::string p = "exile-store-package-v1\n";
     p += "app=" + std::string(appId) + "\n";
     p += "version=" + std::string(version) + "\n";
@@ -137,10 +159,11 @@ std::string signingPayload(std::string_view appId, std::string_view version, std
     return p;
 }
 
-VerifyOutcome verifyPackageSignature(const AppEntry& app, const PackageBuild& build, std::string_view version,
-                                     const TrustStore& store, const ISignatureVerifier& verifier) {
+VerifyOutcome verifyPackageSignature(AppEntry const& app, PackageBuild const& build, std::string_view version,
+    TrustStore const& store, ISignatureVerifier const& verifier)
+{
     VerifyOutcome out;
-    const SignatureMetadata& sig = build.signature;
+    SignatureMetadata const& sig = build.signature;
     if (sig.keyId.empty() || sig.signatureHex.empty()) {
         out.reason = "the package is not signed";
         return out;
@@ -149,7 +172,7 @@ VerifyOutcome verifyPackageSignature(const AppEntry& app, const PackageBuild& bu
         out.reason = "unsupported signature algorithm '" + sig.algorithm + "'";
         return out;
     }
-    const TrustedKey* key = store.find(sig.keyId);
+    TrustedKey const* key = store.find(sig.keyId);
     if (!key) {
         out.reason = "the signing key '" + sig.keyId + "' is not trusted on this device";
         return out;
@@ -183,4 +206,4 @@ VerifyOutcome verifyPackageSignature(const AppEntry& app, const PackageBuild& bu
     return out;
 }
 
-}  // namespace exile
+} // namespace exile

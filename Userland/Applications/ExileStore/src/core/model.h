@@ -1,4 +1,11 @@
+/*
+ * Copyright (c) 2026, the Exile OS developers
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
 #pragma once
+
 // Typed catalog model. Application identity (AppEntry) is separate from the
 // device-specific builds (PackageBuild), so one app can ship several builds.
 
@@ -12,17 +19,29 @@ namespace exile {
 
 // "Any" is only valid in a build's device list (a universal build, e.g. a web app that
 // adapts to any screen). A DeviceProfile is always one concrete class.
-enum class DeviceClass { Desktop, Mobile, Tablet, Tv, Other, Any };
-enum class Arch { X86_64, Aarch64, Riscv64, Any };
-enum class PackageKind { Native, CompatibilityLayer, Web };
-enum class ReleaseChannel { Stable, Beta, Nightly };
+enum class DeviceClass { Desktop,
+    Mobile,
+    Tablet,
+    Tv,
+    Other,
+    Any };
+enum class Arch { X86_64,
+    Aarch64,
+    Riscv64,
+    Any };
+enum class PackageKind { Native,
+    CompatibilityLayer,
+    Web };
+enum class ReleaseChannel { Stable,
+    Beta,
+    Nightly };
 
-std::string_view toString(DeviceClass v);   // wire name, e.g. "desktop"
-std::string_view toString(Arch v);          // "x86_64", "aarch64", "riscv64", "any"
-std::string_view toString(PackageKind v);   // "native", "compat-layer", "web"
+std::string_view toString(DeviceClass v); // wire name, e.g. "desktop"
+std::string_view toString(Arch v);        // "x86_64", "aarch64", "riscv64", "any"
+std::string_view toString(PackageKind v); // "native", "compat-layer", "web"
 std::string_view toString(ReleaseChannel v);
 
-std::string displayName(DeviceClass v);     // "Desktop", "Mobile", ...
+std::string displayName(DeviceClass v); // "Desktop", "Mobile", ...
 std::string displayName(PackageKind v);
 
 std::optional<DeviceClass> parseDeviceClass(std::string_view s);
@@ -37,13 +56,13 @@ struct Publisher {
 };
 
 struct Permission {
-    std::string id;      // e.g. "network", "camera"
-    std::string reason;  // the publisher's own explanation (shown alongside ours)
+    std::string id;     // e.g. "network", "camera"
+    std::string reason; // the publisher's own explanation (shown alongside ours)
 };
 
 struct Dependency {
     std::string appId;
-    std::string minVersion;  // empty => any version
+    std::string minVersion; // empty => any version
 };
 
 // Metadata only. It is NOT trusted: public keys live in the separate trust store.
@@ -54,16 +73,16 @@ struct SignatureMetadata {
 };
 
 struct PackageBuild {
-    std::string id;  // unique inside the app, e.g. "desktop-x86_64"
+    std::string id; // unique inside the app, e.g. "desktop-x86_64"
     PackageKind kind = PackageKind::Native;
     std::vector<DeviceClass> devices;
     std::vector<Arch> architectures;
-    std::string minimumOsVersion;  // empty => no minimum
-    std::string version;           // empty => the app's currentVersion
-    std::string url;               // https://, file:// or a safe relative path
-    std::string sha256;            // lowercase hex digest of the package file
-    uint64_t downloadSize = 0;     // bytes, 0 => unknown
-    uint64_t packageSize = 0;      // installed size in bytes, 0 => unknown
+    std::string minimumOsVersion; // empty => no minimum
+    std::string version;          // empty => the app's currentVersion
+    std::string url;              // https://, file:// or a safe relative path
+    std::string sha256;           // lowercase hex digest of the package file
+    uint64_t downloadSize = 0;    // bytes, 0 => unknown
+    uint64_t packageSize = 0;     // installed size in bytes, 0 => unknown
     SignatureMetadata signature;
     ReleaseChannel channel = ReleaseChannel::Stable;
     std::vector<Dependency> dependencies;
@@ -95,13 +114,13 @@ struct AppEntry {
     std::string publishedAt;
     std::string updatedAt;
     bool featured = false;
-    std::optional<Rating> rating;  // only present when real data exists
+    std::optional<Rating> rating; // only present when real data exists
     std::vector<PackageBuild> packages;
 
     // Derived views over `packages`.
     std::vector<DeviceClass> supportedDevices() const;
     std::vector<Arch> supportedArchitectures() const;
-    std::string minimumOsVersion() const;  // lowest minimum across builds, empty if none
+    std::string minimumOsVersion() const; // lowest minimum across builds, empty if none
 };
 
 struct Category {
@@ -112,12 +131,12 @@ struct Category {
 struct Catalog {
     int schemaVersion = 1;
     std::string generatedAt;
-    std::string baseDir;  // directory used to resolve relative package paths
+    std::string baseDir; // directory used to resolve relative package paths
     std::vector<Category> categories;
     std::vector<AppEntry> apps;
 
-    const AppEntry* find(std::string_view appId) const;
-    const Category* findCategory(std::string_view id) const;
+    AppEntry const* find(std::string_view appId) const;
+    Category const* findCategory(std::string_view id) const;
 };
 
-}  // namespace exile
+} // namespace exile

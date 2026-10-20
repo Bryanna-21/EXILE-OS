@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2026, the Exile OS developers
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
 #include <Kernel/Boot/Exile/BootGuardian.h>
 
 namespace Exile::Boot {
@@ -149,11 +155,151 @@ void sha256(void const* data, size_t size, BootMeasurement& measurement)
     }
 }
 
-bool verify_kernel_integrity(void const*, size_t)
+char const* verify_status_to_string(VerifyStatus status)
 {
-    // The expected digest will come from the signed boot manifest.
-    // Until that manifest exists, measurement remains the only operation.
-    return true;
+    switch (status) {
+    case VerifyStatus::Ok:
+        return "ok";
+    case VerifyStatus::InvalidArgument:
+        return "invalid argument";
+    case VerifyStatus::MissingManifest:
+        return "boot manifest is missing";
+    case VerifyStatus::MalformedManifest:
+        return "boot manifest is malformed";
+    case VerifyStatus::UnsupportedVersion:
+        return "boot manifest version is not supported";
+    case VerifyStatus::UnsupportedAlgorithm:
+        return "boot manifest uses an unsupported algorithm";
+    case VerifyStatus::NoTrustAnchor:
+        return "no trust anchor is configured";
+    case VerifyStatus::UnknownKey:
+        return "boot manifest is signed by an unknown key";
+    case VerifyStatus::BadSignature:
+        return "boot manifest signature is invalid";
+    case VerifyStatus::SizeMismatch:
+        return "kernel image size does not match the boot manifest";
+    case VerifyStatus::DigestMismatch:
+        return "kernel image digest does not match the boot manifest";
+    }
+    return "unknown verification status";
+}
+
+void compute_key_id(u8 const (&public_key)[ED25519_PUBLIC_KEY_SIZE], u8 (&key_id)[KEY_ID_SIZE])
+{
+    BootMeasurement measurement;
+    sha256(public_key, sizeof(public_key), measurement);
+    for (size_t i = 0; i < KEY_ID_SIZE; ++i)
+        key_id[i] = measurement.digest[i];
+}
+
+// Compares without an early exit, so the running time does not depend on where the inputs differ.
+static bool equal_constant_time(u8 const* a, u8 const* b, size_t size)
+{
+    u8 difference = 0;
+    for (size_t i = 0; i < size; ++i)
+        difference |= a[i] ^ b[i];
+    return difference == 0;
+}
+
+VerifyStatus parse_manifest(u8 const* data, size_t size, BootManifest& manifest)
+{
+    if (data == nullptr || size == 0)
+        return VerifyStatus::MissingManifest;
+
+    // Exact length only: truncated input would read out of bounds and trailing bytes would make the encoding ambiguous.
+    if (size != MANIFEST_SIZE)
+        return VerifyStatus::MalformedManifest;
+
+    for (size_t i = 0; i < sizeof(MANIFEST_MAGIC); ++i) {
+        if (data[i] != MANIFEST_MAGIC[i])
+            return VerifyStatus::MalformedManifest;
+    }
+
+    BootManifest parsed;
+    parsed.version = static_cast<u16>(Detail::load_le(data + 4, 2));
+    parsed.flags = static_cast<u16>(Detail::load_le(data + 6, 2));
+    parsed.hash_algorithm = static_cast<u16>(Detail::load_le(data + 8, 2));
+    parsed.signature_algorithm = static_cast<u16>(Detail::load_le(data + 10, 2));
+    parsed.os_version = static_cast<u32>(Detail::load_le(data + 12, 4));
+    parsed.kernel_size = Detail::load_le(data + 16, 8);
+
+    if (parsed.version != MANIFEST_VERSION)
+        return VerifyStatus::UnsupportedVersion;
+
+    // No flags are defined. Rejecting unknown bits keeps a future flag from being silently ignored by this verifier.
+    if (parsed.flags != 0)
+        return VerifyStatus::MalformedManifest;
+
+    if (parsed.hash_algorithm != HASH_ALGORITHM_SHA256 || parsed.signature_algorithm != SIGNATURE_ALGORITHM_ED25519)
+        return VerifyStatus::UnsupportedAlgorithm;
+
+    // An empty kernel image is never valid.
+    if (parsed.kernel_size == 0)
+        return VerifyStatus::MalformedManifest;
+
+    for (size_t i = 0; i < KEY_ID_SIZE; ++i)
+        parsed.key_id[i] = data[24 + i];
+    for (size_t i = 0; i < SHA256_DIGEST_SIZE; ++i)
+        parsed.kernel_sha256[i] = data[32 + i];
+    for (size_t i = 0; i < ED25519_SIGNATURE_SIZE; ++i)
+        parsed.signature[i] = data[MANIFEST_SIGNATURE_OFFSET + i];
+
+    manifest = parsed;
+    return VerifyStatus::Ok;
+}
+
+VerifyStatus verify_kernel_integrity(
+    u8 const* kernel, size_t kernel_size,
+    u8 const* manifest_bytes, size_t manifest_size,
+    TrustAnchor const* trust_anchors, size_t trust_anchor_count,
+    SignatureVerifyFunction verify_signature)
+{
+    if (kernel == nullptr || kernel_size == 0 || verify_signature == nullptr)
+        return VerifyStatus::InvalidArgument;
+
+    // With nothing to trust, nothing can be authenticated. Fail closed instead of treating this as "unchecked".
+    if (trust_anchors == nullptr || trust_anchor_count == 0)
+        return VerifyStatus::NoTrustAnchor;
+
+    BootManifest manifest;
+    if (auto status = parse_manifest(manifest_bytes, manifest_size, manifest); status != VerifyStatus::Ok)
+        return status;
+
+    // The signed region is re-serialized from the parsed fields. parse_manifest accepts only one encoding of
+    // every field, so this is byte-for-byte what was in the input.
+    u8 signed_region[MANIFEST_SIGNED_SIZE];
+    serialize_signed_region(manifest, signed_region);
+    u8 message[SIGNING_MESSAGE_SIZE];
+    build_signing_message(signed_region, message);
+
+    // Authenticate the manifest before trusting any value inside it.
+    bool key_known = false;
+    bool signature_valid = false;
+    for (size_t i = 0; i < trust_anchor_count; ++i) {
+        u8 anchor_key_id[KEY_ID_SIZE];
+        compute_key_id(trust_anchors[i].public_key, anchor_key_id);
+        if (!equal_constant_time(anchor_key_id, manifest.key_id, KEY_ID_SIZE))
+            continue;
+        key_known = true;
+        if (verify_signature(trust_anchors[i].public_key, manifest.signature, message, sizeof(message))) {
+            signature_valid = true;
+            break;
+        }
+    }
+    if (!key_known)
+        return VerifyStatus::UnknownKey;
+    if (!signature_valid)
+        return VerifyStatus::BadSignature;
+
+    if (manifest.kernel_size != static_cast<u64>(kernel_size))
+        return VerifyStatus::SizeMismatch;
+
+    BootMeasurement measurement;
+    sha256(kernel, kernel_size, measurement);
+    if (!equal_constant_time(measurement.digest, manifest.kernel_sha256, SHA256_DIGEST_SIZE))
+        return VerifyStatus::DigestMismatch;
+
+    return VerifyStatus::Ok;
 }
 
 }

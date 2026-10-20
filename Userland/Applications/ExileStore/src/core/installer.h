@@ -1,4 +1,11 @@
+/*
+ * Copyright (c) 2026, the Exile OS developers
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
 #pragma once
+
 // Install / update / uninstall orchestration.
 //
 // Pipeline (each stage is an explicit, validated state transition):
@@ -15,12 +22,12 @@
 #include <string>
 #include <vector>
 
-#include "core/backend.h"
-#include "core/device.h"
-#include "core/library.h"
-#include "core/model.h"
-#include "core/transport.h"
-#include "core/trust.h"
+#include "backend.h"
+#include "device.h"
+#include "library.h"
+#include "model.h"
+#include "transport.h"
+#include "trust.h"
 
 namespace exile {
 
@@ -37,23 +44,24 @@ enum class JobState {
     Cancelled,
 };
 
-enum class JobKind { Install, Update };
+enum class JobKind { Install,
+    Update };
 
-const char* toString(JobState s);
+char const* toString(JobState s);
 bool isTerminal(JobState s);
 bool isValidTransition(JobState from, JobState to);
 
 struct InstallerEnv {
-    const Catalog* catalog = nullptr;
-    const DeviceProfile* device = nullptr;
+    Catalog const* catalog = nullptr;
+    DeviceProfile const* device = nullptr;
     Library* library = nullptr;
     IPackageBackend* backend = nullptr;
     ITransport* transport = nullptr;
-    const TrustStore* trust = nullptr;
-    const ISignatureVerifier* verifier = nullptr;
+    TrustStore const* trust = nullptr;
+    ISignatureVerifier const* verifier = nullptr;
     std::filesystem::path cacheDir;
     // Free bytes at a path; defaults to std::filesystem::space. Injectable for tests.
-    std::function<std::optional<uint64_t>(const std::filesystem::path&)> freeSpace;
+    std::function<std::optional<uint64_t>(std::filesystem::path const&)> freeSpace;
 };
 
 struct JobProgress {
@@ -65,9 +73,9 @@ struct JobProgress {
 
 struct JobResult {
     JobState finalState = JobState::Failed;
-    std::string error;                 // plain-language reason when not Succeeded
-    std::string detail;                // optional extra information (e.g. warnings)
-    std::vector<JobState> trail;       // every state visited, in order
+    std::string error;           // plain-language reason when not Succeeded
+    std::string detail;          // optional extra information (e.g. warnings)
+    std::vector<JobState> trail; // every state visited, in order
     bool ok() const { return finalState == JobState::Succeeded; }
 };
 
@@ -75,16 +83,16 @@ class InstallJob {
 public:
     InstallJob(InstallerEnv env, std::string appId, JobKind kind);
 
-    JobResult run();                         // blocking
-    std::future<JobResult> runAsync();       // runs on a worker thread
-    JobProgress progress() const;            // thread-safe snapshot
+    JobResult run();                   // blocking
+    std::future<JobResult> runAsync(); // runs on a worker thread
+    JobProgress progress() const;      // thread-safe snapshot
     CancelToken& cancelToken() { return cancel_; }
 
 private:
     bool transition(JobState to, std::string message = {});
     JobResult finish(JobState terminal, std::string error, std::string detail = {});
     void setProgress(uint64_t done, uint64_t total);
-    void record(const std::string& outcome, const std::string& version, const std::string& detail);
+    void record(std::string const& outcome, std::string const& version, std::string const& detail);
 
     InstallerEnv env_;
     std::string appId_;
@@ -98,10 +106,10 @@ private:
 struct UninstallResult {
     bool ok = false;
     std::string error;
-    std::vector<std::string> blockedBy;  // installed apps that depend on the target
+    std::vector<std::string> blockedBy; // installed apps that depend on the target
 };
 
 // Refuses when other installed apps depend on this one, unless force is set.
-UninstallResult uninstallApp(InstallerEnv& env, const std::string& appId, bool force = false);
+UninstallResult uninstallApp(InstallerEnv& env, std::string const& appId, bool force = false);
 
-}  // namespace exile
+} // namespace exile

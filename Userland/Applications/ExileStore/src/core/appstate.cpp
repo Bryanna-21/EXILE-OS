@@ -1,10 +1,17 @@
-#include "core/appstate.h"
+/*
+ * Copyright (c) 2026, the Exile OS developers
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
 
-#include "core/version.h"
+#include "appstate.h"
+
+#include "version.h"
 
 namespace exile {
 
-AppStatus computeStatus(const AppEntry& app, const Library& library, const DeviceProfile& device, bool canLaunch) {
+AppStatus computeStatus(AppEntry const& app, Library const& library, DeviceProfile const& device, bool canLaunch)
+{
     AppStatus s;
     s.compat = resolveCompatibility(app, device);
     s.installed = library.find(app.appId);
@@ -22,7 +29,8 @@ AppStatus computeStatus(const AppEntry& app, const Library& library, const Devic
             s.label = "Installed";
             s.note = "Version " + s.installed->version + " is installed.";
         }
-        if (!s.compat.ok()) s.note = "Installed. " + s.compat.reason;
+        if (!s.compat.ok())
+            s.note = "Installed. " + s.compat.reason;
         return s;
     }
 
@@ -37,16 +45,20 @@ AppStatus computeStatus(const AppEntry& app, const Library& library, const Devic
     return s;
 }
 
-std::vector<UpdateInfo> findUpdates(const Catalog& catalog, const Library& library, const DeviceProfile& device) {
+std::vector<UpdateInfo> findUpdates(Catalog const& catalog, Library const& library, DeviceProfile const& device)
+{
     std::vector<UpdateInfo> out;
-    for (const auto& inst : library.installed()) {
-        const AppEntry* app = catalog.find(inst.appId);
-        if (!app) continue;
+    for (auto const& inst : library.installed()) {
+        AppEntry const* app = catalog.find(inst.appId);
+        if (!app)
+            continue;
         Compatibility c = resolveCompatibility(*app, device);
-        if (!c.ok()) continue;
-        if (compareVersionStrings(c.version, inst.version) > 0) out.push_back({app, inst.version, c.version, app->releaseNotes});
+        if (!c.ok())
+            continue;
+        if (compareVersionStrings(c.version, inst.version) > 0)
+            out.push_back({ app, inst.version, c.version, app->releaseNotes });
     }
     return out;
 }
 
-}  // namespace exile
+} // namespace exile

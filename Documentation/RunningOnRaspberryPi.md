@@ -20,7 +20,7 @@ Please follow [build instructions](BuildInstructions.md) to download and build S
 Use the following command to build and run the AArch64 version of the system in an emulated Pi 3:
 
 ```console
-SERENITY_RUN=raspi3b Meta/exile.sh run aarch64
+EXILE_RUN=raspi3b Meta/exile.sh run aarch64
 ```
 
 Replace `raspi3b` with `raspi4b` if you want a Pi 4.
@@ -30,7 +30,7 @@ It should build Serenity and open a QEMU window. It should reach the desktop aft
 You can also run it under gdb with:
 
 ```console
-SERENITY_RUN=raspi3b Meta/exile.sh gdb aarch64
+EXILE_RUN=raspi3b Meta/exile.sh gdb aarch64
 ```
 
 ## Running on real hardware using a USB drive

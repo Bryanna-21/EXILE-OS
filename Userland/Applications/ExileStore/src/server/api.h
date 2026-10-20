@@ -1,4 +1,11 @@
+/*
+ * Copyright (c) 2026, the Exile OS developers
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
 #pragma once
+
 // Request handler for the local web front-end: static assets plus a small JSON API
 // over app::Engine. All request-level security decisions live here:
 //
@@ -13,8 +20,8 @@
 
 #include <string>
 
-#include "app/engine.h"
-#include "server/http.h"
+#include "../app/engine.h"
+#include "http.h"
 
 namespace exile::server {
 
@@ -23,18 +30,18 @@ public:
     Api(app::Engine& engine, std::string token);
 
     void setPort(unsigned short port) { port_ = port; }
-    Response handle(const Request& req);
+    Response handle(Request const& req);
 
     // 256 bits from the OS random source; empty (and error set) if unavailable.
     static std::string makeToken(std::string& error);
 
 private:
-    Response dispatchApi(const Request& req);
-    Response serveAsset(const Request& req);
+    Response dispatchApi(Request const& req);
+    Response serveAsset(Request const& req);
 
     app::Engine& engine_;
     std::string token_;
     unsigned short port_ = 0;
 };
 
-}  // namespace exile::server
+} // namespace exile::server

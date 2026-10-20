@@ -22,6 +22,11 @@ static constexpr int WindowsProtRead = 0x1;
 static constexpr int WindowsProtWrite = 0x2;
 static constexpr int WindowsMapShared = 0x1;
 static constexpr int WindowsMapPrivate = 0x2;
+#else
+static constexpr int WindowsProtRead = PROT_READ;
+static constexpr int WindowsProtWrite = PROT_WRITE;
+static constexpr int WindowsMapShared = MAP_SHARED;
+static constexpr int WindowsMapPrivate = MAP_PRIVATE;
 #endif
 
 namespace Core {

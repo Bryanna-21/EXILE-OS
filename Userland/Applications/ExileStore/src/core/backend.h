@@ -1,4 +1,11 @@
+/*
+ * Copyright (c) 2026, the Exile OS developers
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
 #pragma once
+
 // Package-manager adapter. The store never installs anything itself; it hands a
 // verified package to an IPackageBackend and trusts only the backend's own
 // confirmation (isInstalled) before reporting success.
@@ -18,7 +25,7 @@ struct InstallRequest {
     std::string appId;
     std::string version;
     std::string packageId;
-    std::filesystem::path packageFile;  // already downloaded, digest- and signature-verified
+    std::filesystem::path packageFile; // already downloaded, digest- and signature-verified
 };
 
 struct BackendResult {
@@ -34,11 +41,11 @@ public:
     virtual bool canLaunch() const = 0;
     // Where installed payloads go (used for free-space checks).
     virtual std::filesystem::path storagePath() const = 0;
-    virtual BackendResult install(const InstallRequest& request) = 0;
-    virtual BackendResult uninstall(const std::string& appId) = 0;
+    virtual BackendResult install(InstallRequest const& request) = 0;
+    virtual BackendResult uninstall(std::string const& appId) = 0;
     // Ground truth from the backend, independent of the store's own records.
-    virtual bool isInstalled(const std::string& appId, const std::string& version) const = 0;
-    virtual BackendResult launch(const std::string& appId) = 0;
+    virtual bool isInstalled(std::string const& appId, std::string const& version) const = 0;
+    virtual BackendResult launch(std::string const& appId) = 0;
     // Cleans up after a crash/interruption (half-finished staging, orphaned backups).
     virtual void recoverInterrupted() = 0;
 };
@@ -50,16 +57,16 @@ public:
     std::string name() const override { return "Local development prefix"; }
     bool canLaunch() const override { return false; }
     std::filesystem::path storagePath() const override { return prefix_; }
-    BackendResult install(const InstallRequest& request) override;
-    BackendResult uninstall(const std::string& appId) override;
-    bool isInstalled(const std::string& appId, const std::string& version) const override;
-    BackendResult launch(const std::string& appId) override;
+    BackendResult install(InstallRequest const& request) override;
+    BackendResult uninstall(std::string const& appId) override;
+    bool isInstalled(std::string const& appId, std::string const& version) const override;
+    BackendResult launch(std::string const& appId) override;
     void recoverInterrupted() override;
 
-    std::filesystem::path installDir(const std::string& appId) const;  // <prefix>/apps/<id>/current
+    std::filesystem::path installDir(std::string const& appId) const; // <prefix>/apps/<id>/current
 
 private:
     std::filesystem::path prefix_;
 };
 
-}  // namespace exile
+} // namespace exile

@@ -1,5 +1,11 @@
+/*
+ * Copyright (c) 2026, the Exile OS developers
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
+#include "util.h"
 #include <cstdlib>
-#include "core/util.h"
 
 #include <algorithm>
 #include <cstdio>
@@ -9,7 +15,8 @@
 
 namespace exile::util {
 
-bool hasControlChars(std::string_view s, bool allowNewlineAndTab) {
+bool hasControlChars(std::string_view s, bool allowNewlineAndTab)
+{
     for (unsigned char c : s) {
         if (c == 0)
             return true;
@@ -22,7 +29,8 @@ bool hasControlChars(std::string_view s, bool allowNewlineAndTab) {
     return false;
 }
 
-bool isSafeRelativePath(std::string_view path) {
+bool isSafeRelativePath(std::string_view path)
+{
     if (path.empty() || path.size() > 1024)
         return false;
     if (path.front() == '/')
@@ -51,7 +59,8 @@ bool isSafeRelativePath(std::string_view path) {
     return true;
 }
 
-std::string toLower(std::string_view s) {
+std::string toLower(std::string_view s)
+{
     std::string out(s);
     for (char& c : out)
         if (c >= 'A' && c <= 'Z')
@@ -59,19 +68,24 @@ std::string toLower(std::string_view s) {
     return out;
 }
 
-bool isLowerHex(std::string_view s, size_t len) {
+bool isLowerHex(std::string_view s, size_t len)
+{
     if (s.size() != len)
         return false;
     return std::all_of(s.begin(), s.end(), [](char c) { return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'); });
 }
 
-std::optional<std::vector<uint8_t>> hexDecode(std::string_view hex) {
+std::optional<std::vector<uint8_t>> hexDecode(std::string_view hex)
+{
     if (hex.size() % 2 != 0)
         return std::nullopt;
     auto nibble = [](char c) -> int {
-        if (c >= '0' && c <= '9') return c - '0';
-        if (c >= 'a' && c <= 'f') return c - 'a' + 10;
-        if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+        if (c >= '0' && c <= '9')
+            return c - '0';
+        if (c >= 'a' && c <= 'f')
+            return c - 'a' + 10;
+        if (c >= 'A' && c <= 'F')
+            return c - 'A' + 10;
         return -1;
     };
     std::vector<uint8_t> out;
@@ -86,8 +100,9 @@ std::optional<std::vector<uint8_t>> hexDecode(std::string_view hex) {
     return out;
 }
 
-std::string hexEncode(const uint8_t* data, size_t size) {
-    static const char* digits = "0123456789abcdef";
+std::string hexEncode(uint8_t const* data, size_t size)
+{
+    static char const* digits = "0123456789abcdef";
     std::string out;
     out.reserve(size * 2);
     for (size_t i = 0; i < size; ++i) {
@@ -97,8 +112,9 @@ std::string hexEncode(const uint8_t* data, size_t size) {
     return out;
 }
 
-std::string humanSize(uint64_t bytes) {
-    static const char* units[] = {"B", "KB", "MB", "GB", "TB"};
+std::string humanSize(uint64_t bytes)
+{
+    static char const* units[] = { "B", "KB", "MB", "GB", "TB" };
     double v = static_cast<double>(bytes);
     size_t u = 0;
     while (v >= 1000.0 && u < 4) {
@@ -113,9 +129,10 @@ std::string humanSize(uint64_t bytes) {
     return buf;
 }
 
-std::string nowIso8601() {
+std::string nowIso8601()
+{
     std::time_t t = std::time(nullptr);
-    std::tm tm{};
+    std::tm tm {};
 #ifdef _WIN32
     gmtime_s(&tm, &t);
 #else
@@ -126,32 +143,38 @@ std::string nowIso8601() {
     return buf;
 }
 
-std::optional<std::string> readFile(const std::filesystem::path& path, uint64_t maxBytes, std::string* error) {
+std::optional<std::string> readFile(std::filesystem::path const& path, uint64_t maxBytes, std::string* error)
+{
     std::error_code ec;
     auto size = std::filesystem::file_size(path, ec);
     if (ec) {
-        if (error) *error = "cannot read " + path.string() + ": " + ec.message();
+        if (error)
+            *error = "cannot read " + path.string() + ": " + ec.message();
         return std::nullopt;
     }
     if (size > maxBytes) {
-        if (error) *error = path.string() + " is too large";
+        if (error)
+            *error = path.string() + " is too large";
         return std::nullopt;
     }
     std::ifstream in(path, std::ios::binary);
     if (!in) {
-        if (error) *error = "cannot open " + path.string();
+        if (error)
+            *error = "cannot open " + path.string();
         return std::nullopt;
     }
     std::string data(static_cast<size_t>(size), '\0');
     in.read(data.data(), static_cast<std::streamsize>(size));
     if (static_cast<uint64_t>(in.gcount()) != size) {
-        if (error) *error = "short read on " + path.string();
+        if (error)
+            *error = "short read on " + path.string();
         return std::nullopt;
     }
     return data;
 }
 
-bool writeFileAtomic(const std::filesystem::path& path, std::string_view data, std::string& error) {
+bool writeFileAtomic(std::filesystem::path const& path, std::string_view data, std::string& error)
+{
     std::error_code ec;
     if (path.has_parent_path())
         std::filesystem::create_directories(path.parent_path(), ec);
@@ -179,28 +202,34 @@ bool writeFileAtomic(const std::filesystem::path& path, std::string_view data, s
     return true;
 }
 
-bool containsIgnoreCase(std::string_view haystack, std::string_view needle) {
+bool containsIgnoreCase(std::string_view haystack, std::string_view needle)
+{
     if (needle.empty())
         return true;
     return toLower(haystack).find(toLower(needle)) != std::string::npos;
 }
 
-std::filesystem::path defaultDataDir() {
+std::filesystem::path defaultDataDir()
+{
     namespace fs = std::filesystem;
-    if (const char* x = std::getenv("XDG_DATA_HOME")) return fs::path(x) / "exile-store";
-    if (const char* h = std::getenv("HOME")) return fs::path(h) / ".local/share/exile-store";
+    if (char const* x = std::getenv("XDG_DATA_HOME"))
+        return fs::path(x) / "exile-store";
+    if (char const* h = std::getenv("HOME"))
+        return fs::path(h) / ".local/share/exile-store";
     return fs::path(".exile-store");
 }
 
-std::filesystem::path findDefaultCatalog() {
+std::filesystem::path findDefaultCatalog()
+{
     namespace fs = std::filesystem;
-    for (fs::path p : {fs::path("data/catalog/catalog.json"), fs::path("../data/catalog/catalog.json"),
-                       fs::path("/usr/local/share/exile-store/catalog/catalog.json"),
-                       fs::path("/usr/share/exile-store/catalog/catalog.json")}) {
+    for (fs::path p : { fs::path("data/catalog/catalog.json"), fs::path("../data/catalog/catalog.json"),
+             fs::path("/usr/local/share/exile-store/catalog/catalog.json"),
+             fs::path("/usr/share/exile-store/catalog/catalog.json") }) {
         std::error_code ec;
-        if (fs::exists(p, ec)) return p;
+        if (fs::exists(p, ec))
+            return p;
     }
     return "data/catalog/catalog.json";
 }
 
-}  // namespace exile::util
+} // namespace exile::util

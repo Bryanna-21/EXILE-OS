@@ -1,13 +1,12 @@
-#include <AK/Platform.h>
-
-#if !defined(AK_OS_WINDOWS)
-#include <AK/Platform.h>
-
 /*
  * Copyright (c) 2022, Peter Elliott <pelliott@serenityos.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
+
+#include <AK/Platform.h>
+
+#if !defined(AK_OS_WINDOWS)
 
 #include <LibCore/Directory.h>
 #include <LibCore/SessionManagement.h>

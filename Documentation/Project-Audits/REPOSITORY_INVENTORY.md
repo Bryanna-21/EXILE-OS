@@ -1,5 +1,8 @@
 # REPOSITORY_INVENTORY.md (PROPOSED DRAFT, not written to the repo)
 
+> **Status update (branch `fix/boot-integrity-and-ci`, based on `72c3049`; changes uncommitted pending review).**
+> This audit was written against `18a3c70`. Verified since then, by running code on a development host: the boot guardian now implements Ed25519-authenticated verification (12 unit tests, 24 tamper checks pass); the Store host build passes 2/2 tests; the repo style checks pass. `.tmp/` is no longer tracked. **Not verified:** any full-OS build, QEMU boot, CI result, or the prekernel target compile. Verified boot is opt-in and not proven end to end; see `Documentation/BootIntegrity.md`. Items below not mentioned here remain proposals.
+
 Scope: public `Bryanna-21/EXILE-OS`, branch `main`, commit `18a3c7007cf61eca2f7b26046620a9f6440c42a3`
 ("Integrate Exile Store and harden package installation", Bryanna, 2026-10-16 23:28 +0300).
 Method: depth-1 clone read-only; 18,936 tracked files. Local `~/Downloads/EXILE-OS` was NOT reachable, so local

@@ -20,6 +20,15 @@ from subprocess import run
 from typing import Any, Callable, Literal
 import shlex
 
+
+def exile_env(name: str, default: str | None = None) -> str | None:
+    """Read EXILE_<name>, falling back to the legacy SERENITY_<name> spelling."""
+    value = environ.get(f"EXILE_{name}")
+    if value is None:
+        value = environ.get(f"SERENITY_{name}")
+    return value if value is not None else default
+
+
 QEMU_MINIMUM_REQUIRED_MAJOR_VERSION = 6
 QEMU_MINIMUM_REQUIRED_MINOR_VERSION = 2
 
@@ -302,7 +311,7 @@ def kvm_usable() -> bool:
 
 
 def determine_qemu_kind() -> QEMUKind:
-    if which("wslpath") is not None and environ.get("SERENITY_NATIVE_WINDOWS_QEMU", "1") == "1":
+    if which("wslpath") is not None and exile_env("NATIVE_WINDOWS_QEMU", "1") == "1":
         # Assume native Windows QEMU for now,
         # we might discard that assuption later when we properly
         # look for the binary.
@@ -348,13 +357,13 @@ def determine_boot_drive_type() -> BootDriveType:
 
 
 def detect_ram_size() -> str | None:
-    return environ.get("SERENITY_RAM_SIZE", "2G")
+    return exile_env("RAM_SIZE", "2G")
 
 
 def set_up_qemu_binary(config: Configuration):
     qemu_binary_basename: str | None = None
-    if "SERENITY_QEMU_BIN" in environ:
-        qemu_binary_basename = environ.get("SERENITY_QEMU_BIN")
+    if exile_env("QEMU_BIN") is not None:
+        qemu_binary_basename = exile_env("QEMU_BIN")
     else:
         if config.architecture == Arch.Aarch64:
             qemu_binary_basename = "qemu-system-aarch64"
@@ -432,7 +441,7 @@ def check_qemu_version(config: Configuration):
 
 
 def set_up_virtualization_support(config: Configuration):
-    provided_virtualization_enable = environ.get("SERENITY_VIRTUALIZATION_SUPPORT")
+    provided_virtualization_enable = exile_env("VIRTUALIZATION_SUPPORT")
     # The user config always forces the platform-appropriate virtualizer to be used,
     # even if we couldn't detect it otherwise; this is intended behavior.
     if provided_virtualization_enable is not None:
@@ -467,7 +476,7 @@ def set_up_basic_kernel_cmdline(config: Configuration):
 
 
 def set_up_disk_image_path(config: Configuration):
-    provided_disk_image = environ.get("SERENITY_DISK_IMAGE")
+    provided_disk_image = exile_env("DISK_IMAGE")
     if provided_disk_image is not None:
         config.disk_image = Path(provided_disk_image)
     else:
@@ -489,7 +498,7 @@ def set_up_cpu(config: Configuration):
         # Setting -cpu to "max" breaks on QEMU 9 with WHPX whereas the default cpu is more broadly compatible
         config.qemu_cpu = None
     else:
-        provided_cpu = environ.get("SERENITY_QEMU_CPU")
+        provided_cpu = exile_env("QEMU_CPU")
         if provided_cpu is not None:
             config.qemu_cpu = provided_cpu
 
@@ -498,7 +507,7 @@ def set_up_cpu_count(config: Configuration):
     if config.architecture != Arch.x86_64:
         return
 
-    provided_cpu_count = environ.get("SERENITY_CPUS")
+    provided_cpu_count = exile_env("CPUS")
     if provided_cpu_count is not None:
         try:
             config.cpu_count = int(provided_cpu_count)
@@ -524,7 +533,7 @@ def set_up_spice(config: Configuration):
     # Only the default machine has virtio-serial (required for the spice agent).
     if config.machine_type != MachineType.Default:
         return
-    use_non_qemu_spice = environ.get("SERENITY_SPICE") == "1"
+    use_non_qemu_spice = exile_env("SPICE") == "1"
     chardev_info = run(
         [str(config.qemu_binary), "-chardev", "help"],
         capture_output=True,
@@ -573,7 +582,7 @@ def set_up_audio_backend(config: Configuration):
 
 
 def set_up_audio_hardware(config: Configuration):
-    provided_audio_hardware = environ.get("SERENITY_AUDIO_HARDWARE", "intelhda")
+    provided_audio_hardware = exile_env("AUDIO_HARDWARE", "intelhda")
     if provided_audio_hardware == "ac97":
         config.audio_devices = ["ac97,audiodev=snd0"]
     elif provided_audio_hardware == "intelhda":
@@ -595,13 +604,13 @@ def has_virgl() -> bool:
 
 
 def set_up_screens(config: Configuration):
-    provided_screen_count_unparsed = environ.get("SERENITY_SCREENS", "1")
+    provided_screen_count_unparsed = exile_env("SCREENS", "1")
     try:
         config.screen_count = int(provided_screen_count_unparsed)
     except ValueError:
         raise RunError(f"Invalid screen count {provided_screen_count_unparsed}")
 
-    provided_display_backend = environ.get("SERENITY_QEMU_DISPLAY_BACKEND")
+    provided_display_backend = exile_env("QEMU_DISPLAY_BACKEND")
     if provided_display_backend is not None:
         config.display_backend = provided_display_backend
     else:
@@ -640,16 +649,16 @@ def set_up_screens(config: Configuration):
 
 
 def set_up_display_device(config: Configuration):
-    config.enable_gl = environ.get("SERENITY_GL") == "1"
-    provided_display_device = environ.get("SERENITY_QEMU_DISPLAY_DEVICE")
+    config.enable_gl = exile_env("GL") == "1"
+    provided_display_device = exile_env("QEMU_DISPLAY_DEVICE")
     if provided_display_device is not None:
         config.display_device = provided_display_device
     elif config.enable_gl:
         # QEMU appears to not support the GL backend for VirtIO GPU variant on macOS.
         if config.qemu_kind == QEMUKind.MacOS:
-            raise RunError("SERENITY_GL is not supported since there's no GL backend on macOS")
+            raise RunError("EXILE_GL is not supported since there's no GL backend on macOS")
         elif config.screen_count > 1:
-            raise RunError("SERENITY_GL and multi-monitor support cannot be set up simultaneously")
+            raise RunError("EXILE_GL and multi-monitor support cannot be set up simultaneously")
         config.display_device = "virtio-vga-gl"
 
     elif config.screen_count > 1:
@@ -716,7 +725,7 @@ def determine_host_address() -> str:
 
 
 def set_up_gdb(config: Configuration):
-    config.enable_gdb = environ.get("SERENITY_DISABLE_GDB_SOCKET") != "1"
+    config.enable_gdb = exile_env("DISABLE_GDB_SOCKET") != "1"
     if config.qemu_kind == QEMUKind.NativeWindows or (
         config.virtualization_support and config.qemu_kind == QEMUKind.MacOS
     ):
@@ -727,9 +736,9 @@ def set_up_gdb(config: Configuration):
 
 
 def set_up_network_hardware(config: Configuration):
-    config.packet_logging_arguments = (environ.get("SERENITY_PACKET_LOGGING_ARG", "")).split()
+    config.packet_logging_arguments = (exile_env("PACKET_LOGGING_ARG", "")).split()
 
-    provided_ethernet_device_type = environ.get("SERENITY_ETHERNET_DEVICE_TYPE")
+    provided_ethernet_device_type = exile_env("ETHERNET_DEVICE_TYPE")
     if provided_ethernet_device_type is not None:
         config.ethernet_device_type = provided_ethernet_device_type
 

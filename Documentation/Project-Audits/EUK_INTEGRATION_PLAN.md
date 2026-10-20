@@ -1,5 +1,8 @@
 # EUK_INTEGRATION_PLAN.md (PROPOSED DRAFT)
 
+> **Status update (branch `fix/boot-integrity-and-ci`, based on `72c3049`; changes uncommitted pending review).**
+> This audit was written against `18a3c70`. Verified since then, by running code on a development host: the boot guardian now implements Ed25519-authenticated verification (12 unit tests, 24 tamper checks pass); the Store host build passes 2/2 tests; the repo style checks pass. `.tmp/` is no longer tracked. **Not verified:** any full-OS build, QEMU boot, CI result, or the prekernel target compile. Verified boot is opt-in and not proven end to end; see `Documentation/BootIntegrity.md`. Items below not mentioned here remain proposals.
+
 Goal: an independently implemented Exile Universal Kernel (EUK), hybrid architecture, x86-64 and ARM64 first, developed
 alongside the current kernel and swapped in gradually. Starting point: the current kernel is in-kernel monolithic
 (drivers, filesystems, network stack under `Kernel/`), inherited from SerenityOS.

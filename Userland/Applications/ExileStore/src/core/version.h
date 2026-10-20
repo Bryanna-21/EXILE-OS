@@ -1,4 +1,11 @@
+/*
+ * Copyright (c) 2026, the Exile OS developers
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
 #pragma once
+
 // Semantic-version parsing and ordering (semver 2.0 precedence rules).
 
 #include <cstdint>
@@ -13,7 +20,7 @@ struct Version {
     uint64_t major = 0;
     uint64_t minor = 0;
     uint64_t patch = 0;
-    std::vector<std::string> prerelease;  // empty => a normal release
+    std::vector<std::string> prerelease; // empty => a normal release
 
     std::string str() const;
 };
@@ -22,9 +29,9 @@ struct Version {
 std::optional<Version> parseVersion(std::string_view text);
 
 // -1, 0, 1.
-int compareVersions(const Version& a, const Version& b);
+int compareVersions(Version const& a, Version const& b);
 
 // Convenience for already-validated strings; unparsable input compares as the lowest version.
 int compareVersionStrings(std::string_view a, std::string_view b);
 
-}  // namespace exile
+} // namespace exile

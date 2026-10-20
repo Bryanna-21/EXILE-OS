@@ -11,9 +11,12 @@ third-party notices continue to apply to the combined work and must be preserved
 
 License
 -------
-No license has been chosen for these files. The project owner needs to pick one that
-is compatible with the Exile OS tree this will be merged into (a Serenity-derived
-tree is typically BSD-2-Clause) before this code is distributed.
+The Exile Store source files carry "SPDX-License-Identifier: BSD-2-Clause" headers, the same license as the
+repository root (see ../../../LICENSE). The copyright line reads "the Exile OS developers", which is a
+placeholder collective name modelled on the repository's existing "the SerenityOS developers" notices: the
+project owner must confirm the correct copyright holder and license before this code is distributed, and
+qualified legal review is recommended. Earlier revisions of this file said no license had been chosen; that
+was resolved by adopting the repository's required header format, not by a recorded licensing decision.
 
 Third-party dependencies
 ------------------------

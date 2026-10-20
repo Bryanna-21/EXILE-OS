@@ -1,5 +1,12 @@
 # Repository audit
 
+> **Superseded in part.** The findings below describe the state when the Store was first written, before it was
+> merged into the Exile OS repository. It is now part of that repository (`Userland/Applications/ExileStore`),
+> built natively through `CMakeLists.txt` and, standalone, through `CMakeLists.host.cmake`. The repository audit
+> is kept in `Documentation/Project-Audits/`. The integration gaps listed in `INTEGRATION.md` and `SECURITY.md`
+> (privileged installer, enforced permissions, HTTPS transport, catalog freshness, signing-key rotation, rollback
+> protection) are still open. The original text follows unchanged.
+
 ## Findings
 
 The brief says to inspect the existing Exile OS repository first. **There was no repository to inspect.**

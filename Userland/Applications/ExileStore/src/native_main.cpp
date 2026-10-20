@@ -1,7 +1,10 @@
 /*
- * Exile Store native catalog browser.
+ * Copyright (c) 2026, the Exile OS developers
+ *
  * SPDX-License-Identifier: BSD-2-Clause
  */
+
+// Exile Store native catalog browser.
 
 #include <AK/JsonArray.h>
 #include <AK/JsonObject.h>
@@ -13,11 +16,11 @@
 #include <LibGUI/Application.h>
 #include <LibGUI/BoxLayout.h>
 #include <LibGUI/Icon.h>
+#include <LibGUI/ItemListModel.h>
 #include <LibGUI/Label.h>
 #include <LibGUI/ListView.h>
 #include <LibGUI/TextBox.h>
 #include <LibGUI/Window.h>
-#include <LibGUI/ItemListModel.h>
 #include <LibMain/Main.h>
 
 using namespace AK::Literals;

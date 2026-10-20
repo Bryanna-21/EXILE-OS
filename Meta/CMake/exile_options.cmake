@@ -17,3 +17,6 @@ exile_option(ENABLE_KERNEL_UNDEFINED_SANITIZER_ALWAYS_DEADLY ON CACHE BOOL "Make
 exile_option(ENABLE_EXTRA_KERNEL_DEBUG_SYMBOLS  OFF CACHE BOOL "Enable -Og and -ggdb3 options for Kernel code for easier debugging")
 exile_option(ENABLE_MOLD_LINKER OFF CACHE BOOL "Link the Exile OS userland with the mold linker")
 exile_option(ENABLE_USERSPACE_COVERAGE_COLLECTION OFF CACHE BOOL "Enable code coverage instrumentation for userspace binaries in clang")
+exile_option(ENABLE_BOOT_VERIFICATION OFF CACHE BOOL "Verify a signed boot manifest in the EFI prekernel and refuse to boot a kernel image that fails verification (experimental, see Documentation/BootIntegrity.md)")
+exile_option(BOOT_SIGNING_SEED "" CACHE FILEPATH "Raw 32-byte Ed25519 seed that signs the kernel boot manifest at build time. Keep it offline and never commit it. Required when ENABLE_BOOT_VERIFICATION is ON")
+exile_option(BOOT_TRUST_ANCHOR_PUBKEY "" CACHE FILEPATH "Raw 32-byte Ed25519 public key compiled into the EFI prekernel as the boot trust anchor. Required when ENABLE_BOOT_VERIFICATION is ON")

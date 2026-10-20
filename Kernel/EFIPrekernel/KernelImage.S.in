@@ -9,3 +9,5 @@
 start_of_kernel_image:
 .incbin "@PREKERNEL_KERNEL_IMAGE_PATH@"
 end_of_kernel_image:
+
+@PREKERNEL_BOOT_MANIFEST_ASM@

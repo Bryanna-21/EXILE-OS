@@ -1,4 +1,11 @@
+/*
+ * Copyright (c) 2026, the Exile OS developers
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
 #pragma once
+
 // Minimal strict JSON reader/writer. No external dependencies.
 // Strictness is intentional: duplicate object keys, trailing garbage, lone
 // surrogates and excessive nesting are all rejected, because catalog metadata
@@ -20,7 +27,12 @@ public:
 
 class Value {
 public:
-    enum class Type { Null, Bool, Number, String, Array, Object };
+    enum class Type { Null,
+        Bool,
+        Number,
+        String,
+        Array,
+        Object };
 
     Value() = default;
     static Value makeBool(bool b);
@@ -38,17 +50,17 @@ public:
     bool isBool() const { return type_ == Type::Bool; }
 
     // Non-throwing accessors: null / nullopt when the type does not match.
-    const std::string* string() const { return type_ == Type::String ? &str_ : nullptr; }
+    std::string const* string() const { return type_ == Type::String ? &str_ : nullptr; }
     std::optional<double> number() const;
     std::optional<bool> boolean() const;
     // Non-negative integer that fits in 2^53, otherwise nullopt.
     std::optional<uint64_t> unsignedInteger() const;
 
     // Object lookup (nullptr when not an object or key absent).
-    const Value* find(std::string_view key) const;
+    Value const* find(std::string_view key) const;
     // Array elements, or object values (parallel to keys()).
-    const std::vector<Value>& items() const { return items_; }
-    const std::vector<std::string>& keys() const { return keys_; }
+    std::vector<Value> const& items() const { return items_; }
+    std::vector<std::string> const& keys() const { return keys_; }
 
     // Builders (used by the serializer side).
     void push(Value v);
@@ -63,7 +75,7 @@ private:
     std::vector<std::string> keys_;
 };
 
-Value parse(std::string_view text);  // throws ParseError
-std::string dump(const Value& v, int indent = 2);
+Value parse(std::string_view text); // throws ParseError
+std::string dump(Value const& v, int indent = 2);
 
-}  // namespace exile::json
+} // namespace exile::json

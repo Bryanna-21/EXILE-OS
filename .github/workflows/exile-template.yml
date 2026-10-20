@@ -53,7 +53,7 @@ jobs:
       - name: Set Disk Size for Coverage Builds
         if: ${{ inputs.coverage == 'ON' }}
         # Using 5GiB here is arbitrary.
-        run: echo "SERENITY_DISK_SIZE_BYTES=5368709120" >> $GITHUB_ENV
+        run: echo "EXILE_DISK_SIZE_BYTES=5368709120" >> $GITHUB_ENV
 
       # === PREPARE FOR BUILDING ===
 
@@ -91,7 +91,7 @@ jobs:
           CCACHE_DIR: ${{ env.TOOLCHAIN_CCACHE_DIR }}
 
       - name: Build jakt toolchain
-        if: ${{ steps.cache-restore.output.jakt_prebuilt_hit != 'true' }}
+        if: ${{ steps.cache-restore.outputs.jakt_prebuilt_hit != 'true' }}
         run: ARCH="${{ inputs.arch }}" CXX=g++-14 ${{ github.workspace }}/Toolchain/BuildJakt.sh
 
       - name: Create Build Environment

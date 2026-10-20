@@ -1,4 +1,11 @@
+/*
+ * Copyright (c) 2026, the Exile OS developers
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
 #pragma once
+
 // Tiny self-registering test framework plus fixtures that build REAL signed
 // packages and catalogs, so installer/trust tests exercise the real code paths.
 
@@ -14,19 +21,19 @@
 #include <string>
 #include <vector>
 
-#include "core/backend.h"
-#include "core/catalog.h"
-#include "core/device.h"
-#include "core/expkg.h"
-#include "core/installer.h"
-#include "core/library.h"
-#include "core/sha256.h"
-#include "core/transport.h"
-#include "core/trust.h"
-#include "core/util.h"
+#include "../src/core/backend.h"
+#include "../src/core/catalog.h"
+#include "../src/core/device.h"
+#include "../src/core/expkg.h"
+#include "../src/core/installer.h"
+#include "../src/core/library.h"
+#include "../src/core/sha256.h"
+#include "../src/core/transport.h"
+#include "../src/core/trust.h"
+#include "../src/core/util.h"
 
 #ifdef EXILE_HAS_OPENSSL
-#include <openssl/evp.h>
+#    include <openssl/evp.h>
 #endif
 
 namespace testing {
@@ -40,17 +47,19 @@ struct Case {
     std::function<void()> fn;
 };
 
-inline std::vector<Case>& registry() {
+inline std::vector<Case>& registry()
+{
     static std::vector<Case> r;
     return r;
 }
 
 struct Registrar {
-    Registrar(const char* name, std::function<void()> fn) { registry().push_back({name, std::move(fn)}); }
+    Registrar(char const* name, std::function<void()> fn) { registry().push_back({ name, std::move(fn) }); }
 };
 
-template <typename T>
-std::string show(const T& v) {
+template<typename T>
+std::string show(T const& v)
+{
     if constexpr (std::is_enum_v<T>) {
         return std::to_string(static_cast<long long>(v));
     } else if constexpr (std::is_convertible_v<T, std::string>) {
@@ -62,41 +71,41 @@ std::string show(const T& v) {
     }
 }
 
-}  // namespace testing
+} // namespace testing
 
-#define TEST(name)                                         \
-    static void name();                                    \
+#define TEST(name)                                           \
+    static void name();                                      \
     static testing::Registrar registrar_##name(#name, name); \
     static void name()
 
-#define CHECK(cond)                                                                                      \
-    do {                                                                                                 \
-        if (!(cond)) throw testing::Failure{std::string(__FILE__) + ":" + std::to_string(__LINE__) + ": CHECK(" #cond ")"}; \
+#define CHECK(cond)                                                                                                   \
+    do {                                                                                                              \
+        if (!(cond))                                                                                                  \
+            throw testing::Failure { std::string(__FILE__) + ":" + std::to_string(__LINE__) + ": CHECK(" #cond ")" }; \
     } while (0)
 
-#define CHECK_EQ(a, b)                                                                                    \
-    do {                                                                                                  \
-        const auto va_ = (a); /* by value: operands are often temporaries or elements of temporaries */   \
-        const auto vb_ = (b);                                                                             \
-        if (!(va_ == vb_))                                                                                \
-            throw testing::Failure{std::string(__FILE__) + ":" + std::to_string(__LINE__) + ": " #a " == " #b \
-                                   "  (got " + testing::show(va_) + " vs " + testing::show(vb_) + ")"};   \
+#define CHECK_EQ(a, b)                                                                                                                                                                \
+    do {                                                                                                                                                                              \
+        const auto va_ = (a); /* by value: operands are often temporaries or elements of temporaries */                                                                               \
+        const auto vb_ = (b);                                                                                                                                                         \
+        if (!(va_ == vb_))                                                                                                                                                            \
+            throw testing::Failure { std::string(__FILE__) + ":" + std::to_string(__LINE__) + ": " #a " == " #b "  (got " + testing::show(va_) + " vs " + testing::show(vb_) + ")" }; \
     } while (0)
 
-#define CHECK_CONTAINS(haystack, needle)                                                                  \
-    do {                                                                                                  \
-        std::string h_ = (haystack);                                                                      \
-        std::string n_ = (needle);                                                                        \
-        if (h_.find(n_) == std::string::npos)                                                             \
-            throw testing::Failure{std::string(__FILE__) + ":" + std::to_string(__LINE__) + ": expected to find \"" + n_ + "\" in \"" + h_ + "\""}; \
+#define CHECK_CONTAINS(haystack, needle)                                                                                                               \
+    do {                                                                                                                                               \
+        std::string h_ = (haystack);                                                                                                                   \
+        std::string n_ = (needle);                                                                                                                     \
+        if (h_.find(n_) == std::string::npos)                                                                                                          \
+            throw testing::Failure { std::string(__FILE__) + ":" + std::to_string(__LINE__) + ": expected to find \"" + n_ + "\" in \"" + h_ + "\"" }; \
     } while (0)
 
-#define CHECK_NOT_CONTAINS(haystack, needle)                                                              \
-    do {                                                                                                  \
-        std::string h_ = (haystack);                                                                      \
-        std::string n_ = (needle);                                                                        \
-        if (h_.find(n_) != std::string::npos)                                                             \
-            throw testing::Failure{std::string(__FILE__) + ":" + std::to_string(__LINE__) + ": did not expect \"" + n_ + "\" in \"" + h_ + "\""}; \
+#define CHECK_NOT_CONTAINS(haystack, needle)                                                                                                         \
+    do {                                                                                                                                             \
+        std::string h_ = (haystack);                                                                                                                 \
+        std::string n_ = (needle);                                                                                                                   \
+        if (h_.find(n_) != std::string::npos)                                                                                                        \
+            throw testing::Failure { std::string(__FILE__) + ":" + std::to_string(__LINE__) + ": did not expect \"" + n_ + "\" in \"" + h_ + "\"" }; \
     } while (0)
 
 namespace testing {
@@ -105,34 +114,38 @@ namespace fs = std::filesystem;
 
 class TempDir {
 public:
-    TempDir() {
+    TempDir()
+    {
         static int counter = 0;
         std::error_code ec;
         path_ = fs::temp_directory_path(ec) / ("exile-store-test-" + std::to_string(static_cast<long long>(std::chrono::steady_clock::now().time_since_epoch().count())) + "-" + std::to_string(++counter));
         fs::remove_all(path_, ec);
         fs::create_directories(path_, ec);
     }
-    ~TempDir() {
+    ~TempDir()
+    {
         std::error_code ec;
         fs::remove_all(path_, ec);
     }
-    TempDir(const TempDir&) = delete;
-    TempDir& operator=(const TempDir&) = delete;
-    const fs::path& path() const { return path_; }
-    fs::path operator/(const std::string& s) const { return path_ / s; }
+    TempDir(TempDir const&) = delete;
+    TempDir& operator=(TempDir const&) = delete;
+    fs::path const& path() const { return path_; }
+    fs::path operator/(std::string const& s) const { return path_ / s; }
 
 private:
     fs::path path_;
 };
 
-inline void writeFile(const fs::path& p, const std::string& data) {
+inline void writeFile(fs::path const& p, std::string const& data)
+{
     std::error_code ec;
     fs::create_directories(p.parent_path(), ec);
     std::ofstream out(p, std::ios::binary | std::ios::trunc);
     out.write(data.data(), static_cast<std::streamsize>(data.size()));
 }
 
-inline std::string readAll(const fs::path& p) {
+inline std::string readAll(fs::path const& p)
+{
     auto s = exile::util::readFile(p, 1ull << 30);
     return s ? *s : std::string();
 }
@@ -142,7 +155,8 @@ struct Keys {
 };
 
 #ifdef EXILE_HAS_OPENSSL
-inline Keys makeKeys() {
+inline Keys makeKeys()
+{
     EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_ED25519, nullptr);
     EVP_PKEY* key = nullptr;
     EVP_PKEY_keygen_init(ctx);
@@ -153,17 +167,18 @@ inline Keys makeKeys() {
     EVP_PKEY_get_raw_public_key(key, pub, &ul);
     EVP_PKEY_free(key);
     EVP_PKEY_CTX_free(ctx);
-    return {exile::util::hexEncode(priv, 32), exile::util::hexEncode(pub, 32)};
+    return { exile::util::hexEncode(priv, 32), exile::util::hexEncode(pub, 32) };
 }
 
-inline std::string sign(const std::string& privHex, const std::string& message) {
+inline std::string sign(std::string const& privHex, std::string const& message)
+{
     auto priv = *exile::util::hexDecode(privHex);
     EVP_PKEY* key = EVP_PKEY_new_raw_private_key(EVP_PKEY_ED25519, nullptr, priv.data(), priv.size());
     EVP_MD_CTX* ctx = EVP_MD_CTX_new();
     uint8_t sig[64];
     size_t sl = 64;
     EVP_DigestSignInit(ctx, nullptr, nullptr, nullptr, key);
-    EVP_DigestSign(ctx, sig, &sl, reinterpret_cast<const unsigned char*>(message.data()), message.size());
+    EVP_DigestSign(ctx, sig, &sl, reinterpret_cast<unsigned char const*>(message.data()), message.size());
     EVP_MD_CTX_free(ctx);
     EVP_PKEY_free(key);
     return exile::util::hexEncode(sig, 64);
@@ -181,8 +196,8 @@ struct PkgSpec {
     std::string devices = "\"desktop\"";
     std::string archs = "\"x86_64\"";
     std::string category = "utilities";
-    std::string extraPkg;   // raw JSON fragment appended inside the package, e.g. ,"minimumOsVersion":"2.0.0"
-    std::string extraApp;   // raw JSON fragment appended inside the app
+    std::string extraPkg; // raw JSON fragment appended inside the package, e.g. ,"minimumOsVersion":"2.0.0"
+    std::string extraApp; // raw JSON fragment appended inside the app
     bool signWithUntrustedKey = false;
     bool tamperPackageAfterSigning = false;
     bool omitSignature = false;
@@ -205,7 +220,8 @@ struct Fixture {
     std::unique_ptr<exile::ISignatureVerifier> verifier = exile::makeDefaultVerifier();
     exile::DeviceProfile device;
 
-    Fixture() {
+    Fixture()
+    {
 #ifdef EXILE_HAS_OPENSSL
         good = makeKeys();
         bad = makeKeys();
@@ -221,7 +237,8 @@ struct Fixture {
         device.osVersion = "1.0.0";
     }
 
-    BuiltApp build(const PkgSpec& s) {
+    BuiltApp build(PkgSpec const& s)
+    {
         BuiltApp b;
         fs::path stage = dir / ("stage-" + s.appId + "-" + s.version);
         writeFile(stage / "README.txt", s.payload);
@@ -235,7 +252,7 @@ struct Fixture {
         std::string sig;
 #ifdef EXILE_HAS_OPENSSL
         sig = sign(s.signWithUntrustedKey ? bad.privHex : good.privHex,
-                   exile::signingPayload(s.appId, s.version, s.pkgId, b.sha256, b.size));
+            exile::signingPayload(s.appId, s.version, s.pkgId, b.sha256, b.size));
 #endif
         if (s.tamperPackageAfterSigning) {
             // Same size, different bytes: only the digest check can notice.
@@ -257,18 +274,23 @@ struct Fixture {
         return b;
     }
 
-    static std::string catalogJson(const std::vector<std::string>& apps) {
+    static std::string catalogJson(std::vector<std::string> const& apps)
+    {
         std::string out = "{\"schemaVersion\":1,\"generatedAt\":\"2026-01-01\",\"categories\":["
                           "{\"id\":\"utilities\",\"name\":\"Utilities\"},{\"id\":\"games\",\"name\":\"Games\"},"
                           "{\"id\":\"system-tools\",\"name\":\"System Tools\"}],\"apps\":[";
-        for (size_t i = 0; i < apps.size(); ++i) out += (i ? "," : "") + apps[i];
+        for (size_t i = 0; i < apps.size(); ++i)
+            out += (i ? "," : "") + apps[i];
         return out + "]}";
     }
 
-    exile::Catalog catalog(const std::vector<std::string>& apps) {
+    exile::Catalog catalog(std::vector<std::string> const& apps)
+    {
         auto r = exile::parseCatalog(catalogJson(apps), dir.path());
-        if (!r.catalog) throw Failure{"fixture catalog failed to parse: " + (r.issues.empty() ? std::string("?") : r.issues[0].message)};
-        for (const auto& i : r.issues) throw Failure{"fixture catalog issue: " + i.where + ": " + i.message};
+        if (!r.catalog)
+            throw Failure { "fixture catalog failed to parse: " + (r.issues.empty() ? std::string("?") : r.issues[0].message) };
+        for (auto const& i : r.issues)
+            throw Failure { "fixture catalog issue: " + i.where + ": " + i.message };
         return std::move(*r.catalog);
     }
 };
@@ -276,14 +298,18 @@ struct Fixture {
 // Wraps the real LocalTransport but can misbehave on demand.
 class FlakyTransport final : public exile::ITransport {
 public:
-    explicit FlakyTransport(exile::ITransport& inner) : inner_(inner) {}
-    bool failNext = false;          // fail with an error before sending anything
-    bool interruptNext = false;     // write half the file, then report cancellation
-    bool corruptPartial = false;    // put garbage in the partial file before a resume
+    explicit FlakyTransport(exile::ITransport& inner)
+        : inner_(inner)
+    {
+    }
+    bool failNext = false;       // fail with an error before sending anything
+    bool interruptNext = false;  // write half the file, then report cancellation
+    bool corruptPartial = false; // put garbage in the partial file before a resume
     int calls = 0;
 
-    exile::TransferResult fetch(const std::string& source, const fs::path& part, bool resume,
-                                const exile::ProgressFn& progress, const exile::CancelToken& cancel) override {
+    exile::TransferResult fetch(std::string const& source, fs::path const& part, bool resume,
+        exile::ProgressFn const& progress, exile::CancelToken const& cancel) override
+    {
         ++calls;
         if (failNext) {
             failNext = false;
@@ -295,12 +321,10 @@ public:
             interruptNext = false;
             exile::CancelToken stop;
             uint64_t seen = 0;
-            exile::TransferResult r = inner_.fetch(source, part, resume,
-                [&](uint64_t d, uint64_t t) {
+            exile::TransferResult r = inner_.fetch(source, part, resume, [&](uint64_t d, uint64_t t) {
                     seen = d;
                     if (d * 2 >= t) stop.cancel();
-                    if (progress) progress(d, t);
-                }, stop);
+                    if (progress) progress(d, t); }, stop);
             (void)seen;
             return r;
         }
@@ -318,7 +342,10 @@ private:
 // Backend double that can fail or lie, used to prove the store trusts only real confirmation.
 class ScriptedBackend final : public exile::IPackageBackend {
 public:
-    explicit ScriptedBackend(exile::IPackageBackend& inner) : inner_(inner) {}
+    explicit ScriptedBackend(exile::IPackageBackend& inner)
+        : inner_(inner)
+    {
+    }
     bool failInstall = false;
     bool installButDoNotConfirm = false;
     bool failUninstall = false;
@@ -326,22 +353,27 @@ public:
     std::string name() const override { return "scripted"; }
     bool canLaunch() const override { return inner_.canLaunch(); }
     fs::path storagePath() const override { return inner_.storagePath(); }
-    exile::BackendResult install(const exile::InstallRequest& r) override {
+    exile::BackendResult install(exile::InstallRequest const& r) override
+    {
         ++installCalls;
-        if (failInstall) return {false, "simulated installer failure"};
-        if (installButDoNotConfirm) return {true, {}};  // claims success, installs nothing
+        if (failInstall)
+            return { false, "simulated installer failure" };
+        if (installButDoNotConfirm)
+            return { true, {} }; // claims success, installs nothing
         return inner_.install(r);
     }
-    exile::BackendResult uninstall(const std::string& id) override {
-        if (failUninstall) return {false, "simulated failure"};
+    exile::BackendResult uninstall(std::string const& id) override
+    {
+        if (failUninstall)
+            return { false, "simulated failure" };
         return inner_.uninstall(id);
     }
-    bool isInstalled(const std::string& id, const std::string& v) const override { return inner_.isInstalled(id, v); }
-    exile::BackendResult launch(const std::string& id) override { return inner_.launch(id); }
+    bool isInstalled(std::string const& id, std::string const& v) const override { return inner_.isInstalled(id, v); }
+    exile::BackendResult launch(std::string const& id) override { return inner_.launch(id); }
     void recoverInterrupted() override { inner_.recoverInterrupted(); }
 
 private:
     exile::IPackageBackend& inner_;
 };
 
-}  // namespace testing
+} // namespace testing

@@ -1,6 +1,8 @@
 # Exile OS
 
-Independent graphical operating system for 64-bit x86, Arm, and RISC-V computers.
+Graphical operating system project targeting 64-bit x86, Arm, and RISC-V computers, derived from the [SerenityOS](https://github.com/SerenityOS/serenity) codebase.
+
+> **Status:** which architectures actually build, boot and pass tests is tracked in [`Documentation/Project-Audits/`](Documentation/Project-Audits/). Nothing in this README should be read as a claim that an architecture or feature has been validated.
 
 [![GitHub Actions Status](https://github.com/Bryanna-21/EXILE-OS/actions/workflows/ci.yml/badge.svg)](https://github.com/Bryanna-21/EXILE-OS/actions/workflows/ci.yml)
 
@@ -8,11 +10,13 @@ Independent graphical operating system for 64-bit x86, Arm, and RISC-V computers
 
 ## About
 
-Exile OS is an independent operating system project inspired by '90s user interfaces with a custom Unix-like core. It flatters with sincerity by stealing beautiful ideas from various other systems.
+Exile OS is an independent project developed under the Exile organization. It originated from the SerenityOS codebase: the vast majority of the code in this repository is SerenityOS-derived and is used under its BSD-2-Clause license, with all upstream copyright and license notices preserved (see [`LICENSE`](LICENSE) and [`Meta/Exile/IDENTITY.md`](Meta/Exile/IDENTITY.md)). Exile-authored components are being added alongside it, for example the Exile Store and the boot integrity tooling.
+
+The inherited design is inspired by '90s user interfaces with a custom Unix-like core.
 
 Roughly speaking, the goal is a marriage between the aesthetic of late-1990s productivity software and the power-user accessibility of late-2000s \*nix. This is a system by us, for us, based on the things we like.
 
-You can watch videos of the system being developed on YouTube:
+You can watch videos of the upstream SerenityOS system being developed on YouTube:
 
 -   [Andreas Kling's channel](https://youtube.com/andreaskling)
 -   [Linus Groh's channel](https://youtube.com/linusgroh)
@@ -38,7 +42,7 @@ You can watch videos of the system being developed on YouTube:
 -   [Games](Userland/Games/) (Solitaire, Minesweeper, 2048, chess, Conway's Game of Life, ...) and [demos](Userland/Demos/) (CatDog, Starfield, Eyes, mandelbrot set, WidgetGallery, ...)
 -   Every-day GUI programs and utilities (Spreadsheet with JavaScript, TextEditor, Terminal, PixelPaint, various multimedia viewers and players, Mail, Assistant, Calculator, ...)
 
-... and all of the above are right in this repository, no extra dependencies, built from-scratch by us :^)
+... and all of the above are right in this repository, with no extra dependencies. This is inherited from the upstream SerenityOS project, whose developers wrote it (see [Authors](#authors)); it has not been independently re-validated for Exile OS.
 
 Additionally, there are [over three hundred ports of popular open-source software](Ports/AvailablePorts.md), including games, compilers, Unix tools, multimedia apps and more.
 

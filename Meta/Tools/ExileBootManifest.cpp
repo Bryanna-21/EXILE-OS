@@ -1,221 +1,246 @@
-#include <Kernel/Boot/Exile/BootManifest.h>
+/*
+ * Copyright (c) 2026, the Exile OS developers
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
+/*
+ * Host tool to create, sign and verify Exile boot manifests.
+ */
+
+#include <AK/ByteBuffer.h>
+#include <Kernel/Boot/Exile/BootGuardian.h>
+#include <LibCrypto/Curves/Ed25519.h>
 
 #include <cstdio>
+#include <cstring>
 #include <fstream>
+#include <string>
 #include <vector>
+
+using namespace Exile::Boot;
 
 namespace {
 
-static constexpr unsigned int RoundConstants[64] {
-    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5,
-    0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
-    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
-    0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
-    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f,
-    0x4a7484aa, 0x5cb0a9dc, 0x76f988da, 0x983e5152,
-    0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3,
-    0xd5a79147, 0x06ca6351, 0x14292967, 0x27b70a85,
-    0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354,
-    0x766a0abb, 0x81c2c92e, 0x92722c85, 0xa2bfe8a1,
-    0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819,
-    0xd6990624, 0xf40e3585, 0x106aa070, 0x19a4c116,
-    0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3,
-    0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3, 0x748f82ee,
-    0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa,
-    0xa4506ceb, 0xbef9a3f7, 0xc67178f2
-};
+// Exit codes: 0 success, 1 usage or I/O error, 2 the manifest did not verify.
+constexpr int ExitUsage = 1;
+constexpr int ExitVerificationFailed = 2;
 
-static constexpr unsigned int InitialState[8] {
-    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
-    0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
-};
-
-static constexpr unsigned int rotr(unsigned int value, unsigned int bits)
+bool read_file(char const* path, std::vector<u8>& data)
 {
-    return (value >> bits) | (value << (32 - bits));
+    std::ifstream input(path, std::ios::binary | std::ios::ate);
+    if (!input)
+        return false;
+    auto size = input.tellg();
+    if (size < 0)
+        return false;
+    data.resize(static_cast<size_t>(size));
+    input.seekg(0);
+    if (!data.empty())
+        input.read(reinterpret_cast<char*>(data.data()), static_cast<std::streamsize>(data.size()));
+    return static_cast<bool>(input) || data.empty();
 }
 
-static constexpr unsigned int choose(unsigned int x, unsigned int y, unsigned int z)
+bool write_file(char const* path, u8 const* data, size_t size)
 {
-    return (x & y) ^ (~x & z);
+    std::ofstream output(path, std::ios::binary | std::ios::trunc);
+    if (!output)
+        return false;
+    output.write(reinterpret_cast<char const*>(data), static_cast<std::streamsize>(size));
+    return static_cast<bool>(output);
 }
 
-static constexpr unsigned int majority(unsigned int x, unsigned int y, unsigned int z)
+// Key files are raw: exactly 32 bytes (an Ed25519 seed or public key, RFC 8032).
+bool read_key_file(char const* path, char const* what, u8 (&key)[32])
 {
-    return (x & y) ^ (x & z) ^ (y & z);
+    std::vector<u8> data;
+    if (!read_file(path, data)) {
+        std::fprintf(stderr, "failed to read %s: %s\n", what, path);
+        return false;
+    }
+    if (data.size() != 32) {
+        std::fprintf(stderr, "%s must be exactly 32 raw bytes, got %zu: %s\n", what, data.size(), path);
+        return false;
+    }
+    std::memcpy(key, data.data(), 32);
+    return true;
 }
 
-static constexpr unsigned int big_sigma0(unsigned int x)
+bool ed25519_verify(u8 const* public_key, u8 const* signature, u8 const* message, size_t message_size)
 {
-    return rotr(x, 2) ^ rotr(x, 13) ^ rotr(x, 22);
+    return Crypto::Curves::Ed25519::verify(
+        ReadonlyBytes { public_key, ED25519_PUBLIC_KEY_SIZE },
+        ReadonlyBytes { signature, ED25519_SIGNATURE_SIZE },
+        ReadonlyBytes { message, message_size });
 }
 
-static constexpr unsigned int big_sigma1(unsigned int x)
+void print_hex(char const* label, u8 const* data, size_t size)
 {
-    return rotr(x, 6) ^ rotr(x, 11) ^ rotr(x, 25);
+    std::printf("%s", label);
+    for (size_t i = 0; i < size; ++i)
+        std::printf("%02x", data[i]);
+    std::printf("\n");
 }
 
-static constexpr unsigned int small_sigma0(unsigned int x)
+int usage(char const* argv0)
 {
-    return rotr(x, 7) ^ rotr(x, 18) ^ (x >> 3);
+    std::fprintf(stderr,
+        "usage:\n"
+        "  %s keygen <seed-out> <pubkey-out>\n"
+        "  %s sign <kernel> <seed-file> <manifest-out> [os-version]\n"
+        "  %s verify <kernel> <manifest> <pubkey-file>\n"
+        "\n"
+        "Key files are raw 32-byte Ed25519 values. Keep the seed offline: it is the signing authority.\n"
+        "Exit status: 0 ok, 1 usage or I/O error, 2 verification failed.\n",
+        argv0, argv0, argv0);
+    return ExitUsage;
 }
 
-static constexpr unsigned int small_sigma1(unsigned int x)
+int keygen(char const* seed_path, char const* pubkey_path)
 {
-    return rotr(x, 17) ^ rotr(x, 19) ^ (x >> 10);
+    auto seed = Crypto::Curves::Ed25519::generate_private_key();
+    if (seed.is_error() || seed.value().size() != 32) {
+        std::fprintf(stderr, "failed to generate a private key\n");
+        return ExitUsage;
+    }
+    auto pubkey = Crypto::Curves::Ed25519::generate_public_key(seed.value());
+    if (pubkey.is_error() || pubkey.value().size() != 32) {
+        std::fprintf(stderr, "failed to derive the public key\n");
+        return ExitUsage;
+    }
+    if (!write_file(seed_path, seed.value().data(), 32) || !write_file(pubkey_path, pubkey.value().data(), 32)) {
+        std::fprintf(stderr, "failed to write key files\n");
+        return ExitUsage;
+    }
+    std::printf("wrote seed (keep offline): %s\nwrote public key: %s\n", seed_path, pubkey_path);
+    return 0;
 }
 
-static void transform(unsigned int state[8], unsigned char const* block)
+int sign(char const* kernel_path, char const* seed_path, char const* manifest_path, u32 os_version)
 {
-    unsigned int schedule[64];
-
-    for (size_t i = 0; i < 16; ++i) {
-        auto offset = i * 4;
-        schedule[i] = (static_cast<unsigned int>(block[offset]) << 24)
-            | (static_cast<unsigned int>(block[offset + 1]) << 16)
-            | (static_cast<unsigned int>(block[offset + 2]) << 8)
-            | static_cast<unsigned int>(block[offset + 3]);
+    std::vector<u8> kernel;
+    if (!read_file(kernel_path, kernel)) {
+        std::fprintf(stderr, "failed to read kernel: %s\n", kernel_path);
+        return ExitUsage;
+    }
+    if (kernel.empty()) {
+        std::fprintf(stderr, "kernel image is empty\n");
+        return ExitUsage;
     }
 
-    for (size_t i = 16; i < 64; ++i)
-        schedule[i] = small_sigma1(schedule[i - 2]) + schedule[i - 7]
-            + small_sigma0(schedule[i - 15]) + schedule[i - 16];
+    u8 seed[32];
+    if (!read_key_file(seed_path, "signing seed", seed))
+        return ExitUsage;
 
-    unsigned int a = state[0];
-    unsigned int b = state[1];
-    unsigned int c = state[2];
-    unsigned int d = state[3];
-    unsigned int e = state[4];
-    unsigned int f = state[5];
-    unsigned int g = state[6];
-    unsigned int h = state[7];
-
-    for (size_t i = 0; i < 64; ++i) {
-        auto t1 = h + big_sigma1(e) + choose(e, f, g) + RoundConstants[i] + schedule[i];
-        auto t2 = big_sigma0(a) + majority(a, b, c);
-
-        h = g;
-        g = f;
-        f = e;
-        e = d + t1;
-        d = c;
-        c = b;
-        b = a;
-        a = t1 + t2;
+    auto public_key = Crypto::Curves::Ed25519::generate_public_key(ReadonlyBytes { seed, sizeof(seed) });
+    if (public_key.is_error() || public_key.value().size() != 32) {
+        std::fprintf(stderr, "failed to derive the public key from the seed\n");
+        return ExitUsage;
     }
 
-    state[0] += a;
-    state[1] += b;
-    state[2] += c;
-    state[3] += d;
-    state[4] += e;
-    state[5] += f;
-    state[6] += g;
-    state[7] += h;
+    BootManifest manifest;
+    manifest.os_version = os_version;
+    manifest.kernel_size = kernel.size();
+
+    BootMeasurement measurement;
+    sha256(kernel.data(), kernel.size(), measurement);
+    std::memcpy(manifest.kernel_sha256, measurement.digest, sizeof(manifest.kernel_sha256));
+
+    u8 public_key_bytes[ED25519_PUBLIC_KEY_SIZE];
+    std::memcpy(public_key_bytes, public_key.value().data(), sizeof(public_key_bytes));
+    compute_key_id(public_key_bytes, manifest.key_id);
+
+    u8 signed_region[MANIFEST_SIGNED_SIZE];
+    serialize_signed_region(manifest, signed_region);
+    u8 message[SIGNING_MESSAGE_SIZE];
+    build_signing_message(signed_region, message);
+
+    auto signature = Crypto::Curves::Ed25519::sign(
+        ReadonlyBytes { public_key_bytes, sizeof(public_key_bytes) },
+        ReadonlyBytes { seed, sizeof(seed) },
+        ReadonlyBytes { message, sizeof(message) });
+    if (signature.is_error() || signature.value().size() != ED25519_SIGNATURE_SIZE) {
+        std::fprintf(stderr, "failed to sign the manifest\n");
+        return ExitUsage;
+    }
+    std::memcpy(manifest.signature, signature.value().data(), sizeof(manifest.signature));
+
+    u8 serialized[MANIFEST_SIZE];
+    serialize_manifest(manifest, serialized);
+
+    // Never write a manifest that this tool's own verifier would reject.
+    TrustAnchor anchor;
+    std::memcpy(anchor.public_key, public_key_bytes, sizeof(anchor.public_key));
+    auto status = verify_kernel_integrity(kernel.data(), kernel.size(), serialized, sizeof(serialized), &anchor, 1, ed25519_verify);
+    if (status != VerifyStatus::Ok) {
+        std::fprintf(stderr, "internal error: freshly signed manifest does not verify: %s\n", verify_status_to_string(status));
+        return ExitUsage;
+    }
+
+    if (!write_file(manifest_path, serialized, sizeof(serialized))) {
+        std::fprintf(stderr, "failed to write manifest: %s\n", manifest_path);
+        return ExitUsage;
+    }
+
+    std::printf("Exile Boot Manifest v%u\n", static_cast<unsigned>(manifest.version));
+    std::printf("Kernel size: %llu bytes\n", static_cast<unsigned long long>(manifest.kernel_size));
+    print_hex("Kernel SHA-256: ", manifest.kernel_sha256, sizeof(manifest.kernel_sha256));
+    print_hex("Signing key id: ", manifest.key_id, sizeof(manifest.key_id));
+    return 0;
 }
 
-void sha256(void const* data, size_t size, unsigned char digest[32])
+int verify(char const* kernel_path, char const* manifest_path, char const* pubkey_path)
 {
-    unsigned int state[8];
-    for (size_t i = 0; i < 8; ++i)
-        state[i] = InitialState[i];
-
-    auto bytes = static_cast<unsigned char const*>(data);
-    auto full_blocks = size / 64;
-
-    for (size_t i = 0; i < full_blocks; ++i)
-        transform(state, bytes + i * 64);
-
-    unsigned char block[128] {};
-    auto remaining = size % 64;
-
-    for (size_t i = 0; i < remaining; ++i)
-        block[i] = bytes[full_blocks * 64 + i];
-
-    block[remaining] = 0x80;
-
-    auto final_size = remaining < 56 ? 64 : 128;
-    auto bit_length = static_cast<unsigned long long>(size) * 8;
-
-    for (size_t i = 0; i < 8; ++i)
-        block[final_size - 1 - i] = static_cast<unsigned char>(bit_length >> (i * 8));
-
-    transform(state, block);
-
-    if (final_size == 128)
-        transform(state, block + 64);
-
-    for (size_t i = 0; i < 8; ++i) {
-        digest[i * 4] = static_cast<unsigned char>(state[i] >> 24);
-        digest[i * 4 + 1] = static_cast<unsigned char>(state[i] >> 16);
-        digest[i * 4 + 2] = static_cast<unsigned char>(state[i] >> 8);
-        digest[i * 4 + 3] = static_cast<unsigned char>(state[i]);
+    std::vector<u8> kernel;
+    std::vector<u8> manifest;
+    if (!read_file(kernel_path, kernel)) {
+        std::fprintf(stderr, "failed to read kernel: %s\n", kernel_path);
+        return ExitUsage;
     }
+    if (!read_file(manifest_path, manifest)) {
+        std::fprintf(stderr, "failed to read manifest: %s\n", manifest_path);
+        return ExitUsage;
+    }
+    TrustAnchor anchor;
+    if (!read_key_file(pubkey_path, "public key", anchor.public_key))
+        return ExitUsage;
+
+    auto status = verify_kernel_integrity(
+        kernel.data(), kernel.size(),
+        manifest.data(), manifest.size(),
+        &anchor, 1, ed25519_verify);
+
+    if (status != VerifyStatus::Ok) {
+        std::fprintf(stderr, "REJECTED: %s\n", verify_status_to_string(status));
+        return ExitVerificationFailed;
+    }
+    std::printf("OK: kernel image matches the signed manifest\n");
+    return 0;
 }
 
 }
 
 int main(int argc, char** argv)
 {
-    if (argc != 3) {
-        std::fprintf(stderr, "usage: %s <kernel> <manifest>\n", argv[0]);
-        return 1;
+    if (argc >= 2 && std::strcmp(argv[1], "keygen") == 0 && argc == 4)
+        return keygen(argv[2], argv[3]);
+
+    if (argc >= 2 && std::strcmp(argv[1], "sign") == 0 && (argc == 5 || argc == 6)) {
+        u32 os_version = 1;
+        if (argc == 6) {
+            char* end = nullptr;
+            auto parsed = std::strtoul(argv[5], &end, 10);
+            if (end == argv[5] || *end != '\0' || parsed > 0xFFFFFFFFul) {
+                std::fprintf(stderr, "invalid os-version: %s\n", argv[5]);
+                return ExitUsage;
+            }
+            os_version = static_cast<u32>(parsed);
+        }
+        return sign(argv[2], argv[3], argv[4], os_version);
     }
 
-    std::ifstream input(argv[1], std::ios::binary | std::ios::ate);
-    if (!input) {
-        std::fprintf(stderr, "failed to open kernel: %s\n", argv[1]);
-        return 1;
-    }
+    if (argc >= 2 && std::strcmp(argv[1], "verify") == 0 && argc == 5)
+        return verify(argv[2], argv[3], argv[4]);
 
-    auto size = input.tellg();
-    if (size < 0 || static_cast<unsigned long long>(size) > 0xFFFFFFFFULL) {
-        std::fprintf(stderr, "kernel is too large\n");
-        return 1;
-    }
-
-    std::vector<unsigned char> data(static_cast<size_t>(size));
-    input.seekg(0);
-
-    if (!data.empty())
-        input.read(reinterpret_cast<char*>(data.data()), data.size());
-
-    if (!input && !data.empty()) {
-        std::fprintf(stderr, "failed to read kernel\n");
-        return 1;
-    }
-
-    Exile::Boot::BootManifest manifest {};
-    manifest.kernel_size = static_cast<unsigned int>(data.size());
-
-    sha256(
-        data.data(),
-        data.size(),
-        manifest.kernel_sha256);
-
-    std::ofstream output(argv[2], std::ios::binary | std::ios::trunc);
-    if (!output) {
-        std::fprintf(stderr, "failed to create manifest: %s\n", argv[2]);
-        return 1;
-    }
-
-    output.write(
-        reinterpret_cast<char const*>(&manifest),
-        sizeof(manifest));
-
-    if (!output) {
-        std::fprintf(stderr, "failed to write manifest\n");
-        return 1;
-    }
-
-    std::printf("Exile Boot Manifest v%u\n", manifest.version);
-    std::printf("Kernel size: %u bytes\n", manifest.kernel_size);
-    std::printf("Kernel SHA-256: ");
-
-    for (auto byte : manifest.kernel_sha256)
-        std::printf("%02x", byte);
-
-    std::printf("\n");
-
-    return 0;
+    return usage(argv[0]);
 }
