@@ -15,6 +15,7 @@
 #include <AK/StringBuilder.h>
 #include <AK/Try.h>
 #include <Applications/FileManager/FileManagerWindowGML.h>
+#include <LibGUI/Button.h>
 #include <LibConfig/Client.h>
 #include <LibConfig/Listener.h>
 #include <LibCore/ArgsParser.h>
@@ -626,6 +627,42 @@ ErrorOr<int> run_in_windowed_mode(ByteString const& initial_location, ByteString
 
     auto directory_view = TRY(splitter.try_add<DirectoryView>(DirectoryView::Mode::Normal));
     directory_view->set_name("directory_view");
+
+    auto& workspace_button = *widget->find_descendant_of_type_named<GUI::Button>("workspace_button");
+    auto& projects_button = *widget->find_descendant_of_type_named<GUI::Button>("projects_button");
+    auto& media_button = *widget->find_descendant_of_type_named<GUI::Button>("media_button");
+    auto& all_files_button = *widget->find_descendant_of_type_named<GUI::Button>("all_files_button");
+    auto& vault_button = *widget->find_descendant_of_type_named<GUI::Button>("vault_button");
+
+    vault_button.set_enabled(false);
+
+    auto home_directory = Core::StandardPaths::home_directory();
+    auto documents_path = Core::StandardPaths::documents_directory();
+    auto projects_path = ByteString::formatted("{}/Source", home_directory);
+    auto media_path = Core::StandardPaths::videos_directory();
+
+    auto workspace_path = FileSystem::is_directory(documents_path)
+        ? documents_path
+        : home_directory;
+
+    workspace_button.on_click = [&, workspace_path](auto) {
+        directory_view->open(workspace_path);
+    };
+
+    projects_button.set_enabled(FileSystem::is_directory(projects_path));
+    projects_button.on_click = [&, projects_path](auto) {
+        directory_view->open(projects_path);
+    };
+
+    media_button.set_enabled(FileSystem::is_directory(media_path));
+    media_button.on_click = [&, media_path](auto) {
+        directory_view->open(media_path);
+    };
+
+    all_files_button.on_click = [&, home_directory](auto) {
+        directory_view->open("/");
+    };
+
 
     // Open the root directory. FIXME: This is awkward.
     tree_view.toggle_index(directories_model->index(0, 0, {}));

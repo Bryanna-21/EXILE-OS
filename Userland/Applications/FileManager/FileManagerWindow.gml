@@ -27,6 +27,40 @@
         }
     }
 
+    @GUI::Widget {
+        name: "navigator_bar"
+        preferred_height: "shrink"
+        layout: @GUI::HorizontalBoxLayout {
+            margins: [8, 6]
+            spacing: 6
+        }
+
+        @GUI::Button {
+            name: "workspace_button"
+            text: "Workspace"
+        }
+
+        @GUI::Button {
+            name: "projects_button"
+            text: "Projects"
+        }
+
+        @GUI::Button {
+            name: "media_button"
+            text: "Media"
+        }
+
+        @GUI::Button {
+            name: "all_files_button"
+            text: "All Files"
+        }
+
+        @GUI::Button {
+            name: "vault_button"
+            text: "Vault (Planned)"
+        }
+    }
+
     @GUI::HorizontalSplitter {
         name: "splitter"
 
