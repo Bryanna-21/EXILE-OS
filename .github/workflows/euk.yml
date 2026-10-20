@@ -1,0 +1,50 @@
+name: EUK isolated boot milestone
+on:
+  push:
+    paths: ['ExileKernel/**', '.github/workflows/euk.yml']
+  pull_request:
+    paths: ['ExileKernel/**', '.github/workflows/euk.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  x86_64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install test tools
+        run: sudo apt-get update && sudo apt-get install -y gcc binutils python3 rustc rustfmt grub-pc-bin grub-common xorriso qemu-system-x86
+      - name: Install checksum-pinned bare-metal compiler and target
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          curl -fL https://static.rust-lang.org/dist/rustc-1.91.1-x86_64-unknown-linux-gnu.tar.xz -o rustc.tar.xz
+          echo '4b4c596fc5268435c310a79c2e231a5a3567572c930ac0740ef9e147e83baf4e  rustc.tar.xz' | sha256sum -c -
+          curl -fL https://static.rust-lang.org/dist/rust-std-1.91.1-x86_64-unknown-none.tar.xz -o target.tar.xz
+          echo '069edc1d99b45efd97f1d9746289667dc4dc38d8532da547bcc3d0d735420d16  target.tar.xz' | sha256sum -c -
+          tar -xJf rustc.tar.xz
+          tar -xJf target.tar.xz
+          ./rustc-1.91.1-x86_64-unknown-linux-gnu/install.sh --prefix="$RUNNER_TEMP/euk-toolchain" --disable-ldconfig
+          ./rust-std-1.91.1-x86_64-unknown-none/install.sh --prefix="$RUNNER_TEMP/euk-toolchain" --disable-ldconfig
+          echo "EUK_RUSTC=$RUNNER_TEMP/euk-toolchain/bin/rustc" >> "$GITHUB_ENV"
+          echo "EUK_SYSROOT=$RUNNER_TEMP/euk-toolchain" >> "$GITHUB_ENV"
+      - name: Formatting and dependency/license gates
+        run: |
+          rustfmt --edition 2024 --check ExileKernel/src/kernel.rs ExileKernel/src/memory.rs
+          python3 ExileKernel/scripts/audit.py
+      - name: Portable tests, compilation and reproducibility
+        run: |
+          python3 ExileKernel/scripts/test.py
+          python3 ExileKernel/scripts/build.py --output ExileKernel/build/repro-a
+          python3 ExileKernel/scripts/build.py --output ExileKernel/build/repro-b
+          cmp ExileKernel/build/repro-a/euk.elf ExileKernel/build/repro-b/euk.elf
+      - name: Real emulator boot and negative tests
+        run: python3 ExileKernel/scripts/boot_test.py
+      - name: Archive diagnostics only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: euk-boot-logs
+          path: ExileKernel/build/boot/**/*.log
