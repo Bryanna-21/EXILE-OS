@@ -18,7 +18,7 @@ set(SOURCES
     Version.cpp
 )
 
-exile_lib(LibCoreMinimal coreminimal TYPE STATIC)
+exile_lib(LibCoreMinimal coreminimal)
 target_link_libraries(LibCoreMinimal PRIVATE LibSystem)
 
 if (WIN32 OR MINGW OR MSYS)
