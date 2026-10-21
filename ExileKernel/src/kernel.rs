@@ -59,6 +59,7 @@ pub extern "C" fn kernel_main(magic: u32, info: u32) -> ! {
     if magic != 0x2badb002 {
         fail("boot magic");
     }
+    #[cfg_attr(fault_handoff, allow(unused_variables))]
     let info = info as usize;
     #[cfg(fault_handoff)]
     let info = MAP_LIMIT - 4;
@@ -71,6 +72,7 @@ pub extern "C" fn kernel_main(magic: u32, info: u32) -> ! {
     if flags & (1 << 6) == 0 {
         fail("memory map missing");
     }
+    #[cfg_attr(fault_map_length, allow(unused_variables))]
     let length = unsafe { read32(info + 44) } as usize;
     #[cfg(fault_map_length)]
     let length = 65537;
