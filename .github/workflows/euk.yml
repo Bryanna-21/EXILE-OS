@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install test tools
         run: sudo apt-get update && sudo apt-get install -y gcc binutils python3 rustc rustfmt grub-pc-bin grub-common xorriso mtools qemu-system-x86
-      - name: Install checksum-pinned bare-metal compiler and target
+      - name: Install checksum-pinned bare-metal compiler and targets
         shell: bash
         run: |
           set -euo pipefail
@@ -24,11 +24,17 @@ jobs:
           echo '4b4c596fc5268435c310a79c2e231a5a3567572c930ac0740ef9e147e83baf4e  rustc.tar.xz' | sha256sum -c -
           curl -fL https://static.rust-lang.org/dist/rust-std-1.91.1-x86_64-unknown-none.tar.xz -o target.tar.xz
           echo '069edc1d99b45efd97f1d9746289667dc4dc38d8532da547bcc3d0d735420d16  target.tar.xz' | sha256sum -c -
+          # The portable unit tests in src/memory.rs need the host (std) libraries for this same pinned compiler.
+          curl -fL https://static.rust-lang.org/dist/rust-std-1.91.1-x86_64-unknown-linux-gnu.tar.xz -o std-host.tar.xz
+          echo '2023ed689529516d7bd5533738ca6d205b2561f8d51947dabeeb39dd51a024c9  std-host.tar.xz' | sha256sum -c -
           tar -xJf rustc.tar.xz
           tar -xJf target.tar.xz
+          tar -xJf std-host.tar.xz
           ./rustc-1.91.1-x86_64-unknown-linux-gnu/install.sh --prefix="$RUNNER_TEMP/euk-toolchain" --disable-ldconfig
           ./rust-std-1.91.1-x86_64-unknown-none/install.sh --prefix="$RUNNER_TEMP/euk-toolchain" --disable-ldconfig
+          ./rust-std-1.91.1-x86_64-unknown-linux-gnu/install.sh --prefix="$RUNNER_TEMP/euk-toolchain" --disable-ldconfig
           echo "EUK_RUSTC=$RUNNER_TEMP/euk-toolchain/bin/rustc" >> "$GITHUB_ENV"
+          echo "EUK_HOST_RUSTC=$RUNNER_TEMP/euk-toolchain/bin/rustc" >> "$GITHUB_ENV"
           echo "EUK_SYSROOT=$RUNNER_TEMP/euk-toolchain" >> "$GITHUB_ENV"
       - name: Formatting and dependency/license gates
         run: |
