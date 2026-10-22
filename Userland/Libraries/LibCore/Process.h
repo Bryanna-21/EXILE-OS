@@ -103,6 +103,7 @@ public:
     static ErrorOr<pid_t> spawn(StringView path, ReadonlySpan<char const*> arguments = {}, ByteString working_directory = {}, KeepAsChild keep_as_child = KeepAsChild::No);
 
     static ErrorOr<String> get_name();
+    static ErrorOr<String> get_name(pid_t pid);
     enum class SetThreadName {
         No,
         Yes,
