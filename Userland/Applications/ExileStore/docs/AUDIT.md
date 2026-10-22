@@ -13,7 +13,7 @@ The brief says to inspect the existing Exile OS repository first. **There was no
 
 | Item | Finding |
 |---|---|
-| Repository root / branch / commit / working tree | None. The workspace (`/home/claude`) was not a git repository (`git rev-parse` failed) and contained only tool caches and dotfiles. |
+| Repository root / branch / commit / working tree | None. The initial workspace was not a Git repository (`git rev-parse` failed) and contained only tool caches and dotfiles. |
 | README, contribution guide, licenses, third-party notices | None present. |
 | Serenity-derived sources, GUI toolkit (LibGUI/LibGfx), `AK`, `LibCore`, `LibIPC` | **Not present**, so none of it was inspected, linked, or reused. |
 | Existing package manager, signature verification, dependency resolver, update service | Not present / not inspectable. |

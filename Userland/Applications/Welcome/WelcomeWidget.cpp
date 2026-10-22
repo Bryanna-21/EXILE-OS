@@ -125,8 +125,8 @@ void WelcomeWidget::paint_event(GUI::PaintEvent& event)
     auto rect = m_banner_widget->relative_rect();
     painter.draw_text(rect, "Welcome to "sv, *m_banner_font, Gfx::TextAlignment::CenterLeft, palette().base_text());
     rect.set_x(rect.x() + static_cast<int>(ceilf(m_banner_font->width("Welcome to "sv))));
-    painter.draw_text(rect, "Serenity"sv, m_banner_font->bold_variant(), Gfx::TextAlignment::CenterLeft, palette().base_text());
-    rect.set_x(rect.x() + static_cast<int>(ceilf(m_banner_font->bold_variant().width("Serenity"sv))));
+    painter.draw_text(rect, "Exile"sv, m_banner_font->bold_variant(), Gfx::TextAlignment::CenterLeft, palette().base_text());
+    rect.set_x(rect.x() + static_cast<int>(ceilf(m_banner_font->bold_variant().width("Exile"sv))));
     painter.draw_text(rect, "OS"sv, m_banner_font->bold_variant(), Gfx::TextAlignment::CenterLeft, palette().tray_text());
 }
 
