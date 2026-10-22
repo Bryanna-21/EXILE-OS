@@ -264,6 +264,30 @@ ErrorOr<String> Process::get_name()
 #endif
 }
 
+ErrorOr<String> Process::get_name(pid_t pid)
+{
+#if defined(AK_OS_LINUX)
+    auto const process_name_path = ByteString::formatted("/proc/{}/comm", pid);
+    auto process_name_file = TRY(Core::File::open(process_name_path, Core::File::OpenMode::Read));
+    auto process_name_bytes = TRY(process_name_file->read_until_eof());
+    auto process_name = StringView { process_name_bytes.bytes() };
+    if (!process_name.is_empty() && process_name[process_name.length() - 1] == '\n')
+        process_name = StringView { process_name.characters_without_null_termination(), process_name.length() - 1 };
+    return String::from_utf8(process_name);
+#elif defined(AK_OS_SERENITY)
+    if (pid != getpid())
+        return Error::from_errno(ENOTSUP);
+    return get_name();
+#elif defined(AK_OS_BSD_GENERIC) || defined(AK_OS_HAIKU) || defined(AK_OS_MACOS)
+    if (pid == getpid())
+        return get_name();
+    return Error::from_errno(ENOTSUP);
+#else
+    (void)pid;
+    return Error::from_errno(ENOTSUP);
+#endif
+}
+
 ErrorOr<void> Process::set_name([[maybe_unused]] StringView name, [[maybe_unused]] SetThreadName set_thread_name)
 {
 #if defined(AK_OS_SERENITY)
@@ -278,7 +302,7 @@ ErrorOr<void> Process::set_name([[maybe_unused]] StringView name, [[maybe_unused
         return Error::from_syscall("set_thread_name"sv, -rc);
     return {};
 #else
-    // FIXME: Implement Process::set_name() for other platforms.
+    // FIXME: Implement Process::set_name() for more platforms.
     return {};
 #endif
 }
