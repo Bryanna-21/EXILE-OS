@@ -4,7 +4,7 @@ pipe, pipe2 - create a pipe
 
 ## Synopsis
 
-```**c++
+```c++
 #include <unistd.h>
 
 int pipe(int pipefd[2]);

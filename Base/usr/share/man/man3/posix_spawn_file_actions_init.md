@@ -4,7 +4,7 @@
 
 ## Synopsis
 
-```**c++
+```c++
 #include <spawn.h>
 
 typedef struct posix_spawn_file_actions_t;

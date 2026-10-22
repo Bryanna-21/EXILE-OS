@@ -4,7 +4,7 @@ getresuid, getresgid - get real, effective, and saved user / group ID
 
 ## Synopsis
 
-```**c++
+```c++
 #include <unistd.h>
 
 int getresuid(uid_t*, uid_t*, uid_t*);

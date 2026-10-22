@@ -4,7 +4,7 @@ id - print user/group ID
 
 ## Synopsis
 
-```**sh
+```sh
 $ id [options...]
 ```
 

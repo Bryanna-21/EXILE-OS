@@ -4,7 +4,7 @@ get_process_name - get the process name
 
 ## Synopsis
 
-```**c++
+```c++
 #include <unistd.h>
 
 int get_process_name(char* buffer, int buffer_length);

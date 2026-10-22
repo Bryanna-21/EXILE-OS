@@ -4,7 +4,7 @@ getppid - get current process's parent process ID
 
 ## Synopsis
 
-```**c++
+```c++
 #include <unistd.h>
 
 pid_t getppid();

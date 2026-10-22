@@ -4,7 +4,7 @@ rmdir - remove empty directories
 
 ## Synopsis
 
-```**sh
+```sh
 $ rmdir `[directory...]`
 ```
 
@@ -32,7 +32,7 @@ rmdir: Directory not empty
 # Remove empty directory
 $ mkdir example
 $ ls -a example
-.	..
+.    ..
 $ rmdir example
 $ ls -a example
 example: No such file or directory

@@ -6,7 +6,7 @@
 
 ## Synopsis
 
-```**sh
+```sh
 $ Chess
 ```
 

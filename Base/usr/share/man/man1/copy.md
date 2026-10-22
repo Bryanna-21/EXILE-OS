@@ -4,7 +4,7 @@ copy - copy text to the clipboard
 
 ## Synopsis
 
-```**sh
+```sh
 $ copy [options...] [text...]
 ```
 

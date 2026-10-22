@@ -4,7 +4,7 @@ setuid, setgid - set user / group ID
 
 ## Synopsis
 
-```**c++
+```c++
 #include <unistd.h>
 
 int setuid(uid_t);

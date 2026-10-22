@@ -4,7 +4,7 @@ geteuid, getegid - get effective user / group id
 
 ## Synopsis
 
-```**c++
+```c++
 #include <unistd.h>
 
 uid_t geteuid(void);

@@ -4,7 +4,7 @@ NetworkServer - network configuration
 
 ## Synopsis
 
-```**
+```ini
 /etc/Network.ini
 ```
 

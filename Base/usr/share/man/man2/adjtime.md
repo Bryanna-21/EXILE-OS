@@ -4,7 +4,7 @@ adjtime - gradually adjust system clock
 
 ## Synopsis
 
-```**c++
+```c++
 #include <sys/time.h>
 
 int adjtime(const struct timeval* delta, struct timeval* old_delta);

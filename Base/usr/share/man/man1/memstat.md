@@ -4,7 +4,7 @@ memstat - show memory statistics
 
 ## Synopsis
 
-```**sh
+```sh
 $ memstat
 ```
 

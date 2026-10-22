@@ -4,7 +4,7 @@ asctl - Send control signals to the audio server and hardware
 
 ## Synopsis
 
-```**sh
+```sh
 $ asctl [--human-readable] <command> [args...]
 ```
 
@@ -37,7 +37,7 @@ Both commands and arguments can be abbreviated: Commands by their first letter, 
 
 ## Examples
 
-```**sh
+```sh
 Get the current volume (machine format)
 $ asctl get volume
 100
