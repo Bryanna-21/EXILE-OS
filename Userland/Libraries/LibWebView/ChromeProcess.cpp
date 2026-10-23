@@ -23,18 +23,18 @@ private:
     UIProcessClient(NonnullOwnPtr<Core::LocalSocket>);
 };
 
-ErrorOr<ChromeProcess> ChromeProcess::create()
+ErrorOr<ChromeProcess> ChromeProcess::create(StringView process_name)
 {
     // Increase the open file limit, as the default limits on Linux cause us to run out of file descriptors with around 15 tabs open.
     if (auto result = Core::System::set_resource_limits(RLIMIT_NOFILE, 8192); result.is_error())
         warnln("Unable to increase open file limit: {}", result.error());
 
-    return ChromeProcess {};
+    return ChromeProcess { process_name };
 }
 
 ErrorOr<ChromeProcess::ProcessDisposition> ChromeProcess::connect(Vector<ByteString> const& raw_urls, bool new_window)
 {
-    static constexpr auto process_name = "Ladybird"sv;
+    StringView process_name = m_process_name.view();
 
     auto [socket_path, pid_path] = TRY(Core::IPCProcess::paths_for_process(process_name));
 

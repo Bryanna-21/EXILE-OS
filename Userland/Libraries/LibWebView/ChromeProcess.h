@@ -9,6 +9,7 @@
 #include <AK/Error.h>
 #include <AK/Function.h>
 #include <AK/OwnPtr.h>
+#include <AK/StringView.h>
 #include <AK/Types.h>
 #include <LibCore/Socket.h>
 #include <LibIPC/ConnectionFromClient.h>
@@ -48,7 +49,9 @@ public:
         ExitProcess,
     };
 
-    static ErrorOr<ChromeProcess> create();
+    // process_name picks the pid/socket files used for single-instance forwarding. Applications that
+    // should not hand their URLs to another browser (e.g. Bridgeline vs. Browser) must use distinct names.
+    static ErrorOr<ChromeProcess> create(StringView process_name = "Ladybird"sv);
     ~ChromeProcess();
 
     ErrorOr<ProcessDisposition> connect(Vector<ByteString> const& raw_urls, bool new_window);
@@ -57,7 +60,10 @@ public:
     Function<void(Vector<ByteString> const& raw_urls)> on_new_window;
 
 private:
-    ChromeProcess() = default;
+    explicit ChromeProcess(StringView process_name)
+        : m_process_name(process_name)
+    {
+    }
 
     ErrorOr<void> connect_as_client(ByteString const& socket_path, Vector<ByteString> const& raw_urls, bool new_window);
     ErrorOr<void> connect_as_server(ByteString const& socket_path);
@@ -66,6 +72,7 @@ private:
     OwnPtr<Core::File> m_pid_file;
     ByteString m_pid_path;
     ByteString m_socket_path;
+    ByteString m_process_name;
 };
 
 }
