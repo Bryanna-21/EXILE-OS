@@ -1,6 +1,6 @@
 #!sh
 
-alias fm=FileManager
+alias fm=XFiles
 alias mag=Magnifier
 alias sh=Shell
 alias tb=Taskbar
