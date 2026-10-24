@@ -8,7 +8,7 @@
 
 #include <Applications/Bridgeline/BookmarksBarWidget.h>
 #include <Applications/Bridgeline/Browser.h>
-#include <Applications/Bridgeline/EditBookmarkGML.h>
+#include <Applications/Bridgeline/BridgelineEditBookmarkGML.h>
 #include <LibGUI/Action.h>
 #include <LibGUI/BoxLayout.h>
 #include <LibGUI/Button.h>

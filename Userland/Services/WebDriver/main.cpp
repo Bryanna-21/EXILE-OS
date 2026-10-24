@@ -16,7 +16,7 @@
 
 static ErrorOr<pid_t> launch_browser(ByteString const& socket_path)
 {
-    return Core::Process::spawn("/bin/Browser"sv,
+    return Core::Process::spawn("/bin/Bridgeline"sv,
         Array {
             "--webdriver-content-path",
             socket_path.characters(),
@@ -92,7 +92,7 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
 
     outln("Listening on {}:{}", ipv4_address.value(), port);
 
-    TRY(Core::System::unveil("/bin/Browser", "rx"));
+    TRY(Core::System::unveil("/bin/Bridgeline", "rx"));
     TRY(Core::System::unveil("/bin/headless-browser", "rx"));
     TRY(Core::System::unveil("/etc/timezone", "r"));
     TRY(Core::System::unveil("/res/icons", "r"));

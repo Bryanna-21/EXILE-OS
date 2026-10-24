@@ -5,7 +5,7 @@
  */
 
 #include "FindInPageWidget.h"
-#include <Applications/Bridgeline/FindInPageWidgetGML.h>
+#include <Applications/Bridgeline/BridgelineFindInPageWidgetGML.h>
 #include <LibGUI/Button.h>
 #include <LibGUI/CheckBox.h>
 #include <LibGUI/Label.h>

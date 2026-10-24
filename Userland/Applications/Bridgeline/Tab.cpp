@@ -19,7 +19,7 @@
 #include "InspectorWidget.h"
 #include "StorageWidget.h"
 #include <AK/StringBuilder.h>
-#include <Applications/Bridgeline/TabGML.h>
+#include <Applications/Bridgeline/BridgelineTabGML.h>
 #include <Applications/Bridgeline/URLBox.h>
 #include <Applications/BrowserSettings/Defaults.h>
 #include <LibConfig/Client.h>

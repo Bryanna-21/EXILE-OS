@@ -8,7 +8,7 @@
 #include "StorageWidget.h"
 #include "CookiesModel.h"
 #include "StorageModel.h"
-#include <Applications/Bridgeline/StorageWidgetGML.h>
+#include <Applications/Bridgeline/BridgelineStorageWidgetGML.h>
 #include <LibGUI/Menu.h>
 #include <LibGUI/TabWidget.h>
 #include <LibGUI/TableView.h>

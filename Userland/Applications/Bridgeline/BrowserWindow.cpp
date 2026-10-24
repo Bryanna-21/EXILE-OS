@@ -13,7 +13,7 @@
 #include "InspectorWidget.h"
 #include "Tab.h"
 #include "TaskManagerWidget.h"
-#include <Applications/Bridgeline/BrowserWindowGML.h>
+#include <Applications/Bridgeline/BridgelineBrowserWindowGML.h>
 #include <Applications/BrowserSettings/Defaults.h>
 #include <LibConfig/Client.h>
 #include <LibCore/StandardPaths.h>

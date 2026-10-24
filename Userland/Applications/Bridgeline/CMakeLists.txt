@@ -6,12 +6,12 @@ exile_component(
     DEPENDS BrowserSettings ImageDecoder RequestServer WebContent
 )
 
-stringify_gml(BrowserWindow.gml BrowserWindowGML.h browser_window_gml)
-stringify_gml(EditBookmark.gml EditBookmarkGML.h edit_bookmark_gml)
-stringify_gml(FindInPageWidget.gml FindInPageWidgetGML.h find_in_page_widget_gml)
-stringify_gml(History/HistoryWidget.gml HistoryWidgetGML.h history_widget_gml)
-stringify_gml(StorageWidget.gml StorageWidgetGML.h storage_widget_gml)
-stringify_gml(Tab.gml TabGML.h tab_gml)
+stringify_gml(BrowserWindow.gml BridgelineBrowserWindowGML.h browser_window_gml)
+stringify_gml(EditBookmark.gml BridgelineEditBookmarkGML.h edit_bookmark_gml)
+stringify_gml(FindInPageWidget.gml BridgelineFindInPageWidgetGML.h find_in_page_widget_gml)
+stringify_gml(History/HistoryWidget.gml BridgelineHistoryWidgetGML.h history_widget_gml)
+stringify_gml(StorageWidget.gml BridgelineStorageWidgetGML.h storage_widget_gml)
+stringify_gml(Tab.gml BridgelineTabGML.h tab_gml)
 
 set(SOURCES
     BookmarksBarWidget.cpp
@@ -33,12 +33,12 @@ set(SOURCES
 )
 
 set(GENERATED_SOURCES
-    BrowserWindowGML.h
-    EditBookmarkGML.h
-    FindInPageWidgetGML.h
-    HistoryWidgetGML.h
-    StorageWidgetGML.h
-    TabGML.h
+    BridgelineBrowserWindowGML.h
+    BridgelineEditBookmarkGML.h
+    BridgelineFindInPageWidgetGML.h
+    BridgelineHistoryWidgetGML.h
+    BridgelineStorageWidgetGML.h
+    BridgelineTabGML.h
 )
 
 exile_app(Bridgeline ICON app-browser)

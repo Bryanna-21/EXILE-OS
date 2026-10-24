@@ -5,7 +5,7 @@
  */
 
 #include "HistoryWidget.h"
-#include <Applications/Bridgeline/HistoryWidgetGML.h>
+#include <Applications/Bridgeline/BridgelineHistoryWidgetGML.h>
 #include <LibGUI/TableView.h>
 
 namespace Browser {
