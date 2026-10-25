@@ -63,7 +63,7 @@ Columns: *Src* present in source; *Reg* registered in CMake; *.af* launcher entr
 | Run | Applications | Y | N | 379 | 3 | 1/0 | app-run |
 | Screenshot | Applications | Y | Y | 267 | 1 | 1/0 | app-screenshot |
 | Settings | Applications | Y | N | 147 | 0 | 2/0 | app-settings |
-| SoundPlayer | Applications | Y | Y | 1912 | 11 | 1/0 | app-sound-player |
+| Audio | Applications | Y | Y | 1912 | 11 | 1/0 | app-sound-player |
 | SpaceAnalyzer | Applications | Y | Y | 1060 | 2 | 0/0 | app-space-analyzer |
 | Spreadsheet | Applications | Y | Y | 8088 | 17 | 1/6 | app-spreadsheet |
 | SystemMonitor | Applications | Y | Y | 2996 | 6 | 1/15 | app-system-monitor |
@@ -272,7 +272,7 @@ Still **not** done (blocked by missing OS infrastructure, not faked): installing
 * **Settings** (`Userland/Applications/Settings`, 147 LOC): built/runtime unverified. Flags: no .af launcher entry; no unveil call found; 2 'serenity' mentions; no man page found; no tests found. Recommendation: KEEP pending deeper review. Features, UX and accessibility: *not assessed*.
 * **Snake** (`Userland/Games/Snake`, 984 LOC): built/runtime unverified. Flags: 31 'serenity' mentions; no tests found. Recommendation: KEEP pending deeper review. Features, UX and accessibility: *not assessed*.
 * **Solitaire** (`Userland/Games/Solitaire`, 1294 LOC): built/runtime unverified. Flags: 8 'serenity' mentions; no tests found. Recommendation: KEEP pending deeper review. Features, UX and accessibility: *not assessed*.
-* **SoundPlayer** (`Userland/Applications/SoundPlayer`, 1912 LOC): built/runtime unverified. Flags: no unveil call found; 11 TODO/FIXME; 25 'serenity' mentions; no man page found; no tests found. Recommendation: KEEP pending deeper review. Features, UX and accessibility: *not assessed*.
+* **Audio** (`Userland/Applications/SoundPlayer`, 1912 LOC): built/runtime unverified. Flags: no unveil call found; 11 TODO/FIXME; 25 'serenity' mentions; no man page found; no tests found. Recommendation: KEEP pending deeper review. Features, UX and accessibility: *not assessed*.
 * **SpaceAnalyzer** (`Userland/Applications/SpaceAnalyzer`, 1060 LOC): built/runtime unverified. Flags: no pledge call found; no unveil call found; 13 'serenity' mentions; no man page found; no tests found. Recommendation: KEEP pending deeper review. Features, UX and accessibility: *not assessed*.
 * **Spider** (`Userland/Games/Spider`, 958 LOC): built/runtime unverified. Flags: 7 'serenity' mentions; no tests found. Recommendation: KEEP pending deeper review. Features, UX and accessibility: *not assessed*.
 * **Spreadsheet** (`Userland/Applications/Spreadsheet`, 8088 LOC): built/runtime unverified. Flags: 17 TODO/FIXME; 48 'serenity' mentions; no man page found. Recommendation: KEEP pending deeper review. Features, UX and accessibility: *not assessed*.
@@ -312,7 +312,7 @@ ExileStore: launcher `.af`, real icon, LaunchServer `exile-store:` protocol, ver
 | ModelGallery vs 3DFileViewer | overlap | medium |
 | BrickGame vs Snake / FlappyBug | overlapping casual games | low |
 | ImageViewer vs PixelPaint viewing | overlap | medium: different use cases |
-| SoundPlayer vs Piano | different purposes; **not** a merge, listed only for review | — |
+| Audio vs Piano | different purposes; **not** a merge, listed only for review | — |
 
 Demos and dev tools are not recommended for removal merely for being so.
 

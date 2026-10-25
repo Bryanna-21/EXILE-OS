@@ -46,7 +46,7 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     auto app_icon = GUI::Icon::default_icon("app-sound-player"sv);
 
     auto window = GUI::Window::construct();
-    window->set_title("Sound Player");
+    window->set_title("Audio");
     window->set_icon(app_icon.bitmap_for_size(16));
 
     // start in advanced view by default
@@ -163,7 +163,7 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
 
     auto help_menu = window->add_menu("&Help"_string);
     help_menu->add_action(GUI::CommonActions::make_command_palette_action(window));
-    help_menu->add_action(GUI::CommonActions::make_about_action("Sound Player"_string, app_icon, window));
+    help_menu->add_action(GUI::CommonActions::make_about_action("Audio"_string, app_icon, window));
 
     window->show();
     return app->exec();

@@ -1,7 +1,7 @@
 exile_component(
-    SoundPlayer
+    Audio
     RECOMMENDED
-    TARGETS SoundPlayer
+    TARGETS Audio
     DEPENDS AudioServer
 )
 
@@ -18,5 +18,5 @@ set(SOURCES
     main.cpp
 )
 
-exile_app(SoundPlayer ICON app-sound-player)
-target_link_libraries(SoundPlayer PRIVATE LibAudio LibConfig LibCore LibFileSystem LibDSP LibGfx LibGUI LibIPC LibMain LibThreading LibImageDecoderClient LibURL)
+exile_app(Audio ICON app-sound-player)
+target_link_libraries(Audio PRIVATE LibAudio LibConfig LibCore LibFileSystem LibDSP LibGfx LibGUI LibIPC LibMain LibThreading LibImageDecoderClient LibURL)

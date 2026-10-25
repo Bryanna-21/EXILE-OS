@@ -61,7 +61,7 @@ This is a non-exhaustive list of applications that use audio. Most of these foll
 
 -   **Piano** is a sequencer/tracker and synthesizer.
 -   [**aplay**](help://man/1/aplay) is a command line audio file playback utility.
--   **SoundPlayer** is a UI audio file player with extra features such as playlist support and audio visualizations.
+-   **Audio** is a UI audio file player with extra features such as playlist support and audio visualizations.
 -   [**asctl**](help://man/1/asctl) is a command line audio server control utility.
 -   **Applets/Audio** (AudioApplet) is a taskbar applet for setting audio parameters through a UI.
 -   The [Browser](help://man/1/Applications/Browser) can play audio on websites.

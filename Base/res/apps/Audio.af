@@ -1,6 +1,6 @@
 [App]
-Name=&Sound Player
-Executable=/bin/SoundPlayer
+Name=Audio
+Executable=/bin/Audio
 Category=&Media
 
 [Launcher]

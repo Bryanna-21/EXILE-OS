@@ -260,7 +260,7 @@ void SoundPlayerWidget::file_name_changed(StringView name)
             title = metadata.title.value().to_byte_string();
         }
     }
-    m_window.set_title(ByteString::formatted("{} — Sound Player", title));
+    m_window.set_title(ByteString::formatted("{} — Audio", title));
 }
 
 void SoundPlayerWidget::total_samples_changed(int total_samples)
