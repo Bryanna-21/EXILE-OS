@@ -1,138 +1,296 @@
 # Exile OS
 
-Graphical operating system project targeting 64-bit x86, Arm, and RISC-V computers, derived from the [SerenityOS](https://github.com/SerenityOS/serenity) codebase.
+Exile OS is an independent operating-system project focused on user control, privacy, and a coherent desktop experience. It is developed under the Exile Organization and builds on a substantial inherited codebase while adding original Exile-authored components.
 
-> **Status:** which architectures actually build, boot and pass tests is tracked in [`Documentation/Project-Audits/`](Documentation/Project-Audits/). Nothing in this README should be read as a claim that an architecture or feature has been validated.
+> **Development status:** This project is under active early-stage development. The inherited codebase provides a working graphical Unix-like system for x86-64. Exile-authored components — including the Exile Universal Kernel (EUK) and Exile Store — are experimental and not yet integrated into the primary boot image. Nothing in this document should be read as a claim that any architecture or feature beyond the inherited codebase has been independently validated for production use.
 
-[![GitHub Actions Status](https://github.com/Bryanna-21/EXILE-OS/actions/workflows/ci.yml/badge.svg)](https://github.com/Bryanna-21/EXILE-OS/actions/workflows/ci.yml)
+---
 
-[FAQ](Documentation/FAQ.md) | [Documentation](#how-do-i-read-the-documentation) | [Build Instructions](#how-do-i-build-and-run-this)
+## Vision and principles
 
-## About
+Exile OS is being built around a small set of commitments:
 
-Exile OS is an independent project developed under the Exile organization. It originated from the SerenityOS codebase: the vast majority of the code in this repository is SerenityOS-derived and is used under its BSD-2-Clause license, with all upstream copyright and license notices preserved (see [`LICENSE`](LICENSE) and [`Meta/Exile/IDENTITY.md`](Meta/Exile/IDENTITY.md)). Exile-authored components are being added alongside it, for example the Exile Store and the boot integrity tooling.
+Exile OS is being built around a small set of commitments:
 
-The inherited design is inspired by '90s user interfaces with a custom Unix-like core.
+- **User sovereignty.** The project aims to give users control over what runs on their machines, what data is stored, and what is transmitted. Many core operating-system tasks can run without network access, while network-dependent features require connectivity.
+- **Privacy by design.** Privacy is a design goal, not a claim of complete system-wide verification. The project aims to minimize unnecessary telemetry and prevent page contents from being sent to external AI services without explicit user authorization. Privacy behavior depends on the implementation and configuration of inherited components and connected services. Site data isolation and clearing depend on each component's storage implementation.
+- **Transparent system behavior.** The inherited codebase includes security mechanisms such as pledge, unveil, W^X memory protections, ASLR, and process isolation. Their presence does not establish that every component is correctly configured or independently audited. Certificate validation and other security behavior depend on the relevant implementation and configuration.
+- **Native applications and coherent UX.** Applications share a common toolkit (LibGUI), icon language, and design philosophy. The interface is consistent across the desktop, and the long-term ambition includes a shared desktop and mobile ecosystem.
+- **Extensibility.** A port system provides access to hundreds of open-source packages. The architecture supports future engine adapters and compatibility layers, subject to licensing, ABI compatibility, and security review.
 
-Roughly speaking, the goal is a marriage between the aesthetic of late-1990s productivity software and the power-user accessibility of late-2000s \*nix. This is a system by us, for us, based on the things we like.
+---
 
-## Features
+## Architecture
 
--   Modern 64-bit kernel with pre-emptive multi-threading
--   [Browser](Userland/Applications/Browser/) with JavaScript, WebAssembly, and more (check the spec compliance for [JS](external JS specification tests), [CSS](external CSS specification tests), and [Wasm](external WebAssembly specification tests))
--   Security features (hardware protections, limited userland capabilities, W^X memory, `pledge` & `unveil`, (K)ASLR, OOM-resistance, web-content isolation, state-of-the-art TLS algorithms, ...)
--   [System services](Userland/Services/) (WindowServer, LoginServer, AudioServer, WebServer, RequestServer, CrashServer, ...) and modern IPC
--   Good POSIX compatibility ([LibC](Userland/Libraries/LibC/), Shell, syscalls, signals, pseudoterminals, filesystem notifications, standard Unix [utilities](Userland/Utilities/), ...)
--   POSIX-like virtual file systems (/proc, /dev, /sys, /tmp, ...) and ext2 file system
--   Network stack and applications with support for IPv4, TCP, UDP; DNS, HTTP, Gemini, IMAP, NTP
--   Profiling, debugging and other development tools (Kernel-supported profiling, CrashReporter, interactive GUI playground, HexEditor, HackStudio IDE for C++ and more)
--   [Libraries](Userland/Libraries/) for everything from cryptography to OpenGL, audio, JavaScript, GUI, playing chess, ...
--   Support for many common and uncommon file formats (PNG, JPEG, GIF, MP3, WAV, FLAC, ZIP, TAR, PDF, QOI, Gemini, ...)
--   Unified style and design philosophy, flexible theming system, [custom (bitmap and vector) fonts](the project font collection)
--   [Games](Userland/Games/) (Solitaire, Minesweeper, 2048, chess, Conway's Game of Life, ...) and [demos](Userland/Demos/) (CatDog, Starfield, Eyes, mandelbrot set, WidgetGallery, ...)
--   Every-day GUI programs and utilities (Spreadsheet with JavaScript, TextEditor, Terminal, PixelPaint, various multimedia viewers and players, Mail, Assistant, Calculator, ...)
+Exile OS combines an inherited userland with new Exile-authored kernel work.
 
-... and all of the above are right in this repository, with no extra dependencies. This is inherited from the upstream SerenityOS project, whose developers wrote it (see [Authors](#authors)); it has not been independently re-validated for Exile OS.
+### Inherited components
 
-Additionally, there are [over three hundred ports of popular open-source software](Ports/AvailablePorts.md), including games, compilers, Unix tools, multimedia apps and more.
+The majority of the repository is derived from the SerenityOS codebase and is used under its BSD-2-Clause license. These components provide:
 
-## How do I read the documentation?
+- A modern 64-bit kernel (`Kernel/`) with pre-emptive multi-threading, hardware protection features, and a POSIX-compatible system-call interface.
+- A full graphical desktop environment built on LibGUI, with WindowServer, LoginServer, AudioServer, and supporting services.
+- LibWeb and the inherited browser engine, providing HTML5 parsing, CSS, JavaScript, and WebAssembly support.
+- A C standard library (LibC), POSIX-compatible shell, virtual file systems (/proc, /dev, /sys), and an ext2 filesystem.
+- A network stack supporting IPv4, TCP, UDP, DNS, HTTP, TLS, and other protocols.
+- A large collection of native applications, libraries, games, and utilities.
+- A port system with over three hundred third-party software packages.
 
-Man pages are available online at the online manual pages. These pages are generated from the Markdown source files in [`Base/usr/share/man`](https://github.com/Bryanna-21/EXILE-OS/tree/main/Base/usr/share/man) and updated automatically.
+These components have not been independently re-validated for Exile OS beyond what the inherited CI infrastructure verifies.
 
-When running Exile OS you can use `man` for the terminal interface, or `help` for the GUI.
+### Exile-authored components
 
-Code-related documentation can be found in the [documentation](Documentation/) folder.
+Exile OS adds original components alongside the inherited codebase:
 
-## How do I build and run this?
+- **Exile Universal Kernel (EUK).** An experimental Rust-based kernel in `ExileKernel/`, currently targeting isolated x86-64 boot as milestone 1. EUK does not replace the inherited kernel and does not yet support userspace. It is developed separately with its own toolchain, test harness, and verification documentation. See `ExileKernel/README.md` and `ExileKernel/docs/` for details.
+- **Exile Store.** A native catalog browser for discovering and installing software, added to `Userland/Applications/`.
+- **Boot integrity tooling.** Verification infrastructure documented in `Documentation/BootIntegrity.md`.
+- **Project audits.** Structured reviews of application inventory, branding, licensing, and integration gaps, maintained in `Documentation/Project-Audits/`.
+- **Exile file format documentation.** MIME detection policy and format specifications in `Documentation/ExileFileFormats.md`.
 
-See the [Exile OS build instructions](https://github.com/Bryanna-21/EXILE-OS/blob/main/Documentation/BuildInstructions.md) or the [Ladybird build instructions](Documentation/BuildInstructionsLadybird.md).
+### Platform support
 
-The build system supports a cross-compilation build of Exile OS from Linux, macOS, Windows (with WSL2) and many other \*Nixes.
-The default build system commands will launch a QEMU instance running the OS with hardware or software virtualization
-enabled as supported.
+| Architecture | Status |
+|---|---|
+| x86-64 | Inherited kernel builds and boots via CI. EUK milestone 1 provides experimental isolated boot. |
+| AArch64 (ARM64) | Inherited codebase includes ARM64 port. Build and boot status tracked in `Documentation/Project-Audits/`. |
+| RISC-V | Inherited codebase includes RISC-V port documentation (`Documentation/RISC-V.md`). Not validated by Exile OS CI. |
 
-Ladybird runs on the same platforms that can be the host for a cross build of Exile OS and on Exile OS itself.
+Architecture validation status is tracked in `Documentation/Project-Audits/`. Do not assume an architecture works because it appears in the source tree.
 
-## Get in touch and participate!
+---
 
+## Repository structure
 
-Before opening an issue, please see the [issue policy](https://github.com/Bryanna-21/EXILE-OS/blob/main/CONTRIBUTING.md#issue-policy).
+```
+AK/                    Core C++ template and utility library
+Base/                  Base filesystem image: man pages, config, resources, etc.
+Documentation/         Build instructions, coding style, architecture docs, project audits
+ExileKernel/           Exile Universal Kernel (EUK) — experimental Rust kernel
+Kernel/                Inherited system kernel (C++)
+Ladybird/              Inherited browser engine and standalone browser build
+Meta/                  Project metadata, Exile identity, CI scripts, linting
+  Meta/Exile/          Exile-specific identity and branding
+Ports/                 Third-party software port definitions
+Tests/                 Test infrastructure for libraries and kernel
+Toolchain/             Cross-compilation toolchain build scripts
+Userland/              Userspace code
+  Userland/Applications/  GUI applications (Browser, Store, Terminal, etc.)
+  Userland/Libraries/     System libraries (LibGUI, LibWeb, LibC, LibCore, etc.)
+  Userland/Services/      System services (WindowServer, AudioServer, etc.)
+  Userland/Utilities/     Command-line utilities
+  Userland/Games/         Games
+  Userland/Demos/         Demo applications
+patches/               Patches applied to third-party code
+```
 
-A general guide for contributing can be found in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+---
 
-## Authors
+## Getting started
 
--   **Andreas Kling** - [awesomekling](https://twitter.com/awesomekling) [![GitHub Sponsors](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub)](https://github.com/sponsors/awesomekling)
--   **Robin Burchell** - [rburchell](https://github.com/rburchell)
--   **Conrad Pankoff** - [deoxxa](https://github.com/deoxxa)
--   **Sergey Bugaev** - [bugaevc](https://github.com/bugaevc)
--   **Liav A** - [supercomputer7](https://github.com/supercomputer7)
--   **Linus Groh** - [linusg](https://github.com/linusg) [![GitHub Sponsors](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub)](https://github.com/sponsors/linusg)
--   **Ali Mohammad Pur** - [alimpfard](https://github.com/alimpfard)
--   **Shannon Booth** - [shannonbooth](https://github.com/shannonbooth)
--   **Hüseyin ASLITÜRK** - [asliturk](https://github.com/asliturk)
--   **Matthew Olsson** - [mattco98](https://github.com/mattco98)
--   **Nico Weber** - [nico](https://github.com/nico)
--   **Brian Gianforcaro** - [bgianfo](https://github.com/bgianfo)
--   **Ben Wiederhake** - [BenWiederhake](https://github.com/BenWiederhake)
--   **Tom** - [tomuta](https://github.com/tomuta)
--   **Paul Scharnofske** - [asynts](https://github.com/asynts)
--   **Itamar Shenhar** - [itamar8910](https://github.com/itamar8910)
--   **Luke Wilde** - [Lubrsi](https://github.com/Lubrsi)
--   **Brendan Coles** - [bcoles](https://github.com/bcoles)
--   **Andrew Kaster** - [ADKaster](https://github.com/ADKaster) [![GitHub Sponsors](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub)](https://github.com/sponsors/ADKaster)
--   **thankyouverycool** - [thankyouverycool](https://github.com/thankyouverycool)
--   **Idan Horowitz** - [IdanHo](https://github.com/IdanHo)
--   **Gunnar Beutner** - [gunnarbeutner](https://github.com/gunnarbeutner)
--   **Tim Flynn** - [trflynn89](https://github.com/trflynn89)
--   **Jean-Baptiste Boric** - [boricj](https://github.com/boricj)
--   **Stephan Unverwerth** - [sunverwerth](https://github.com/sunverwerth)
--   **Max Wipfli** - [MaxWipfli](https://github.com/MaxWipfli)
--   **Daniel Bertalan** - [BertalanD](https://github.com/BertalanD)
--   **Jelle Raaijmakers** - [GMTA](https://github.com/GMTA)
--   **Sam Atkins** - [AtkinsSJ](https://github.com/AtkinsSJ) [![GitHub Sponsors](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub)](https://github.com/sponsors/AtkinsSJ)
--   **Tobias Christiansen** - [TobyAsE](https://github.com/TobyAsE)
--   **Lenny Maiorani** - [ldm5180](https://github.com/ldm5180)
--   **sin-ack** - [sin-ack](https://github.com/sin-ack)
--   **Jesse Buhagiar** - [Quaker762](https://github.com/Quaker762)
--   **Peter Elliott** - [Petelliott](https://github.com/Petelliott)
--   **Karol Kosek** - [krkk](https://github.com/krkk)
--   **Mustafa Quraish** - [mustafaquraish](https://github.com/mustafaquraish)
--   **David Tuin** - [davidot](https://github.com/davidot)
--   **Leon Albrecht** - [Hendiadyoin1](https://github.com/Hendiadyoin1)
--   **Tim Schumacher** - [timschumi](https://github.com/timschumi)
--   **Marcus Nilsson** - [metmo](https://github.com/metmo)
--   **Gegga Thor** - [Xexxa](https://github.com/Xexxa) [![GitHub Sponsors](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub)](https://github.com/sponsors/Xexxa)
--   **kleines Filmröllchen** - [kleinesfilmroellchen](https://github.com/kleinesfilmroellchen) [![GitHub Sponsors](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub)](https://github.com/sponsors/kleinesfilmroellchen)
--   **Kenneth Myhra** - [kennethmyhra](https://github.com/kennethmyhra)
--   **Maciej** - [sppmacd](https://github.com/sppmacd)
--   **Sahan Fernando** - [ccapitalK](https://github.com/ccapitalK)
--   **Benjamin Maxwell** - [MacDue](https://github.com/MacDue)
--   **Dennis Esternon** - [djwisdom](https://github.com/djwisdom) [![GitHub Sponsors](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub)](https://github.com/sponsors/djwisdom)
--   **frhun** - [frhun](https://github.com/frhun)
--   **networkException** - [networkException](https://github.com/networkException) [![GitHub Sponsors](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub)](https://github.com/sponsors/networkException)
--   **Brandon Jordan** - [electrikmilk](https://github.com/electrikmilk)
--   **Lucas Chollet** - [LucasChollet](https://github.com/LucasChollet)
--   **Timon Kruiper** - [FireFox317](https://github.com/FireFox317)
--   **Martin Falisse** - [martinfalisse](https://github.com/martinfalisse)
--   **Gregory Bertilson** - [Zaggy1024](https://github.com/Zaggy1024)
--   **Erik Wouters** - [EWouters](https://github.com/EWouters)
--   **Rodrigo Tobar** - [rtobar](https://github.com/rtobar)
--   **Alexander Kalenik** - [kalenikaliaksandr](https://github.com/kalenikaliaksandr)
--   **Tim Ledbetter** - [tcl3](https://github.com/tcl3)
--   **Steffen T. Larssen** - [stelar7](https://github.com/stelar7)
--   **Andi Gallo** - [axgallo](https://github.com/axgallo)
--   **Simon Wanner** - [skyrising](https://github.com/skyrising)
--   **FalseHonesty** - [FalseHonesty](https://github.com/FalseHonesty)
--   **Bastiaan van der Plaat** - [bplaat](https://github.com/bplaat)
--   **Dan Klishch** - [DanShaders](https://github.com/DanShaders)
--   **Julian Offenhäuser** - [janso3](https://github.com/janso3)
--   **Sönke Holz** - [spholz](https://github.com/spholz)
--   **implicitfield** - [implicitfield](https://github.com/implicitfield)
+### Prerequisites
 
-And many more! [See here](https://github.com/Bryanna-21/EXILE-OS/graphs/contributors) for a full contributor list. The people listed above have landed more than 100 commits in the project. :^)
+Building Exile OS requires a Unix-like host environment. The build system supports cross-compilation from Linux, macOS, and Windows (via WSL2). Detailed, tested instructions are in `Documentation/BuildInstructions.md`.
 
-## License
+Host-specific guides:
 
-Exile OS is licensed under a 2-clause BSD license.
+- [Building on Linux](Documentation/BuildInstructionsOther.md)
+- [Building on macOS](Documentation/BuildInstructionsMacOS.md)
+- [Building on Windows (WSL2)](Documentation/BuildInstructionsWindows.md)
+
+A Nix flake (`flake.nix`) is provided for reproducible development environments.
+
+### Building the inherited system
+
+```sh
+# Clone the repository
+git clone https://github.com/Bryanna-21/EXILE-OS.git
+cd EXILE-OS
+
+# Build the toolchain (first time only)
+Toolchain/BuildIt.sh
+
+# Configure and build
+cmake -S Meta/CMake/Superbuild -B Build/superbuild -GNinja
+cmake --build Build/superbuild
+
+# Run in QEMU
+./Meta/serenity.sh run
+```
+
+These commands are inherited from the upstream build system. If they fail on your host, consult `Documentation/Troubleshooting.md` and `Documentation/BuildInstructions.md` before opening an issue.
+
+### Building Ladybird (standalone browser)
+
+Ladybird can be built separately from the full OS. See `Documentation/BuildInstructionsLadybird.md`.
+
+### Building the Exile Universal Kernel (EUK)
+
+EUK is built independently from the main OS. It requires Rust 1.91.1 (checksum-verified), GNU gcc/binutils, and Python 3. No crates or OS headers are needed.
+
+```sh
+cd ExileKernel
+export EUK_RUSTC=/path/to/rust-1.91.1/bin/rustc
+export EUK_SYSROOT=/path/to/rust-1.91.1
+python3 scripts/test.py
+python3 scripts/build.py
+python3 scripts/boot_test.py
+```
+
+See `ExileKernel/README.md` and `ExileKernel/docs/TOOLCHAIN.md` for exact toolchain requirements and checksums.
+
+---
+
+## Testing
+
+Exile OS inherits a test infrastructure from the upstream codebase. Tests are located in `Tests/` and cover libraries, kernel subsystems, and utilities.
+
+```sh
+# Run tests (inherited)
+./Meta/serenity.sh test
+```
+
+EUK provides its own test harness:
+
+```sh
+cd ExileKernel
+python3 scripts/test.py
+```
+
+See `Documentation/RunningTests.md` for details on the inherited test infrastructure.
+
+**What has been verified:** The active CI workflow runs selected inherited build and test jobs on pushes and pull requests across configured toolchain, architecture, and debug configurations. This does not establish that every test suite passes on every change. EUK milestone 1 has a separate experimental test and boot-validation workflow. No broader integration testing between EUK and the inherited userland has been performed.
+
+---
+
+## Development and contribution
+
+Exile OS welcomes contributions. Before starting, read:
+
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — Code submission policy, commit message format, coding style
+- [`Documentation/CodingStyle.md`](Documentation/CodingStyle.md) — Style guide
+- [`Documentation/Patterns.md`](Documentation/Patterns.md) — Common development patterns
+
+### Guidelines
+
+- **Start small.** For your first contributions, fix a bug or improve documentation before adding new applications or large components.
+- **One change per commit.** Keep commits atomic and well-described. Use the format `Category: Brief description`.
+- **Write tests.** Include tests when fixing bugs or adding features.
+- **Use American English.** The official project language is American English with ISO 8601 dates and metric units.
+- **Check the audits.** Before adding applications or changing branding, review `Documentation/Project-Audits/` for existing guidance.
+
+### Issue policy
+
+File bugs on GitHub. One issue per bug. Do not file build issues if CI passes — work those out locally or ask for help. Include complete debug logs and hardware details for bare-metal issues.
+
+---
+
+## Project status and roadmap
+
+### Implemented
+
+- Inherited graphical desktop environment (x86-64)
+- Inherited kernel with security features (pledge, unveil, ASLR, W^X)
+- Inherited browser with LibWeb engine
+- Inherited network stack and TLS
+- Inherited POSIX compatibility layer
+- Exile project identity and branding (`Meta/Exile/IDENTITY.md`)
+- Exile Store catalog browser
+- Boot integrity documentation
+- Project audit infrastructure
+- EUK milestone 1 (isolated x86-64 boot, experimental)
+
+### Experimental
+
+- Exile Universal Kernel (EUK) — Rust-based, no userspace yet
+- AArch64 and RISC-V architecture ports (inherited, not Exile-validated)
+
+### Planned
+
+- EUK integration with Exile OS userspace (subject to milestone completion)
+- Engine adapter architecture for cross-browser compatibility (see Bridgeline browser project)
+- Local-first AI integration boundary
+- Mobile ecosystem convergence (long-term)
+- Expanded architecture validation and CI
+
+### Not supported
+
+- Production deployment on any architecture
+- Security audit of inherited components beyond upstream CI
+- Compatibility guarantees with third-party software not in the port system
+
+---
+
+## Licensing and provenance
+
+Exile OS contains code from multiple sources with different licenses.
+
+### Inherited codebase
+
+The majority of the repository is derived from SerenityOS and is licensed under the **BSD 2-Clause License**. Copyright is held by the SerenityOS developers. All upstream copyright notices and license terms are preserved. See [`LICENSE`](LICENSE) for the full text.
+
+### Exile-authored components
+
+Exile-authored components are added under compatible terms. The Exile Universal Kernel (EUK) milestone 1 source is released under the **Apache License 2.0**. See `ExileKernel/LICENSE`, `ExileKernel/NOTICE.md`, and `ExileKernel/THIRD_PARTY.md` for details.
+
+### Third-party components
+
+The port system (`Ports/`) includes third-party software under their respective licenses. Individual port directories contain license information. The `patches/` directory contains modifications to third-party code.
+
+### Provenance notice
+
+This project originated from the SerenityOS codebase. Exile OS is an independent project with its own identity, goals, and roadmap, but the majority of the code was not originally authored for Exile OS. Changing the README does not change the provenance of inherited code. All legally required copyright notices, license terms, and attribution are preserved.
+
+See `Documentation/Project-Audits/LICENSING_AND_PROVENANCE_AUDIT.md` for a detailed provenance review.
+
+---
+
+## Documentation
+
+- [Build Instructions](Documentation/BuildInstructions.md)
+- [Ladybird Build Instructions](Documentation/BuildInstructionsLadybird.md)
+- [Coding Style](Documentation/CodingStyle.md)
+- [Running Tests](Documentation/RunningTests.md)
+- [Boot Integrity](Documentation/BootIntegrity.md)
+- [Exile File Formats](Documentation/ExileFileFormats.md)
+- [FAQ](Documentation/FAQ.md)
+- [Project Audits](Documentation/Project-Audits/)
+
+Man pages are generated from `Base/usr/share/man` and available online. Within the OS, use `man` for the terminal interface or `help` for the GUI.
+
+---
+
+## Security
+
+Exile OS inherits security mechanisms from its underlying codebase, including hardware protections, userland capability restrictions, W^X memory, pledge and unveil, ASLR, and web-content process isolation. The system also includes LibTLS for TLS functionality. The exact protections available depend on the implementation, build configuration, and runtime configuration.
+However, this is an early-stage project. The inherited codebase has not received an independent security audit. Exile-authored components are experimental. Do not deploy Exile OS in security-critical environments without your own review.
+
+See [`SECURITY.md`](SECURITY.md) for the vulnerability reporting policy.
+
+---
+
+## Project identity
+
+Exile OS is developed under the **Exile Organization**, founded by the **Exile Foundation**. It is an independent operating-system project with its own identity, goals, and roadmap.
+
+Public-facing branding uses **Exile OS**. Technical identifiers are migrated deliberately when compatibility and build requirements allow. The project identity is documented in `Meta/Exile/IDENTITY.md`.
+
+---
+
+## Acknowledgments
+
+Exile OS builds on the work of the SerenityOS developers and community. The inherited codebase represents years of work by hundreds of contributors. Exile OS preserves all upstream attribution and licensing.
+
+The Exile-authored components are developed by the Exile Organization and contributors. See the [contributor graph](https://github.com/Bryanna-21/EXILE-OS/graphs/contributors) for the full list.
+
+---
+
+## Contact
+
+- **Repository:** https://github.com/Bryanna-21/EXILE-OS
+- **Issues:** https://github.com/Bryanna-21/EXILE-OS/issues
+- **Security:** See [`SECURITY.md`](SECURITY.md)
+
+---
+
+*Exile OS — User control. Privacy. Coherent experience.*
