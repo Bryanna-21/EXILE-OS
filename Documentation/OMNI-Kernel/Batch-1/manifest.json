@@ -1,0 +1,36 @@
+{
+  "manifest_schema_version": "1.0",
+  "package_name": "OMNI-Kernel-Batch-1",
+  "batch_id": "batch-1",
+  "batch_scope": "specification-only milestone; contains documentation, no source code",
+  "checksum_algorithm": "SHA-256",
+  "checksum_statement": "Checksums and byte sizes cover the exact bytes of each listed file as extracted from the archive.",
+  "files": [
+    {
+      "path": "README.md",
+      "sha256": "54fafc26bf1e96ea427c8e58ffe1cc5444561245a4cf84f6080d06ac6474bec8",
+      "bytes": 10728
+    },
+    {
+      "path": "REPORT.md",
+      "sha256": "6b904d9b42ecb02ddef4c1e6fdcd35056ab01ff63e559517b3332a0dd240dd33",
+      "bytes": 7204
+    },
+    {
+      "path": "docs/ABI-AND-SECURITY.md",
+      "sha256": "babe2602a19955842a5cce2ae9625fafef786a7ea96bcc558d01ad08e5df355c",
+      "bytes": 42383
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "sha256": "d7c878b11b24b245a9ceb2c46f1f3c29504c89d677c9d22edb6286c1499574bf",
+      "bytes": 26121
+    }
+  ],
+  "excluded_from_file_list": [
+    {
+      "path": "manifest.json",
+      "reason": "A file cannot contain a stable checksum of itself; excluded to avoid a circular dependency."
+    }
+  ]
+}
