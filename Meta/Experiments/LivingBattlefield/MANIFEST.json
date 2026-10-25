@@ -1,0 +1,114 @@
+[
+ {
+  "file": "assets/ground.png",
+  "dimensions": "1920x650",
+  "format": "PNG RGB",
+  "bytes": 1119156,
+  "sha256": "631e0f2c9132b29de6b4f031d4e4dc694b2b4a0325d09a5a10a6c548b31ed935"
+ },
+ {
+  "file": "assets/hills_far.png",
+  "dimensions": "1920x300",
+  "format": "PNG RGBA",
+  "bytes": 420831,
+  "sha256": "cf7885c473a30397b57a6e9fcb1e54f37850f883529c5fb180d921204b08b92c"
+ },
+ {
+  "file": "assets/hills_near.png",
+  "dimensions": "1920x260",
+  "format": "PNG RGBA",
+  "bytes": 368667,
+  "sha256": "0458b9fc23a4272e27678ac8604a9eeaee68021ea82a739766713082d8624764"
+ },
+ {
+  "file": "assets/sky_clouds.png",
+  "dimensions": "1920x430",
+  "format": "PNG RGBA",
+  "bytes": 286702,
+  "sha256": "9aa093ceabe9633d8856e08ca98faacf851405e0d7c22afd62b029e0dc5f8a40"
+ },
+ {
+  "file": "assets/sprites.json",
+  "dimensions": "-",
+  "format": "JSON",
+  "bytes": 31752,
+  "sha256": "c440a11f8835b08fe8fa5bd262dce34cfa8fc24668a011ea82c615765a63ab5f"
+ },
+ {
+  "file": "assets/sprites.png",
+  "dimensions": "4096x1802",
+  "format": "PNG RGBA",
+  "bytes": 3594686,
+  "sha256": "5221d449a0484be16f176d6f087d5b6b902178e4875c27897e7779107f0e7aeb"
+ },
+ {
+  "file": "previews/PREVIEW.png",
+  "dimensions": "1280x1440",
+  "format": "PNG RGB",
+  "bytes": 2771245,
+  "sha256": "1867fbca9af7a6929770d712c87653d6eab8010fc26fddcab63954fb75723128"
+ },
+ {
+  "file": "previews/contact_sheet.png",
+  "dimensions": "1280x1440",
+  "format": "PNG RGB",
+  "bytes": 2771245,
+  "sha256": "1867fbca9af7a6929770d712c87653d6eab8010fc26fddcab63954fb75723128"
+ },
+ {
+  "file": "previews/phase_afternoon.png",
+  "dimensions": "1152x648",
+  "format": "PNG RGBA",
+  "bytes": 1263044,
+  "sha256": "68b9ab80701d38cb306395306c69e93f216fd2e20db57a2d7de3bc470ede07df"
+ },
+ {
+  "file": "previews/phase_dawn.png",
+  "dimensions": "1152x648",
+  "format": "PNG RGBA",
+  "bytes": 1132685,
+  "sha256": "fc099b943b13f774c4964a71e9811397f1aabfa9aef9ece536488c48520d8509"
+ },
+ {
+  "file": "previews/phase_evening.png",
+  "dimensions": "1152x648",
+  "format": "PNG RGBA",
+  "bytes": 1181913,
+  "sha256": "0bf22bd3f675b78c7d573cdb4c19f8268812a2cf7ef189a479ddce4f916eef9e"
+ },
+ {
+  "file": "previews/phase_midday.png",
+  "dimensions": "1152x648",
+  "format": "PNG RGBA",
+  "bytes": 1280990,
+  "sha256": "b46417a9035dd4a0a3ed4cfb9c37738d4206072df5f8df60a516a44649a5fbed"
+ },
+ {
+  "file": "previews/phase_morning.png",
+  "dimensions": "1152x648",
+  "format": "PNG RGBA",
+  "bytes": 1251683,
+  "sha256": "640e0d00beb8bfa38ccf1b096c10a7c653f0e7e07e97c355440a848344e2741d"
+ },
+ {
+  "file": "previews/phase_night.png",
+  "dimensions": "1152x648",
+  "format": "PNG RGBA",
+  "bytes": 1164139,
+  "sha256": "8ca15ffe43264ea1a47c7d351176d206d1b4fcab276476792c62393798d0ab2d"
+ },
+ {
+  "file": "previews/phase_predawn.png",
+  "dimensions": "1152x648",
+  "format": "PNG RGBA",
+  "bytes": 1162888,
+  "sha256": "d6fc12ace6709368e72d312597350750799eecef0425a3e61809d35962b3fdfb"
+ },
+ {
+  "file": "previews/phase_sunset.png",
+  "dimensions": "1152x648",
+  "format": "PNG RGBA",
+  "bytes": 1106009,
+  "sha256": "0278473c0a202344131b41040d42b1eed4b345feb7665876b0b8c2f4b16ffcb7"
+ }
+]
