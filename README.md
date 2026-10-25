@@ -16,16 +16,6 @@ The inherited design is inspired by '90s user interfaces with a custom Unix-like
 
 Roughly speaking, the goal is a marriage between the aesthetic of late-1990s productivity software and the power-user accessibility of late-2000s \*nix. This is a system by us, for us, based on the things we like.
 
-You can watch videos of the upstream SerenityOS system being developed on YouTube:
-
--   [Andreas Kling's channel](https://youtube.com/andreaskling)
--   [Linus Groh's channel](https://youtube.com/linusgroh)
--   [kleines Filmröllchen's channel](https://www.youtube.com/c/kleinesfilmroellchen)
-
-## Screenshot
-
-![Screenshot as of c03b788.png](Meta/Screenshots/screenshot-c03b788.png)
-
 ## Features
 
 -   Modern 64-bit kernel with pre-emptive multi-threading
