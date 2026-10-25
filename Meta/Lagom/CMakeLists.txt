@@ -693,6 +693,7 @@ if (BUILD_LAGOM)
         set(TEST_DIRECTORIES
             AK
             ExileBoot
+            ExileStore
             Kernel/POSIX
             LibCompress
             LibCrypto

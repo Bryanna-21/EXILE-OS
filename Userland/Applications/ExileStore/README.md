@@ -19,9 +19,10 @@ This repository contains:
 | `src/app/` | `Engine`: thread-safe wrapper around the core (immutable snapshots + one install worker) |
 | `src/server/` | Loopback HTTP server, JSON API and request-security checks for the web UI |
 | `web/` | **The universal UI**: one responsive page (phone, tablet, desktop, TV) compiled into the binary |
+| `src/CatalogLoader.*`, `src/native_main.cpp` | Native Exile OS catalog browser (read-only; see `docs/INTEGRATION.md`, section 5) |
 | `src/main.cpp` | Terminal front-end and CLI (`exile-store`), plus `serve` for the web UI |
 | `tools/expkg_tool.cpp` | Developer tool: build `.expkg` dev packages, sign, generate the sample catalog |
-| `tests/` | 176 unit tests + a CLI smoke test; browser-driven checks were run by hand (see below) |
+| `tests/` | Store unit tests and a CLI smoke test; run the host build script to execute the available checks |
 | `data/` | A small **clearly-labelled sample catalog** (signed, development only) |
 
 The core library has no UI dependency, so a graphical front-end for Exile OS (or the future mobile/tablet/TV stores) can reuse it unchanged.

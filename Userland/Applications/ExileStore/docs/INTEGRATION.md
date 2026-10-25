@@ -42,3 +42,9 @@ Keep it a static-friendly, signed-metadata design so it can be hosted anywhere a
 2. Plug in an HTTPS `ITransport` and make the catalog signed with expiry.
 3. Write the launcher/web-view shell for each device family (or port the front-end to the native toolkit via `app::Engine`).
 4. Replace the dev trust file with the OS root of trust.
+
+## 5. Native Exile OS app (`src/native_main.cpp`) status
+
+The native target is a catalog browser: it loads `/usr/share/exile-store/catalog/catalog.json` (installed from `data/` to `usr/share/exile-store`), validates and sanitises every field (`src/CatalogLoader.*`, AK only, unit-tested in `Tests/ExileStore`), and supports search, selection, refresh and distinct error / empty / loaded states.
+
+It does **not** install, update, uninstall or launch anything, does not track installed state, and does not verify signatures or checksums. The "Install" button is disabled on purpose. To enable it the OS needs the services in section 1 (privileged installer, package database, launcher/process API), after which the native target can link `exile_core` and use `LibCrypto::Curves::Ed25519` instead of OpenSSL.

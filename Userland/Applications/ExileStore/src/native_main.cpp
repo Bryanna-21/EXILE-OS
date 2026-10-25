@@ -5,218 +5,211 @@
  */
 
 // Exile Store native catalog browser.
+//
+// What this build does: loads the development catalog from /usr/share/exile-store, lets the user search and select
+// entries, and shows what the catalog says about them (publisher, version, permissions, package builds).
+//
+// What it deliberately does NOT do: install, update, uninstall or launch anything, and it does not verify catalog or
+// package signatures. Exile OS has no privileged package-installer service yet, so these actions are shown as
+// unavailable instead of being faked. See docs/INTEGRATION.md.
 
-#include <AK/JsonArray.h>
-#include <AK/JsonObject.h>
-#include <AK/JsonValue.h>
-#include <AK/StringView.h>
+#include "CatalogLoader.h"
+#include <AK/StringBuilder.h>
 #include <AK/Try.h>
 #include <LibCore/File.h>
 #include <LibCore/System.h>
 #include <LibGUI/Application.h>
 #include <LibGUI/BoxLayout.h>
+#include <LibGUI/Button.h>
 #include <LibGUI/Icon.h>
-#include <LibGUI/ItemListModel.h>
 #include <LibGUI/Label.h>
 #include <LibGUI/ListView.h>
+#include <LibGUI/Model.h>
 #include <LibGUI/TextBox.h>
 #include <LibGUI/Window.h>
 #include <LibMain/Main.h>
 
-using namespace AK::Literals;
+static constexpr StringView catalog_path = "/usr/share/exile-store/catalog/catalog.json"sv;
+static constexpr char catalog_directory[] = "/usr/share/exile-store";
 
-struct StoreEntry {
-    ByteString id;
-    ByteString name;
-    ByteString summary;
-    ByteString description;
-    ByteString publisher;
-    ByteString version;
-    ByteString category;
-};
-
-static ByteString field_or(JsonObject const& object, StringView key, StringView fallback)
+static String to_label_text(ByteString const& text)
 {
-    auto value = object.get_byte_string(key);
-    if (!value.has_value())
-        return ByteString(fallback);
-    return value.release_value();
+    return String::from_utf8_with_replacement_character(text);
 }
 
-static Vector<StoreEntry> load_catalog(GUI::Label& status)
+// The list model owns the strings it displays. (It used to be GUI::ItemListModel over a Vector that was local to a
+// lambda: ItemListModel keeps only a reference to its container, so the model read freed memory.)
+class CatalogListModel final : public GUI::Model {
+public:
+    static NonnullRefPtr<CatalogListModel> create() { return adopt_ref(*new CatalogListModel); }
+
+    void set_names(Vector<ByteString> names)
+    {
+        m_names = move(names);
+        invalidate();
+    }
+
+    virtual int row_count(GUI::ModelIndex const& parent = {}) const override
+    {
+        return parent.is_valid() ? 0 : static_cast<int>(m_names.size());
+    }
+
+    virtual int column_count(GUI::ModelIndex const& = {}) const override { return 1; }
+
+    virtual GUI::Variant data(GUI::ModelIndex const& index, GUI::ModelRole role) const override
+    {
+        if (role == GUI::ModelRole::TextAlignment)
+            return Gfx::TextAlignment::CenterLeft;
+        if (role != GUI::ModelRole::Display || !index.is_valid() || index.row() < 0
+            || static_cast<size_t>(index.row()) >= m_names.size())
+            return {};
+        return m_names[static_cast<size_t>(index.row())];
+    }
+
+private:
+    CatalogListModel() = default;
+    Vector<ByteString> m_names;
+};
+
+static ExileStore::LoadResult load_catalog_from_disk()
 {
-    Vector<StoreEntry> entries;
-
-    auto file_or_error = Core::File::open(
-        "/usr/share/exile-store/catalog/catalog.json"sv,
-        Core::File::OpenMode::Read);
-
+    auto file_or_error = Core::File::open(catalog_path, Core::File::OpenMode::Read);
     if (file_or_error.is_error()) {
-        status.set_text(
-            "The Exile Store catalog could not be opened.\n"
-            "Check that the catalog data is included in the OS build.");
-        return entries;
+        return ExileStore::failed_load(ByteString::formatted(
+            "The Exile Store catalog could not be opened ({}). Check that the catalog data is installed at {}.",
+            file_or_error.error(), catalog_path));
     }
-
     auto file = file_or_error.release_value();
+
+    auto size_or_error = file->size();
+    if (!size_or_error.is_error() && size_or_error.value() > ExileStore::max_catalog_bytes)
+        return ExileStore::failed_load("The Exile Store catalog is larger than the supported limit and was not loaded.");
+
     auto bytes_or_error = file->read_until_eof();
-
     if (bytes_or_error.is_error()) {
-        status.set_text("The Exile Store catalog could not be read.");
-        return entries;
+        return ExileStore::failed_load(ByteString::formatted(
+            "The Exile Store catalog could not be read ({}).", bytes_or_error.error()));
     }
-
     auto bytes = bytes_or_error.release_value();
-    auto json_or_error = JsonValue::from_string(StringView { bytes });
+    return ExileStore::parse_catalog(StringView { bytes });
+}
 
-    if (json_or_error.is_error()) {
-        status.set_text("The Exile Store catalog contains invalid JSON.");
-        return entries;
-    }
+static ByteString describe(ExileStore::Entry const& entry)
+{
+    StringBuilder builder;
+    builder.appendff("{}  (version {})\n", entry.name, entry.version);
+    builder.appendff("{}\n\n", entry.summary);
+    if (!entry.description.is_empty())
+        builder.appendff("{}\n\n", entry.description);
+    builder.appendff("Publisher: {}\n", entry.publisher);
+    builder.appendff("Category: {}\n", entry.category.is_empty() ? ByteString("Uncategorized") : entry.category);
+    builder.appendff("License: {}\n", entry.license);
+    builder.appendff("Application ID: {}\n", entry.id);
 
-    auto json = json_or_error.release_value();
+    builder.append("\nPermissions requested:\n"sv);
+    if (entry.permissions.is_empty())
+        builder.append("  none listed\n"sv);
+    for (auto const& permission : entry.permissions)
+        builder.appendff("  - {}\n", permission);
 
-    if (!json.is_object()) {
-        status.set_text("The Exile Store catalog has an invalid structure.");
-        return entries;
-    }
+    builder.append("\nPackage builds listed in the catalog:\n"sv);
+    if (entry.packages.is_empty())
+        builder.append("  none listed\n"sv);
+    for (auto const& package : entry.packages)
+        builder.appendff("  - {}\n", package);
 
-    auto apps = json.as_object().get_array("apps"sv);
-
-    if (!apps.has_value()) {
-        status.set_text("The Exile Store catalog has no application list.");
-        return entries;
-    }
-
-    for (auto const& item : apps.value()) {
-        if (!item.is_object())
-            continue;
-
-        auto const& object = item.as_object();
-
-        StoreEntry entry;
-        entry.id = field_or(object, "appId"sv, "unknown"sv);
-        entry.name = field_or(object, "name"sv, "Unnamed application"sv);
-        entry.summary = field_or(object, "summary"sv, ""sv);
-        entry.description = field_or(object, "description"sv, ""sv);
-        entry.version = field_or(object, "currentVersion"sv, "Unknown"sv);
-
-        if (auto publisher = object.get_object("publisher"sv); publisher.has_value())
-            entry.publisher = field_or(publisher.value(), "name"sv, "Unknown publisher"sv);
-        else
-            entry.publisher = "Unknown publisher";
-
-        if (auto categories = object.get_array("categories"sv);
-            categories.has_value() && !categories->is_empty()) {
-            auto const& first_category = categories->at(0);
-            if (first_category.is_string())
-                entry.category = first_category.as_string();
-        }
-
-        entries.append(move(entry));
-    }
-
-    status.set_text(ByteString::formatted(
-        "{} catalog entries loaded. Development catalog only; installation and launching are not enabled.",
-        entries.size()));
-
-    return entries;
+    builder.append("\nInstalled state: not tracked (Exile OS has no package database yet).\n"
+                   "Signatures and checksums shown in the catalog are NOT verified by this build."sv);
+    return builder.to_byte_string();
 }
 
 ErrorOr<int> serenity_main(Main::Arguments arguments)
 {
     TRY(Core::System::pledge("stdio recvfd sendfd rpath"));
-    TRY(Core::System::unveil("/usr/share/exile-store", "r"));
+    TRY(Core::System::unveil(catalog_directory, "r"));
     TRY(Core::System::unveil("/res", "r"));
     TRY(Core::System::unveil(nullptr, nullptr));
 
     auto app = TRY(GUI::Application::create(arguments));
 
-    auto icon = GUI::Icon::default_icon("app-help"sv);
+    auto icon = GUI::Icon::default_icon("exile-store"sv);
     auto window = GUI::Window::construct();
     window->set_title("Exile Store");
     window->set_icon(icon.bitmap_for_size(16));
-    window->resize(760, 560);
+    window->resize(760, 600);
 
     auto root = window->set_main_widget<GUI::Widget>();
     root->set_layout<GUI::VerticalBoxLayout>(GUI::Margins { 10, 10, 10, 10 }, 6);
 
-    auto& heading = root->add<GUI::Label>("Exile Store");
-    auto& subtitle = root->add<GUI::Label>(
-        "Discover applications for Exile OS. This build provides catalog browsing only.");
+    root->add<GUI::Label>("Exile Store"_string);
+    root->add<GUI::Label>("Discover applications for Exile OS. This build is a catalog browser: installing is not available yet."_string);
 
-    auto& search = root->add<GUI::TextBox>();
-    search.set_placeholder("Search applications...");
+    auto& toolbar = root->add<GUI::Widget>();
+    toolbar.set_layout<GUI::HorizontalBoxLayout>(GUI::Margins {}, 6);
+    toolbar.set_fixed_height(26);
+    auto& search = toolbar.add<GUI::TextBox>();
+    search.set_placeholder("Search applications..."sv);
+    auto& refresh_button = toolbar.add<GUI::Button>("Refresh"_string);
+    refresh_button.set_fixed_width(80);
 
     auto& list = root->add<GUI::ListView>();
-    auto& details = root->add<GUI::Label>(
-        "Select an application to view its details.");
+    auto model = CatalogListModel::create();
+    list.set_model(model);
 
-    auto& status = root->add<GUI::Label>("Loading catalog...");
+    auto& details = root->add<GUI::Label>("Select an application to view its details."_string);
+    details.set_text_alignment(Gfx::TextAlignment::TopLeft);
+    details.set_text_wrapping(Gfx::TextWrapping::Wrap);
+    details.set_preferred_height(GUI::SpecialDimension::Fit);
 
-    auto entries = load_catalog(status);
+    auto& install_button = root->add<GUI::Button>("Install (unavailable)"_string);
+    install_button.set_enabled(false);
+    install_button.set_fixed_height(26);
+
+    auto& status = root->add<GUI::Label>("Loading catalog..."_string);
+    status.set_text_alignment(Gfx::TextAlignment::CenterLeft);
+
+    ExileStore::LoadResult result = load_catalog_from_disk();
     Vector<size_t> visible_entries;
-    RefPtr<GUI::Model> list_model;
 
-    auto refresh_list = [&](StringView query) {
+    auto refresh_list = [&] {
+        visible_entries = ExileStore::filter_entries(result.entries, search.text());
         Vector<ByteString> names;
-        visible_entries.clear();
+        for (auto index : visible_entries)
+            names.append(result.entries[index].name);
+        model->set_names(move(names));
 
-        for (size_t i = 0; i < entries.size(); ++i) {
-            auto const& entry = entries[i];
-
-            auto matches = query.is_empty()
-                || entry.name.contains(query, CaseSensitivity::CaseInsensitive)
-                || entry.summary.contains(query, CaseSensitivity::CaseInsensitive)
-                || entry.category.contains(query, CaseSensitivity::CaseInsensitive);
-
-            if (!matches)
-                continue;
-
-            names.append(entry.name);
-            visible_entries.append(i);
-        }
-
-        list_model = GUI::ItemListModel<ByteString>::create(names);
-        list.set_model(*list_model);
-
-        if (visible_entries.is_empty()) {
-            details.set_text("No matching applications.");
+        if (result.status == ExileStore::LoadStatus::Failed) {
+            details.set_text(to_label_text(result.message));
+        } else if (result.status == ExileStore::LoadStatus::Empty) {
+            details.set_text("The catalog is empty. There is nothing to show yet."_string);
+        } else if (visible_entries.is_empty()) {
+            details.set_text("No matching applications."_string);
         } else {
-            details.set_text(
-                "Select an application from the list to see its details.");
+            details.set_text("Select an application from the list to see its details."_string);
         }
-
-        status.set_text(ByteString::formatted(
-            "{} of {} catalog entries shown. Install and launch are not available in this build.",
-            visible_entries.size(), entries.size()));
+        // A failed load keeps its own specific error here; it is never replaced by a "0 of 0" count.
+        status.set_text(to_label_text(ExileStore::status_text(result, visible_entries.size())));
     };
 
     search.on_change = [&] {
-        refresh_list(search.text());
+        refresh_list();
+    };
+
+    refresh_button.on_click = [&](auto) {
+        result = load_catalog_from_disk();
+        refresh_list();
     };
 
     list.on_selection_change = [&] {
-        auto index = list.selection().first();
-        auto row = index.row();
-
+        if (list.selection().is_empty())
+            return;
+        auto row = list.selection().first().row();
         if (row < 0 || static_cast<size_t>(row) >= visible_entries.size())
             return;
-
-        auto const& entry = entries[visible_entries[static_cast<size_t>(row)]];
-
-        details.set_text(MUST(String::formatted(
-            "{}\n\n{}\n\n{}\n\nPublisher: {}\nVersion: {}\nCategory: {}\nApplication ID: {}\n\nStatus: Catalog entry only. Installation and launching are not implemented.",
-            entry.name,
-            entry.summary,
-            entry.description,
-            entry.publisher,
-            entry.version,
-            entry.category.is_empty() ? "Uncategorized" : entry.category,
-            entry.id)));
+        details.set_text(to_label_text(describe(result.entries[visible_entries[static_cast<size_t>(row)]])));
     };
 
-    refresh_list(""sv);
+    refresh_list();
 
     window->show();
     return app->exec();

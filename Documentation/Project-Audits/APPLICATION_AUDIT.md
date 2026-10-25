@@ -125,6 +125,21 @@ Apps with real reads are first; everything else follows with generated inventory
 * Broken / incomplete: (1) use-after-free: ItemListModel keeps `Container const&`, model was built over a lambda-local Vector (VERIFIED in source). (2) refresh_list overwrites load_catalog error with "0 of 0" (VERIFIED). (3) install dest `share/exile-store` vs app opens `/usr/share/exile-store` (SUSPECTED, high confidence; prefix is Build/Root with DATAROOTDIR=res). (4) No .af entry, nothing references it: not launchable by a user (VERIFIED by grep). (5) placeholder icon app-help.
 * Recommendation: **FIX (P0 for 1,2; P1 for 3,4). Patch provided; native compile NOT verified.**
 
+#### ExileStore remediation (branch `exilestore/complete-native-store`; validated results only)
+
+| # | Finding | Status | How it was checked |
+|---|---|---|---|
+| 1 | Model use-after-free | **Fixed in source** | Replaced `ItemListModel` over a lambda-local `Vector` with `CatalogListModel`, which owns its strings. Regression coverage addresses result/filter lifetime. The GUI model has not been executed in the OS runtime. |
+| 2 | Load error masked by "0 of 0" | **Fixed in source; tests added** | `status_text()` distinguishes a failed load from an empty catalog. Regression tests cover failed loads, empty catalogs, and malformed input; the standalone CatalogLoader tests passed 11/11 in a manual build. CMake/CI registration remains unverified, and mutation testing has not been performed. |
+| 3 | Install path mismatch | **Confirmed and fixed** | Traced: `CMAKE_INSTALL_PREFIX=<build>/Root` (CMakeLists.txt:176), `Meta/build-root-filesystem.sh` rsyncs `Root/` onto the image root, so `share/exile-store` landed at `/share/exile-store`, not `/usr/share/exile-store`. Destination is now `usr/share/exile-store`. Verified by running the real `install()` rules in a stub harness and merging `Base/` + staged `Root/`: `/usr/share/exile-store/catalog/catalog.json` exists and parses; no stray `/share/exile-store`. (The audit's `DATAROOTDIR=res` explanation was not the cause.) |
+| 4 | No `.af` entry | **Fixed** | `Base/res/apps/ExileStore.af` (`Executable=/bin/ExileStore`, Utilities). Staged install produces `/bin/ExileStore`, matching the descriptor. Not launched from a running desktop. |
+| 5 | Placeholder icon | **Fixed** | `Base/res/icons/16x16/exile-store.png` and `32x32/exile-store.png` generated from the project's own `branding/icon-1024.png`; `exile_app(... ICON exile-store)`. |
+| 6 | **New:** native source did not compile | **Fixed (syntax/type level)** | Host `clang++ -fsyntax-only` against the real in-tree headers reported 16 errors in the committed `native_main.cpp` (C-string literals and `ByteString` passed to `Label::set_text(String)`, invalid `AK::Literals`, range-for over `JsonArray`). After the rewrite the same check reports 0 errors. This is **not** a cross-build: link, runtime and visual behaviour are unverified. |
+
+Commands and results: host core `tools/host-build.sh` ctest 2/2 passed (unchanged code); `Tests/ExileStore/TestCatalogLoader.cpp` 11/11 passed (clang 18 build, and GCC 13 with ASan+UBSan); `git diff --check` clean; `Meta/check-style.py` exit 0; `clang-format-18` clean on the new C++ files. The Lagom configure could not run here (repo needs a C++26 compiler; sandbox has GCC 13/clang 18), so the test was built by hand against in-tree `AK`/`LibTest` sources; registration in `Tests/ExileStore/CMakeLists.txt`, `Tests/CMakeLists.txt` and `Meta/Lagom/CMakeLists.txt` is therefore unexercised in CI.
+
+Still **not** done (blocked by missing OS infrastructure, not faked): installing, updating, uninstalling and launching packages; installed-state tracking; signature/checksum verification in the native app. There is no privileged package-installer service, package database or launcher API in the repo (`docs/INTEGRATION.md` section 1), the only installer (`src/core/installer.cpp`) is a host-side dev backend with an unprivileged local prefix, and it needs OpenSSL. Smallest next step: implement an OS-side `IPackageBackend` (privileged installer service) and use `LibCrypto::Curves::Ed25519` for verification, then link the host core into the native target.
+
 ### Calculator — evidence: Source-read
 * Working (source-level): BigFraction arithmetic; guards sqrt(neg), 1/0 (m_has_error).
 * Broken / incomplete: 2 FIXMEs (port to GML).
@@ -320,8 +335,8 @@ Proposal (design only, nothing invented): one shared `ArcAIServer` over LibIPC, 
 
 ## 10. Roadmap
 
-* **P0 (S):** Store UAF + error masking (patch supplied; native compile unverified).
-* **P1:** Store launcher entry + icon + install-path (S); Piano close guard (S) and project file (M); Mail credential storage (L); Escalator security review (M); CI branch gating (S).
+* **P0 (S):** Store UAF + error masking: **done on branch `exilestore/complete-native-store`** (unit-tested; native cross-build still unverified).
+* **P1:** Store launcher entry + icon + install-path (S) **done on the same branch (staged-install verified)**; Store installer backend (L, blocked: no OS installer service); Piano close guard (S) and project file (M); Mail credential storage (L); Escalator security review (M); CI branch gating (S).
 * **P2:** Branding leftovers (M); theme palette (M); LaunchServer handlers (S); Maps upstream call (S); About icon (S); FileManager/Browser FIXMEs (M each).
 * **P3:** HackStudio naming (S); Run error handling (S); PartitionEditor naming (S); category cleanup (S); candidates in §6 after approval.
 * **ARC AI:** design (M) → service (L) → per-app integration (M each).
