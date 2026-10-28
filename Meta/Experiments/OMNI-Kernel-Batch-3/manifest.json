@@ -1,0 +1,131 @@
+{
+  "manifest_schema_version": "1.0",
+  "package_name": "OMNI-Kernel-Batch-3",
+  "batch_id": "batch-3",
+  "batch_scope": "Hosted, architecture-neutral capability lifecycle, revocation (derivation tree), object lifetime, resource accounting and concurrency model with a hosted test harness. Reuses Batch 2 core modules unmodified. No architecture boots; no kernel image is produced. Builds on OMNI-Kernel-Batch-1 (OMNI-ABI 0.1 draft) and OMNI-Kernel-Batch-2.",
+  "checksum_algorithm": "SHA-256",
+  "checksum_statement": "Checksums and byte sizes cover the exact bytes of each listed file as extracted from the archive.",
+  "files": [
+    {
+      "path": "EXILE-OS-STATUS.md",
+      "sha256": "a1fbdd682e87d6ff4af1e7cc80c8825eb76b6fee69559fe69a1a1bd3eb3db7b7",
+      "bytes": 678
+    },
+    {
+      "path": "README.md",
+      "sha256": "0d2249b1ba1176e51a3877b04a2aaa3c303cf563601120f279983773bef2e50f",
+      "bytes": 5343
+    },
+    {
+      "path": "REPORT.md",
+      "sha256": "2d6fbf2697649656e8f0eabfc61dfe24add5ff22e947c40ee64d3938253b3f3c",
+      "bytes": 13444
+    },
+    {
+      "path": "build.zig",
+      "sha256": "9330d23c114f74212b3ca9547c17f6d0e8828900e7065fd5f5aefabfdc3cc956",
+      "bytes": 2194
+    },
+    {
+      "path": "build.zig.zon",
+      "sha256": "27f69d1f2cd6f727cb1a35a5fbd2d1bc880b33e611c2cff61c66590ff1db5056",
+      "bytes": 324
+    },
+    {
+      "path": "docs/CAPABILITY-LIFECYCLE.md",
+      "sha256": "7351c29ce6e973b78265e01b79712a2a684268084860fd3fb2c0a971206ff9b8",
+      "bytes": 16742
+    },
+    {
+      "path": "docs/CONCURRENCY.md",
+      "sha256": "ec8fcabc487ce8f23080c60a57c8bfd2961b7a2bc809f4a169c3ae650c4ab75d",
+      "bytes": 9893
+    },
+    {
+      "path": "docs/PROPOSED-ABI-CHANGES.md",
+      "sha256": "5f75d84d08be6817e588293ab9825d681ac9c9d09787bfddfe6160bbcab93ea2",
+      "bytes": 5743
+    },
+    {
+      "path": "docs/REVOCATION-MODEL.md",
+      "sha256": "1e1c73e9e09af91a3ee61bc4a441a80d201c1e7f61a7ecc5f303a4ede0080f08",
+      "bytes": 7337
+    },
+    {
+      "path": "docs/TEST-PLAN.md",
+      "sha256": "248b78ca600d5892b6c45c85dcf1d3f71cbd8db68eac16223ebe53b49d3c301e",
+      "bytes": 6837
+    },
+    {
+      "path": "scripts/verify.sh",
+      "sha256": "ed28bf5b65ba698f51ae079d3edd42e1c7bad348850cb845627b8e64553797df",
+      "bytes": 6023
+    },
+    {
+      "path": "src/batch2.zig",
+      "sha256": "45edf3bfcb143ac712816336035caaa33651638ec81b638d26c4de37fb91ebed",
+      "bytes": 464
+    },
+    {
+      "path": "src/gen_arena.zig",
+      "sha256": "8bbe51c321cf973741ab0f4e63e38b45095f3cf0e4e5f1cacab63eec70ef447f",
+      "bytes": 9075
+    },
+    {
+      "path": "src/kernel.zig",
+      "sha256": "f34eadd9c7c8e52a3ffb67e61fdcc6e122639d56a295aca9fd3e4afb6961dfea",
+      "bytes": 35151
+    },
+    {
+      "path": "src/tests.zig",
+      "sha256": "e4881befcafb6e5aa1d99e755d28193bc2c38fd17fe0b19cd3a6a99e1fa66bb7",
+      "bytes": 359
+    },
+    {
+      "path": "src/tests/accounting_tests.zig",
+      "sha256": "7ef4fb800ddc0a766f764e9539e22ce5b83de951a4e0d6824e97e56367dcea93",
+      "bytes": 6735
+    },
+    {
+      "path": "src/tests/alloc_tests.zig",
+      "sha256": "6c0f44b3752173d844ef7d4ff0417c1b994662c60505f0e4a7224562c4d467ea",
+      "bytes": 7376
+    },
+    {
+      "path": "src/tests/arena_tests.zig",
+      "sha256": "fed5db4b425b58c9343f6570c636917f63c66a68eae843a84b36f5322e758cef",
+      "bytes": 5824
+    },
+    {
+      "path": "src/tests/common.zig",
+      "sha256": "a7c331660657afa8c0946446e4647826062ceaaeb95adba9767475851bd256a5",
+      "bytes": 3458
+    },
+    {
+      "path": "src/tests/concurrency_tests.zig",
+      "sha256": "429a7fe603d749c1de3b3f8940983b868529eb369da7de82f80a3bd8ae15f0aa",
+      "bytes": 17328
+    },
+    {
+      "path": "src/tests/lifecycle_tests.zig",
+      "sha256": "4f4ee8830923cdd3ef4bd5e4d048766cf723f6750b9e90d67b12320392272c81",
+      "bytes": 16203
+    },
+    {
+      "path": "src/tests/model_tests.zig",
+      "sha256": "400675fff327b3e3c1ce6cba89d8ba96965c9db63e5b66b5fec8da6ef3fdf391",
+      "bytes": 13465
+    },
+    {
+      "path": "src/tests/revocation_tests.zig",
+      "sha256": "33b52832e76a6b46a2f139f77253f0fc24525f2918ee108f946e27ae9b7d65a7",
+      "bytes": 9521
+    }
+  ],
+  "excluded_from_file_list": [
+    {
+      "path": "manifest.json",
+      "reason": "A file cannot contain a stable checksum of itself; it is excluded from its own hash list to avoid a circular dependency."
+    }
+  ]
+}
