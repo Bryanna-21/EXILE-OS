@@ -8,7 +8,7 @@ jobs:
     if: always() && github.repository == 'Bryanna-21/EXILE-OS' && github.ref == 'refs/heads/master'
 
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: '14'
