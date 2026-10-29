@@ -50,7 +50,7 @@ jobs:
         run: python3 ExileKernel/scripts/boot_test.py
       - name: Archive diagnostics only
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: euk-boot-logs
           path: ExileKernel/build/boot/**/*.log
