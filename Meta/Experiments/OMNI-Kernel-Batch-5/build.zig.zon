@@ -1,0 +1,16 @@
+.{
+    .name = .omni_kernel_batch5,
+    .version = "0.0.5",
+    .fingerprint = 0x8b57df65038ca7d4,
+    .minimum_zig_version = "0.15.2",
+    .dependencies = .{},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "docs",
+        "scripts",
+        "README.md",
+        "REPORT.md",
+    },
+}
