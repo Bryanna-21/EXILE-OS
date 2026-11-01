@@ -11,7 +11,7 @@ Status: **experimental, opt-in, not verified end to end.** Nothing in this docum
 
 ## What has been tested
 
-- Verifier unit tests (`Tests/ExileBoot/TestBootGuardian.cpp`, 12 cases) and the tamper script (`Tests/ExileBoot/test-boot-integrity.sh`, 24 checks) run on a development host with scratch builds. They cover a modified kernel byte, size changes, truncation, every manifest byte flipped, a wrong key, an attacker-signed manifest and domain separation.
+- Verifier unit tests (`Tests/ExileBoot/TestBootGuardian.cpp`, 12 cases) and the tamper script (`Tests/ExileBoot/test-boot-integrity.sh`, 44 checks) run on a development host with scratch builds. The script is registered with CTest as `ExileBootTamperTests` in the host (Lagom) build. They cover a modified kernel byte, size changes, truncation, every manifest byte flipped, a wrong key, an attacker-signed manifest, domain separation, missing inputs, all-zero keys and a signing seed that does not match the trust anchor.
 
 ## What has NOT been tested
 
@@ -29,6 +29,13 @@ Status: **experimental, opt-in, not verified end to end.** Nothing in this docum
 ## Keys
 
 - Generate with `ExileBootManifest keygen <seed-out> <pubkey-out>`. Both are raw 32-byte files.
+- Sign with `ExileBootManifest sign <kernel> <seed> <manifest-out> [os-version] [--anchor <pubkey>]`. With `--anchor` the tool refuses (exit 3, nothing written) unless the seed derives exactly that public key, and all-zero keys are always refused.
+- Exit codes: 0 ok, 1 usage or I/O error, 2 verification failed, 3 seed does not match the trust anchor.
 - The seed is the signing authority. Keep it offline, never commit it, and never put it in CI logs. Pass it to the build with `BOOT_SIGNING_SEED`.
 - The public key goes in `BOOT_TRUST_ANCHOR_PUBKEY`.
 - Enabling the option without both paths is a configure error.
+
+## Known gaps (as of the Phase One change set)
+
+- The prekernel build (`Kernel/EFIPrekernel/CMakeLists.txt`) does not yet pass `--anchor` to the signing step, so a seed that does not match `BOOT_TRUST_ANCHOR_PUBKEY` is still only discovered at boot (fail closed: the prekernel panics). The tool side is done and tested; the small build change lives in `Kernel/` and is recorded as a proposed patch in `Documentation/Project-Audits/PHASE_ONE_REPORT.md` for the kernel maintainers.
+- No separation between development and production keys is enforced by the build. Test keys are generated per run in a scratch directory and are never trust anchors for a real image.

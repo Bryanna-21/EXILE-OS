@@ -136,6 +136,51 @@ else
     bad "a manifest was written even though signing failed"
 fi
 
+# --- Trust-anchor consistency: the signing seed must belong to the compiled-in anchor ---
+expect_status 0 "signing with the seed that matches the trust anchor succeeds" "$TOOL" sign "$WORK/kernel.bin" "$WORK/seed.key" "$WORK/anchored.bin" 7 --anchor "$WORK/pub.key"
+expect_status 0 "an anchored manifest verifies against that anchor" "$TOOL" verify "$WORK/kernel.bin" "$WORK/anchored.bin" "$WORK/pub.key"
+expect_status 0 "--anchor works without an os-version argument" "$TOOL" sign "$WORK/kernel.bin" "$WORK/seed.key" "$WORK/anchored2.bin" --anchor "$WORK/pub.key"
+expect_status 3 "signing with a seed that does not match the trust anchor is refused" "$TOOL" sign "$WORK/kernel.bin" "$WORK/seed.key" "$WORK/mismatch.bin" 7 --anchor "$WORK/other-pub.key"
+if [ ! -e "$WORK/mismatch.bin" ]; then
+    ok "no manifest is written when the seed does not match the anchor"
+else
+    bad "a manifest was written for a seed that does not match the trust anchor"
+fi
+expect_status 1 "--anchor with a public key of the wrong length is an error" "$TOOL" sign "$WORK/kernel.bin" "$WORK/seed.key" "$WORK/short-anchor.bin" 7 --anchor "$WORK/pub-short.key"
+expect_status 1 "--anchor with a missing public key file is an error" "$TOOL" sign "$WORK/kernel.bin" "$WORK/seed.key" "$WORK/missing-anchor.bin" 7 --anchor "$WORK/does-not-exist.key"
+expect_status 1 "--anchor without a value is an error" "$TOOL" sign "$WORK/kernel.bin" "$WORK/seed.key" "$WORK/noval.bin" 7 --anchor
+expect_status 1 "unknown trailing option is an error" "$TOOL" sign "$WORK/kernel.bin" "$WORK/seed.key" "$WORK/junk.bin" 7 --bogus "$WORK/pub.key"
+expect_status 1 "non-numeric os-version is an error" "$TOOL" sign "$WORK/kernel.bin" "$WORK/seed.key" "$WORK/badver.bin" seven
+head -c 32 /dev/zero >"$WORK/zero.key"
+expect_status 1 "an all-zero signing seed is refused" "$TOOL" sign "$WORK/kernel.bin" "$WORK/zero.key" "$WORK/zeroseed.bin" 7
+expect_status 1 "an all-zero public key is refused as a trust anchor" "$TOOL" verify "$WORK/kernel.bin" "$WORK/manifest.bin" "$WORK/zero.key"
+expect_status 1 "an all-zero --anchor public key is refused" "$TOOL" sign "$WORK/kernel.bin" "$WORK/seed.key" "$WORK/zeroanchor.bin" 7 --anchor "$WORK/zero.key"
+for name in zeroseed zeroanchor badver junk noval missing-anchor short-anchor; do
+    if [ -e "$WORK/$name.bin" ]; then
+        bad "a manifest was written by the rejected invocation: $name"
+    fi
+done
+
+# --- Missing boot components ---
+expect_status 1 "missing kernel image is an error (verify)" "$TOOL" verify "$WORK/no-such-kernel.bin" "$WORK/manifest.bin" "$WORK/pub.key"
+expect_status 1 "missing kernel image is an error (sign)" "$TOOL" sign "$WORK/no-such-kernel.bin" "$WORK/seed.key" "$WORK/nokernel.bin" 7
+expect_status 1 "missing public key file is an error" "$TOOL" verify "$WORK/kernel.bin" "$WORK/manifest.bin" "$WORK/no-such-pub.key"
+expect_status 1 "missing seed file is an error" "$TOOL" sign "$WORK/kernel.bin" "$WORK/no-such-seed.key" "$WORK/noseed.bin" 7
+expect_status 1 "empty kernel image cannot be signed" "$TOOL" sign "$WORK/kernel-empty.bin" "$WORK/seed.key" "$WORK/emptysigned.bin" 7
+for name in nokernel noseed emptysigned; do
+    if [ -e "$WORK/$name.bin" ]; then
+        bad "a manifest was written by the rejected invocation: $name"
+    fi
+done
+
+# --- Key generation hygiene ---
+expect_status 1 "keygen with the wrong number of arguments is an error" "$TOOL" keygen "$WORK/only-one.key"
+if [ "$(wc -c <"$WORK/seed.key")" -eq 32 ] && [ "$(wc -c <"$WORK/pub.key")" -eq 32 ] && ! cmp -s "$WORK/seed.key" "$WORK/other-seed.key"; then
+    ok "keygen writes 32-byte keys and two runs produce different seeds"
+else
+    bad "keygen output is not two distinct 32-byte keys"
+fi
+
 # --- Independent cross-check with OpenSSL, and domain separation ---
 if command -v openssl >/dev/null 2>&1 && openssl list -public-key-algorithms 2>/dev/null | grep -qi ed25519; then
     # Wrap the raw seed in a PKCS#8 header so OpenSSL can sign with the same key.

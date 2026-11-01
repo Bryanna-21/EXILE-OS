@@ -22,9 +22,11 @@ using namespace Exile::Boot;
 
 namespace {
 
-// Exit codes: 0 success, 1 usage or I/O error, 2 the manifest did not verify.
+// Exit codes: 0 success, 1 usage or I/O error, 2 the manifest did not verify,
+// 3 the signing seed does not belong to the trust anchor it was checked against.
 constexpr int ExitUsage = 1;
 constexpr int ExitVerificationFailed = 2;
+constexpr int ExitKeyMismatch = 3;
 
 bool read_file(char const* path, std::vector<u8>& data)
 {
@@ -66,6 +68,16 @@ bool read_key_file(char const* path, char const* what, u8 (&key)[32])
     return true;
 }
 
+// An all-zero seed or public key is never a real key. It is what an uninitialised or truncated key file looks like,
+// so it is refused instead of being used.
+bool is_all_zero(u8 const* data, size_t size)
+{
+    u8 accumulator = 0;
+    for (size_t i = 0; i < size; ++i)
+        accumulator |= data[i];
+    return accumulator == 0;
+}
+
 bool ed25519_verify(u8 const* public_key, u8 const* signature, u8 const* message, size_t message_size)
 {
     return Crypto::Curves::Ed25519::verify(
@@ -87,11 +99,13 @@ int usage(char const* argv0)
     std::fprintf(stderr,
         "usage:\n"
         "  %s keygen <seed-out> <pubkey-out>\n"
-        "  %s sign <kernel> <seed-file> <manifest-out> [os-version]\n"
+        "  %s sign <kernel> <seed-file> <manifest-out> [os-version] [--anchor <pubkey-file>]\n"
         "  %s verify <kernel> <manifest> <pubkey-file>\n"
         "\n"
         "Key files are raw 32-byte Ed25519 values. Keep the seed offline: it is the signing authority.\n"
-        "Exit status: 0 ok, 1 usage or I/O error, 2 verification failed.\n",
+        "With --anchor, signing is refused unless the seed derives exactly that public key, so a build can never sign\n"
+        "with a key its compiled-in trust anchor will not accept.\n"
+        "Exit status: 0 ok, 1 usage or I/O error, 2 verification failed, 3 seed does not match the trust anchor.\n",
         argv0, argv0, argv0);
     return ExitUsage;
 }
@@ -116,7 +130,7 @@ int keygen(char const* seed_path, char const* pubkey_path)
     return 0;
 }
 
-int sign(char const* kernel_path, char const* seed_path, char const* manifest_path, u32 os_version)
+int sign(char const* kernel_path, char const* seed_path, char const* manifest_path, u32 os_version, char const* anchor_path)
 {
     std::vector<u8> kernel;
     if (!read_file(kernel_path, kernel)) {
@@ -131,11 +145,35 @@ int sign(char const* kernel_path, char const* seed_path, char const* manifest_pa
     u8 seed[32];
     if (!read_key_file(seed_path, "signing seed", seed))
         return ExitUsage;
+    if (is_all_zero(seed, sizeof(seed))) {
+        std::fprintf(stderr, "signing seed is all zero bytes; refusing to sign with it: %s\n", seed_path);
+        return ExitUsage;
+    }
 
     auto public_key = Crypto::Curves::Ed25519::generate_public_key(ReadonlyBytes { seed, sizeof(seed) });
     if (public_key.is_error() || public_key.value().size() != 32) {
         std::fprintf(stderr, "failed to derive the public key from the seed\n");
         return ExitUsage;
+    }
+
+    if (anchor_path != nullptr) {
+        u8 anchor_key[32];
+        if (!read_key_file(anchor_path, "trust anchor public key", anchor_key))
+            return ExitUsage;
+        if (is_all_zero(anchor_key, sizeof(anchor_key))) {
+            std::fprintf(stderr, "trust anchor public key is all zero bytes: %s\n", anchor_path);
+            return ExitUsage;
+        }
+        // Compare in constant time; neither value is secret, but there is no reason to branch on the first difference.
+        u8 difference = 0;
+        for (size_t i = 0; i < sizeof(anchor_key); ++i)
+            difference |= anchor_key[i] ^ public_key.value().data()[i];
+        if (difference != 0) {
+            std::fprintf(stderr, "REFUSING TO SIGN: the signing seed does not derive the trust anchor public key (%s).\n"
+                                 "A prekernel built with this anchor would reject every manifest this seed produces.\n",
+                anchor_path);
+            return ExitKeyMismatch;
+        }
     }
 
     BootManifest manifest;
@@ -204,6 +242,10 @@ int verify(char const* kernel_path, char const* manifest_path, char const* pubke
     TrustAnchor anchor;
     if (!read_key_file(pubkey_path, "public key", anchor.public_key))
         return ExitUsage;
+    if (is_all_zero(anchor.public_key, sizeof(anchor.public_key))) {
+        std::fprintf(stderr, "public key is all zero bytes; it cannot be a trust anchor: %s\n", pubkey_path);
+        return ExitUsage;
+    }
 
     auto status = verify_kernel_integrity(
         kernel.data(), kernel.size(),
@@ -225,18 +267,27 @@ int main(int argc, char** argv)
     if (argc >= 2 && std::strcmp(argv[1], "keygen") == 0 && argc == 4)
         return keygen(argv[2], argv[3]);
 
-    if (argc >= 2 && std::strcmp(argv[1], "sign") == 0 && (argc == 5 || argc == 6)) {
+    if (argc >= 5 && std::strcmp(argv[1], "sign") == 0) {
         u32 os_version = 1;
-        if (argc == 6) {
+        char const* anchor_path = nullptr;
+        int index = 5;
+        if (index < argc && std::strcmp(argv[index], "--anchor") != 0) {
             char* end = nullptr;
-            auto parsed = std::strtoul(argv[5], &end, 10);
-            if (end == argv[5] || *end != '\0' || parsed > 0xFFFFFFFFul) {
-                std::fprintf(stderr, "invalid os-version: %s\n", argv[5]);
+            auto parsed = std::strtoul(argv[index], &end, 10);
+            if (end == argv[index] || *end != '\0' || parsed > 0xFFFFFFFFul) {
+                std::fprintf(stderr, "invalid os-version: %s\n", argv[index]);
                 return ExitUsage;
             }
             os_version = static_cast<u32>(parsed);
+            ++index;
         }
-        return sign(argv[2], argv[3], argv[4], os_version);
+        if (index < argc) {
+            if (std::strcmp(argv[index], "--anchor") != 0 || index + 2 != argc)
+                return usage(argv[0]);
+            anchor_path = argv[index + 1];
+            index += 2;
+        }
+        return sign(argv[2], argv[3], argv[4], os_version, anchor_path);
     }
 
     if (argc >= 2 && std::strcmp(argv[1], "verify") == 0 && argc == 5)
