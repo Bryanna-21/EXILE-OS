@@ -1,0 +1,211 @@
+#!/usr/bin/env bash
+# OMNI-Kernel Batch 6 verification script.
+#
+# Runs, in order:
+#   1. required-file check
+#   2. toolchain check (Zig present, version matches the pinned version)
+#   3. formatting check      (zig fmt --check)
+#   4. build + run the hosted test targets (zig build test): the Batch 6 suite AND the
+#      unmodified Batch 5, 4, 3 and 2 regression suites (see build.zig)
+#   5. manifest integrity check, including files present but not listed and build artifacts
+#   6. earlier batches, Kernel/ and ExileKernel/ are unmodified (work tree clean; and, when
+#      OMNI_BASE_REF is set, `git diff --name-only $OMNI_BASE_REF HEAD` touches only this package)
+#
+# Exit status:
+#   0  every executed check passed (optional checks that could not run are reported as SKIPPED)
+#   1  at least one check FAILED (a real defect: missing file, format error, build/test failure, hash mismatch)
+#   2  a REQUIRED tool is missing, so build/test could not be attempted (not a test failure)
+#
+# Environment:
+#   ZIG                                  path to the zig executable (default: zig on PATH)
+#   OMNI_ZIG_EXPECTED                    expected `zig version` (default: 0.15.2)
+#   OMNI_ALLOW_ZIG_VERSION_MISMATCH=1    downgrade a version mismatch from FAIL to WARN
+#   OMNI_BASE_REF                        optional git ref (e.g. experiment/omni-kernel-batch-5) to diff against
+#
+# The script never reports success for a step it did not run.
+
+set -u
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT" || exit 1
+
+ZIG="${ZIG:-zig}"
+EXPECTED="${OMNI_ZIG_EXPECTED:-0.15.2}"
+
+pass=0
+fail=0
+skip=0
+warn=0
+
+ok() { printf 'PASS    %s\n' "$1"; pass=$((pass + 1)); }
+bad() { printf 'FAIL    %s\n' "$1"; fail=$((fail + 1)); }
+skipped() { printf 'SKIPPED %s\n' "$1"; skip=$((skip + 1)); }
+warned() { printf 'WARN    %s\n' "$1"; warn=$((warn + 1)); }
+
+echo "== OMNI-Kernel Batch 6 verification =="
+echo "root: $ROOT"
+
+# ---- 1. required files -------------------------------------------------------
+required=(
+  README.md REPORT.md EXILE-OS-STATUS.md manifest.json build.zig build.zig.zon
+  src/omni5.zig src/arch.zig src/thread_state.zig src/sched.zig src/ipc_sched.zig
+  src/user_memory.zig src/context.zig src/entry.zig src/tests.zig
+  src/tests/common.zig src/tests/arch_tests.zig src/tests/sched_tests.zig src/tests/ipc_tests.zig
+  src/tests/entry_tests.zig src/tests/mem_tests.zig src/tests/proc_tests.zig
+  docs/ARCHITECTURE-INTERFACE.md docs/SCHEDULER-INTEGRATION.md docs/CONTEXT-SWITCHING.md
+  docs/USER-MEMORY-INTEGRATION.md docs/SECURITY-ANALYSIS.md docs/TEST-PLAN.md
+  scripts/verify.sh
+  ../OMNI-Kernel-Batch-5/src/kernel_ipc.zig ../OMNI-Kernel-Batch-5/src/syscall.zig ../OMNI-Kernel-Batch-5/src/wait_queue.zig
+  ../OMNI-Kernel-Batch-5/src/accounting.zig ../OMNI-Kernel-Batch-5/src/hosted_user_memory.zig ../OMNI-Kernel-Batch-5/src/tests.zig
+  ../OMNI-Kernel-Batch-4/src/ipc.zig ../OMNI-Kernel-Batch-4/src/batch2.zig ../OMNI-Kernel-Batch-4/src/tests.zig
+  ../OMNI-Kernel-Batch-3/src/kernel.zig ../OMNI-Kernel-Batch-3/src/tests.zig
+  ../OMNI-Kernel-Batch-2/src/tests.zig ../OMNI-Kernel-Batch-2/src/core/capabilities.zig
+)
+missing=0
+for f in "${required[@]}"; do
+  if [ ! -f "$f" ]; then
+    printf 'FAIL    missing required file: %s\n' "$f"
+    missing=$((missing + 1))
+  fi
+done
+if [ "$missing" -eq 0 ]; then ok "all ${#required[@]} required files present"; else fail=$((fail + 1)); fi
+
+# ---- 2. toolchain ------------------------------------------------------------
+if ! command -v "$ZIG" >/dev/null 2>&1 && [ ! -x "$ZIG" ]; then
+  echo "TOOL-MISSING  required tool not found: '$ZIG' (set ZIG=/path/to/zig, Zig $EXPECTED expected)"
+  echo "Build and test steps were NOT run. This is not a test failure."
+  printf '\nSummary: %d passed, %d failed, %d skipped, %d warnings; exit 2 (required tool missing)\n' "$pass" "$fail" "$skip" "$warn"
+  exit 2
+fi
+
+actual="$("$ZIG" version 2>&1)"
+echo "zig: $ZIG ($actual)"
+if [ "$actual" = "$EXPECTED" ]; then
+  ok "zig version is $EXPECTED"
+elif [ "${OMNI_ALLOW_ZIG_VERSION_MISMATCH:-0}" = "1" ]; then
+  warned "zig version is '$actual', expected '$EXPECTED' (mismatch allowed by OMNI_ALLOW_ZIG_VERSION_MISMATCH=1)"
+else
+  bad "zig version is '$actual', expected '$EXPECTED'"
+fi
+
+# ---- 3. formatting -----------------------------------------------------------
+fmt_out="$(mktemp)"
+fmt_err="$(mktemp)"
+trap 'rm -f "$test_log" "$fmt_out" "$fmt_err"' EXIT
+if "$ZIG" fmt --check build.zig build.zig.zon src >"$fmt_out" 2>"$fmt_err"; then
+  ok "zig fmt --check"
+  if [ -s "$fmt_err" ]; then
+    # A Debug-built Zig compiler may print allocator diagnostics about ITSELF on stderr.
+    # They are not formatting findings; the exit status above is what counts.
+    echo "        (note: zig wrote $(wc -l <"$fmt_err") lines to stderr; exit status was 0)"
+  fi
+else
+  bad "zig fmt --check reported problems (run: $ZIG fmt build.zig build.zig.zon src)"
+  cat "$fmt_out" "$fmt_err"
+fi
+
+# ---- 4. build and test -------------------------------------------------------
+test_log="$(mktemp)"
+trap 'rm -f "$test_log" "$fmt_out" "$fmt_err"' EXIT
+if "$ZIG" build test --summary all >"$test_log" 2>&1; then
+  ok "zig build test"
+  cat "$test_log"
+else
+  bad "zig build test (output follows)"
+  cat "$test_log"
+fi
+
+# ---- 4b. whitespace -----------------------------------------------------------
+if command -v git >/dev/null 2>&1 && git -C "$ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  if git -C "$ROOT" diff --check HEAD -- . >/dev/null 2>&1 || git -C "$ROOT" diff --check >/dev/null 2>&1; then
+    ok "git diff --check"
+  else
+    bad "git diff --check reported whitespace problems"
+  fi
+else
+  skipped "git diff --check (not inside a git work tree)"
+fi
+
+# ---- 5. manifest -------------------------------------------------------------
+if [ -f manifest.json ]; then
+  if command -v python3 >/dev/null 2>&1; then
+    if python3 -I - "$ROOT" <<'PY'
+import hashlib, json, os, sys
+root = sys.argv[1]
+m = json.load(open(os.path.join(root, "manifest.json"), encoding="utf-8"))
+bad = 0
+listed = set()
+for e in m["files"]:
+    p = e["path"]
+    listed.add(p)
+    path = os.path.join(root, p)
+    if not os.path.isfile(path):
+        print("  missing:", p); bad += 1; continue
+    data = open(path, "rb").read()
+    if hashlib.sha256(data).hexdigest() != e["sha256"]:
+        print("  sha256 mismatch:", p); bad += 1
+    if len(data) != e["bytes"]:
+        print("  size mismatch:", p); bad += 1
+actual = set()
+for d, _, fs in os.walk(root):
+    for f in fs:
+        rel = os.path.relpath(os.path.join(d, f), root).replace(os.sep, "/")
+        if rel != "manifest.json" and not rel.startswith((".zig-cache/", "zig-out/")):
+            actual.add(rel)
+for extra in sorted(actual - listed):
+    print("  not in manifest:", extra); bad += 1
+sys.exit(1 if bad else 0)
+PY
+    then ok "manifest.json matches package files (checked with python3)"
+    else bad "manifest.json does not match the package files"
+    fi
+  else
+    skipped "manifest check (python3 not available; optional tool)"
+  fi
+else
+  skipped "manifest check (manifest.json not present in this tree)"
+fi
+
+# ---- 6. no build artifacts, earlier batches untouched ------------------------
+if [ -d .zig-cache ] || [ -d zig-out ] || [ -d zig-cache ]; then
+  # The cache directories are only a problem if they would be committed.
+  if command -v git >/dev/null 2>&1 && git -C "$ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    if [ -n "$(git -C "$ROOT" ls-files -- .zig-cache zig-out zig-cache)" ]; then
+      bad "build artifacts are tracked by git"
+    else
+      ok "no tracked build artifacts"
+    fi
+  else
+    warned "build artifact directories exist (cannot check git tracking)"
+  fi
+else
+  ok "no build artifact directories in the package"
+fi
+
+if command -v git >/dev/null 2>&1 && git -C "$ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  REPO="$(git -C "$ROOT" rev-parse --show-toplevel)"
+  prot=(Kernel ExileKernel Documentation/OMNI-Kernel Meta/Experiments/OMNI-Kernel-Batch-2 Meta/Experiments/OMNI-Kernel-Batch-3 Meta/Experiments/OMNI-Kernel-Batch-4 Meta/Experiments/OMNI-Kernel-Batch-5)
+  dirty="$(git -C "$REPO" status --porcelain -- "${prot[@]}" 2>/dev/null)"
+  if [ -z "$dirty" ]; then ok "earlier batches, Kernel/ and ExileKernel/ have no local modifications"
+  else bad "protected paths modified:"; echo "$dirty"; fi
+  if [ -n "${OMNI_BASE_REF:-}" ]; then
+    if git -C "$REPO" rev-parse --verify -q "$OMNI_BASE_REF^{commit}" >/dev/null; then
+      outside="$(git -C "$REPO" diff --name-only "$OMNI_BASE_REF" HEAD | grep -v '^Meta/Experiments/OMNI-Kernel-Batch-6/' || true)"
+      if [ -z "$outside" ]; then ok "diff against $OMNI_BASE_REF touches only Meta/Experiments/OMNI-Kernel-Batch-6/"
+      else bad "diff against $OMNI_BASE_REF touches other paths:"; echo "$outside"; fi
+    else
+      bad "OMNI_BASE_REF '$OMNI_BASE_REF' is not a commit"
+    fi
+  else
+    skipped "diff against a base ref (set OMNI_BASE_REF to enable)"
+  fi
+else
+  skipped "protected-path checks (not inside a git work tree)"
+fi
+
+printf '\nSummary: %d passed, %d failed, %d skipped, %d warnings\n' "$pass" "$fail" "$skip" "$warn"
+if [ "$fail" -ne 0 ]; then
+  echo "RESULT: FAILED"
+  exit 1
+fi
+echo "RESULT: all executed checks passed"
+exit 0
