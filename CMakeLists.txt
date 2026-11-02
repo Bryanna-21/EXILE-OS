@@ -238,6 +238,7 @@ endif()
 
 add_subdirectory(AK)
 add_subdirectory(Kernel)
+include(exile_boot_verification_checks)
 
 # FIXME: vptr sanitizing requires.. intense ABI wrangling of std::type_info
 #        And would be better served by porting ubsan_type_hash_itanium.cpp from compiler-rt

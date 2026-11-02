@@ -35,7 +35,8 @@ Status: **experimental, opt-in, not verified end to end.** Nothing in this docum
 - The public key goes in `BOOT_TRUST_ANCHOR_PUBKEY`.
 - Enabling the option without both paths is a configure error.
 
-## Known gaps (as of the Phase One change set)
+## Known gaps
 
-- The prekernel build (`Kernel/EFIPrekernel/CMakeLists.txt`) does not yet pass `--anchor` to the signing step, so a seed that does not match `BOOT_TRUST_ANCHOR_PUBKEY` is still only discovered at boot (fail closed: the prekernel panics). The tool side is done and tested; the small build change lives in `Kernel/` and is recorded as a proposed patch in `Documentation/Project-Audits/PHASE_ONE_REPORT.md` for the kernel maintainers.
-- No separation between development and production keys is enforced by the build. Test keys are generated per run in a scratch directory and are never trust anchors for a real image.
+- Seed and anchor consistency is checked before the prekernel is built by `Meta/CMake/exile_boot_verification_checks.cmake` (target `ExileBootKeyCheck`, using `ExileBootManifest check-keys`), which also refuses a signing seed inside the source tree. That hook was tested only in a mock CMake project, not in a real OS build. The signing step itself (`Kernel/EFIPrekernel/CMakeLists.txt`) does not yet pass `--anchor`; a separate patch for the kernel maintainers adds it as defence in depth.
+- A QEMU boot test exists as `Tests/ExileBoot/qemu/run-qemu-boot-tests.sh` but has **never been run**: it needs a `Kernel.efi` built with `ENABLE_BOOT_VERIFICATION=ON`.
+- No separation between development and production keys is enforced by the build. The fixtures in `Tests/ExileBoot/qemu/make-fixtures.sh` use test seeds derived from public labels; they must never be used as a real trust anchor.

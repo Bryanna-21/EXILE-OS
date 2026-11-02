@@ -101,12 +101,13 @@ int usage(char const* argv0)
         "  %s keygen <seed-out> <pubkey-out>\n"
         "  %s sign <kernel> <seed-file> <manifest-out> [os-version] [--anchor <pubkey-file>]\n"
         "  %s verify <kernel> <manifest> <pubkey-file>\n"
+        "  %s check-keys <seed-file> <pubkey-file>\n"
         "\n"
         "Key files are raw 32-byte Ed25519 values. Keep the seed offline: it is the signing authority.\n"
         "With --anchor, signing is refused unless the seed derives exactly that public key, so a build can never sign\n"
         "with a key its compiled-in trust anchor will not accept.\n"
         "Exit status: 0 ok, 1 usage or I/O error, 2 verification failed, 3 seed does not match the trust anchor.\n",
-        argv0, argv0, argv0);
+        argv0, argv0, argv0, argv0);
     return ExitUsage;
 }
 
@@ -227,6 +228,35 @@ int sign(char const* kernel_path, char const* seed_path, char const* manifest_pa
     return 0;
 }
 
+// Succeeds only if the seed derives exactly the given public key. Writes nothing.
+int check_keys(char const* seed_path, char const* pubkey_path)
+{
+    u8 seed[32];
+    u8 anchor_key[32];
+    if (!read_key_file(seed_path, "signing seed", seed) || !read_key_file(pubkey_path, "trust anchor public key", anchor_key))
+        return ExitUsage;
+    if (is_all_zero(seed, sizeof(seed)) || is_all_zero(anchor_key, sizeof(anchor_key))) {
+        std::fprintf(stderr, "a key file is all zero bytes; refusing to use it\n");
+        return ExitUsage;
+    }
+    auto derived = Crypto::Curves::Ed25519::generate_public_key(ReadonlyBytes { seed, sizeof(seed) });
+    if (derived.is_error() || derived.value().size() != 32) {
+        std::fprintf(stderr, "failed to derive the public key from the seed\n");
+        return ExitUsage;
+    }
+    u8 difference = 0;
+    for (size_t i = 0; i < sizeof(anchor_key); ++i)
+        difference |= anchor_key[i] ^ derived.value().data()[i];
+    if (difference != 0) {
+        std::fprintf(stderr, "KEY MISMATCH: the signing seed does not derive the trust anchor public key (%s).\n"
+                             "A prekernel built with this anchor would reject every manifest this seed produces.\n",
+            pubkey_path);
+        return ExitKeyMismatch;
+    }
+    std::printf("OK: the signing seed matches the trust anchor\n");
+    return 0;
+}
+
 int verify(char const* kernel_path, char const* manifest_path, char const* pubkey_path)
 {
     std::vector<u8> kernel;
@@ -289,6 +319,9 @@ int main(int argc, char** argv)
         }
         return sign(argv[2], argv[3], argv[4], os_version, anchor_path);
     }
+
+    if (argc >= 2 && std::strcmp(argv[1], "check-keys") == 0 && argc == 4)
+        return check_keys(argv[2], argv[3]);
 
     if (argc >= 2 && std::strcmp(argv[1], "verify") == 0 && argc == 5)
         return verify(argv[2], argv[3], argv[4]);
