@@ -50,11 +50,15 @@ pub const fn sysret_target_ok(rip: u64) -> bool {
 /// CPUID: does this CPU report SYSCALL/SYSRET in long mode? Executable on any x86-64 host.
 pub fn supports_syscall() -> bool {
     use core::arch::x86_64::__cpuid;
-    // CPUID is available on every x86-64 CPU.
-    if __cpuid(0x8000_0000).eax < 0x8000_0001 {
+
+    // SAFETY: CPUID is supported on x86-64 processors.
+    let max_extended = unsafe { __cpuid(0x8000_0000) }.eax;
+    if max_extended < 0x8000_0001 {
         return false;
     }
-    __cpuid(0x8000_0001).edx & (1 << 11) != 0
+
+    // SAFETY: The maximum extended CPUID leaf was checked above.
+    unsafe { __cpuid(0x8000_0001) }.edx & (1 << 11) != 0
 }
 
 /// # Safety

@@ -83,8 +83,8 @@
     },
     {
       "path": "kernel/msr.rs",
-      "sha256": "962839e500459dc979a17a3bd6b0907aed41cb562d36ba04045a01d81c5fc1a5",
-      "bytes": 3630
+      "sha256": "c8067ec5a2026274ea33cd5ed8e29e9090ae88014a81f53d26273178d4491d75",
+      "bytes": 3766
     },
     {
       "path": "kernel/sched.rs",
