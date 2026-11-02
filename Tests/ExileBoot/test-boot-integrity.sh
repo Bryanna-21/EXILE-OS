@@ -161,6 +161,17 @@ for name in zeroseed zeroanchor badver junk noval missing-anchor short-anchor; d
     fi
 done
 
+# --- check-keys: the standalone form of the same check (used by the build before the prekernel is compiled) ---
+expect_status 0 "check-keys accepts a matching seed and public key" "$TOOL" check-keys "$WORK/seed.key" "$WORK/pub.key"
+expect_status 3 "check-keys rejects a seed that does not match the public key" "$TOOL" check-keys "$WORK/seed.key" "$WORK/other-pub.key"
+expect_status 3 "check-keys rejects the other seed against the first public key" "$TOOL" check-keys "$WORK/other-seed.key" "$WORK/pub.key"
+expect_status 1 "check-keys rejects an all-zero seed" "$TOOL" check-keys "$WORK/zero.key" "$WORK/pub.key"
+expect_status 1 "check-keys rejects an all-zero public key" "$TOOL" check-keys "$WORK/seed.key" "$WORK/zero.key"
+expect_status 1 "check-keys rejects a public key of the wrong length" "$TOOL" check-keys "$WORK/seed.key" "$WORK/pub-short.key"
+expect_status 1 "check-keys with a missing seed file is an error" "$TOOL" check-keys "$WORK/no-such-seed.key" "$WORK/pub.key"
+expect_status 1 "check-keys with a missing public key file is an error" "$TOOL" check-keys "$WORK/seed.key" "$WORK/no-such-pub.key"
+expect_status 1 "check-keys with the wrong number of arguments is an error" "$TOOL" check-keys "$WORK/seed.key"
+
 # --- Missing boot components ---
 expect_status 1 "missing kernel image is an error (verify)" "$TOOL" verify "$WORK/no-such-kernel.bin" "$WORK/manifest.bin" "$WORK/pub.key"
 expect_status 1 "missing kernel image is an error (sign)" "$TOOL" sign "$WORK/no-such-kernel.bin" "$WORK/seed.key" "$WORK/nokernel.bin" 7
