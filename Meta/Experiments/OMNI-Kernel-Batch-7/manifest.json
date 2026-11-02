@@ -1,0 +1,125 @@
+{
+  "manifest_schema_version": "1.0",
+  "package_name": "OMNI-Kernel-Batch-7",
+  "batch_id": "batch-7",
+  "batch_scope": "x86-64 no_std Rust and assembly: real context switch, cooperative uniprocessor scheduler, SYSCALL entry stub and dispatch, user-address validation. Tests execute on a Linux x86-64 host only. Not integrated into ExileKernel/ or Kernel/; not built for x86_64-unknown-none; not booted; the SYSCALL stub has never been executed; no ARM64; IPC not connected.",
+  "checksum_algorithm": "SHA-256",
+  "checksum_statement": "Checksums and byte sizes cover the exact bytes of each listed file as extracted from the archive.",
+  "files": [
+    {
+      "path": "Cargo.lock",
+      "sha256": "ca7af8870efb55c68679e44e8ae10544c00e6a03ac10b7a635fb13ac072fccb1",
+      "bytes": 162
+    },
+    {
+      "path": "Cargo.toml",
+      "sha256": "2a738a5290f7010a06b77683567614305b69637c35053b29cfd0a1835d2ae80e",
+      "bytes": 330
+    },
+    {
+      "path": "EXILE-OS-STATUS.md",
+      "sha256": "21087e2eb2a4bb0fe168dadc77a3185f894d46885a61b042e810c01e6e30983f",
+      "bytes": 1241
+    },
+    {
+      "path": "README.md",
+      "sha256": "2521780372e0fa2d507f6d47dab0e29966c470c653ab6d09644573311b8286d4",
+      "bytes": 2061
+    },
+    {
+      "path": "REPORT.md",
+      "sha256": "ae944ae98daa3bc401cb21c1b83dff708ef9be6c160c6debf11f45a316a3a17f",
+      "bytes": 7732
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "sha256": "a295f13fecd2a43c094332d635293012cad78c8c6891d6470452e9a54d480dc9",
+      "bytes": 5019
+    },
+    {
+      "path": "docs/CONTEXT-SWITCHING.md",
+      "sha256": "e4c1b857abc9568b58559b00a26b681dbb5832f75c22907d08248d6ba26c4c0f",
+      "bytes": 3637
+    },
+    {
+      "path": "docs/SCHEDULER-INTEGRATION.md",
+      "sha256": "ff8daf89b5c44a2f3f3c487101a0dee8ad88fc76f3ecde26cf2c609ca17864b6",
+      "bytes": 4856
+    },
+    {
+      "path": "docs/SECURITY-ANALYSIS.md",
+      "sha256": "b552127f9fc1dd75d35ff5c04a24214cf06af33a68999474304479e4ec62eac8",
+      "bytes": 3655
+    },
+    {
+      "path": "docs/SYSCALL-INTEGRATION.md",
+      "sha256": "b4035df377945fa6a04dd072815e80dee4f2de55a74480619bbabb046b9e98eb",
+      "bytes": 4073
+    },
+    {
+      "path": "docs/TEST-PLAN.md",
+      "sha256": "48d83118f7020da723b1a4fcc4144452d65b09fb353225baaa74df599422a249",
+      "bytes": 4886
+    },
+    {
+      "path": "kernel/arch/x86_64/context.S",
+      "sha256": "3eaa0b289c7556477c0965e73523570bab2a473a6d4cfc04de4c27ed50cf9f47",
+      "bytes": 1778
+    },
+    {
+      "path": "kernel/arch/x86_64/syscall_entry.S",
+      "sha256": "65d0cf912fc76fbb0c3f9f95f0693e3adc12e6a04173c5e90c231c3fcf9680ef",
+      "bytes": 1575
+    },
+    {
+      "path": "kernel/context.rs",
+      "sha256": "d9922cccf47990855e6cab401364083ffb4357148f219ffbc26bc1124fca89af",
+      "bytes": 3933
+    },
+    {
+      "path": "kernel/lib.rs",
+      "sha256": "0523f5517d2788ef8acfdb7aeeee76e3790af49568501710cd14c3ae7ca729d8",
+      "bytes": 1252
+    },
+    {
+      "path": "kernel/msr.rs",
+      "sha256": "c8067ec5a2026274ea33cd5ed8e29e9090ae88014a81f53d26273178d4491d75",
+      "bytes": 3766
+    },
+    {
+      "path": "kernel/sched.rs",
+      "sha256": "1b9cfdc763b016d5de5c52bdd6fee2bd5fdc03651c436eafee1377df9b798140",
+      "bytes": 21545
+    },
+    {
+      "path": "kernel/status.rs",
+      "sha256": "9c2fd6ee90a88aa11219d582ff7ef67ff656b84cb2e5540dd7ed303431998350",
+      "bytes": 527
+    },
+    {
+      "path": "kernel/sync.rs",
+      "sha256": "a5b1b2966d6f6d2c7db7daebcbc430f2b6340dbe73bceac856e012495497ae7d",
+      "bytes": 2320
+    },
+    {
+      "path": "kernel/syscall.rs",
+      "sha256": "8578876e17734edaa739bc7c3bd59679a0312fb2e63545fd5842904b2fe86a53",
+      "bytes": 8830
+    },
+    {
+      "path": "kernel/tests.rs",
+      "sha256": "4c897dc6d1514aab1dd3eef219c3eabaa18f2cd86348ef0a992b83ed2e6b61b5",
+      "bytes": 43573
+    },
+    {
+      "path": "kernel/uaccess.rs",
+      "sha256": "bfb9cff22fd7d9422dc859ce4da790cc03e80e294bdd5c6043a952553059d4d6",
+      "bytes": 7579
+    },
+    {
+      "path": "scripts/verify.sh",
+      "sha256": "068346e943852985d52af8aee4bd45475e3978d98f1154d7d8cb27376167c3f6",
+      "bytes": 9428
+    }
+  ]
+}
