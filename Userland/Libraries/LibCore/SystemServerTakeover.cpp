@@ -5,6 +5,7 @@
  */
 
 #include "SystemServerTakeover.h"
+#include <LibCore/Environment.h>
 #include <LibCore/Socket.h>
 #include <LibCore/System.h>
 
@@ -38,7 +39,7 @@ static void parse_sockets_from_system_server()
 
     // We wouldn't want our children to think we're passing
     // them a socket either, so unset the env variable.
-    (void)System::unsetenv(socket_takeover);
+    (void)Environment::unset(StringView { socket_takeover, strlen(socket_takeover) });
 #endif
 }
 

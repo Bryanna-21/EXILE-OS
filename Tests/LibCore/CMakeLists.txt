@@ -4,6 +4,7 @@ set(TEST_SOURCES
     TestLibCoreDeferredInvoke.cpp
     TestLibCoreFilePermissionsMask.cpp
     TestLibCoreFileWatcher.cpp
+    TestLibCoreIPCProcess.cpp
     TestLibCoreMappedFile.cpp
     TestLibCorePromise.cpp
     TestLibCoreSharedSingleProducerCircularQueue.cpp

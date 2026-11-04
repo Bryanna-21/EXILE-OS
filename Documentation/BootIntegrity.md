@@ -11,11 +11,12 @@ Status: **experimental, opt-in, not verified end to end.** Nothing in this docum
 
 ## What has been tested
 
-- Verifier unit tests (`Tests/ExileBoot/TestBootGuardian.cpp`, 12 cases) and the tamper script (`Tests/ExileBoot/test-boot-integrity.sh`, 44 checks) run on a development host with scratch builds. The script is registered with CTest as `ExileBootTamperTests` in the host (Lagom) build. They cover a modified kernel byte, size changes, truncation, every manifest byte flipped, a wrong key, an attacker-signed manifest, domain separation, missing inputs, all-zero keys and a signing seed that does not match the trust anchor.
+- Verifier unit tests (`Tests/ExileBoot/TestBootGuardian.cpp`, 12 cases) and the tamper script (`Tests/ExileBoot/test-boot-integrity.sh`, 53 checks) run on a development host with scratch builds. The script is registered with CTest as `ExileBootTamperTests` in the host (Lagom) build. They cover a modified kernel byte, size changes, truncation, every manifest byte flipped, a wrong key, an attacker-signed manifest, domain separation, missing inputs, all-zero keys and a signing seed that does not match the trust anchor.
 
 ## What has NOT been tested
 
-- The prekernel integration has not been compiled for the target and has not been booted in QEMU or on hardware. There is no tamper boot test.
+- The prekernel integration has not been compiled for the target and has not been booted in QEMU or on hardware. There is no tamper boot test against a real `Kernel.efi`.
+- The QEMU runner (`Tests/ExileBoot/qemu/run-qemu-boot-tests.sh`) has had its mechanics validated with a stand-in UEFI application (`Tests/ExileBoot/qemu/standin/run-standin-selftest.sh`): OVMF boots an image from the ESP and EFI console output reaches the `-serial` capture. The stand-in is not the Exile prekernel.
 - Until that exists, do not describe Exile OS as having verified boot.
 
 ## Threat model and limits
