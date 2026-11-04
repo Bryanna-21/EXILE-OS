@@ -10,7 +10,7 @@
 #include <LibFileSystem/FileSystem.h>
 #include <LibWebView/URL.h>
 
-#if defined(ENABLE_PUBLIC_SUFFIX)
+#if ENABLE_PUBLIC_SUFFIX
 #    include <LibWebView/PublicSuffixData.h>
 #endif
 
@@ -18,7 +18,7 @@ namespace WebView {
 
 bool is_public_suffix([[maybe_unused]] StringView host)
 {
-#if defined(ENABLE_PUBLIC_SUFFIX)
+#if ENABLE_PUBLIC_SUFFIX
     return PublicSuffixData::the()->is_public_suffix(host);
 #else
     return false;
@@ -27,7 +27,7 @@ bool is_public_suffix([[maybe_unused]] StringView host)
 
 Optional<String> get_public_suffix([[maybe_unused]] StringView host)
 {
-#if defined(ENABLE_PUBLIC_SUFFIX)
+#if ENABLE_PUBLIC_SUFFIX
     return MUST(PublicSuffixData::the()->get_public_suffix(host));
 #else
     return {};

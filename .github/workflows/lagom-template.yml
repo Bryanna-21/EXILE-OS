@@ -169,7 +169,7 @@ jobs:
       # manifest tooling or the LibCore IPC helpers is reported as its own failing step. These are host (Lagom) tests and
       # fixture checks only: no OS image is built and nothing is booted under QEMU here.
       - name: Test (Exile boot-manifest and LibCore IPC checks)
-        if: ${{ inputs.fuzzer == 'NO_FUZZ' }}
+        if: ${{ !cancelled() && inputs.fuzzer == 'NO_FUZZ' }}
         working-directory: ${{ github.workspace }}/Meta/Lagom/Build
         run: ctest --output-on-failure --timeout 600 -R 'TestBootGuardian|ExileBootTamperTests|TestLibCoreIPCProcess' --no-tests=error
         env:

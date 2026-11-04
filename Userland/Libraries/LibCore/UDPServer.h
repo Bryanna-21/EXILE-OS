@@ -13,6 +13,7 @@
 #include <LibCore/EventReceiver.h>
 #include <LibCore/Forward.h>
 #include <LibCore/SocketAddress.h>
+#include <LibCore/System.h>
 
 namespace Core {
 

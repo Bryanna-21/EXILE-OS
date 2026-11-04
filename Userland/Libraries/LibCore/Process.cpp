@@ -535,7 +535,9 @@ ErrorOr<Optional<pid_t>> IPCProcess::get_process_pid(StringView process_name, St
     auto pid_string = TRY(file->read_until_eof());
     auto pid = StringView { pid_string.span() }.to_number<pid_t>();
 
-    if (!pid.has_value())
+    // kill() treats 0 and negative values as process groups (or every process), not as a single process, so they
+    // would wrongly look "alive" and can never be the pid of the process we are looking for.
+    if (!pid.has_value() || *pid <= 0)
         return Error::from_errno(EINVAL);
 
     if (::kill(*pid, 0) < 0) {
