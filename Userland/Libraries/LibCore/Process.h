@@ -103,6 +103,9 @@ public:
     static ErrorOr<pid_t> spawn(StringView path, ReadonlySpan<char const*> arguments = {}, ByteString working_directory = {}, KeepAsChild keep_as_child = KeepAsChild::No);
 
     static ErrorOr<String> get_name();
+    // The name (argv[0]) of another process, as get_name() reports it for the calling process.
+    // Currently implemented on Linux only; other platforms return "???" like get_name().
+    static ErrorOr<String> get_name(pid_t);
     enum class SetThreadName {
         No,
         Yes,

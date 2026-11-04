@@ -165,6 +165,16 @@ jobs:
           UBSAN_OPTIONS: 'print_stacktrace=1:print_summary=1:halt_on_error=1'
           TESTS_ONLY: 1
 
+      # These are already part of the full ctest run above. They are repeated by name so a regression in the Exile boot
+      # manifest tooling or the LibCore IPC helpers is reported as its own failing step. These are host (Lagom) tests and
+      # fixture checks only: no OS image is built and nothing is booted under QEMU here.
+      - name: Test (Exile boot-manifest and LibCore IPC checks)
+        if: ${{ inputs.fuzzer == 'NO_FUZZ' }}
+        working-directory: ${{ github.workspace }}/Meta/Lagom/Build
+        run: ctest --output-on-failure --timeout 600 -R 'TestBootGuardian|ExileBootTamperTests|TestLibCoreIPCProcess' --no-tests=error
+        env:
+          TESTS_ONLY: 1
+
       - name: Upload LibWeb Test Artifacts
         if: ${{ always() && inputs.fuzzer == 'NO_FUZZ' }}
         uses: actions/upload-artifact@v7

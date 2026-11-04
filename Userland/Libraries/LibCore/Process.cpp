@@ -264,6 +264,20 @@ ErrorOr<String> Process::get_name()
 #endif
 }
 
+ErrorOr<String> Process::get_name([[maybe_unused]] pid_t pid)
+{
+#if defined(AK_OS_LINUX)
+    // /proc/<pid>/cmdline holds argv[0] up to the first NUL, which is what program_invocation_name gives get_name() for this process.
+    auto file = TRY(File::open(ByteString::formatted("/proc/{}/cmdline", pid), File::OpenMode::Read));
+    auto contents = TRY(file->read_until_eof());
+    auto name_length = StringView { contents.span() }.find('\0').value_or(contents.size());
+    return String::from_utf8(StringView { contents.data(), name_length });
+#else
+    // FIXME: Implement Process::get_name(pid_t) for other platforms.
+    return "???"_string;
+#endif
+}
+
 ErrorOr<void> Process::set_name([[maybe_unused]] StringView name, [[maybe_unused]] SetThreadName set_thread_name)
 {
 #if defined(AK_OS_SERENITY)
@@ -513,7 +527,8 @@ ErrorOr<Optional<pid_t>> IPCProcess::get_process_pid(StringView process_name, St
     (void)pid_path;
     return Error::from_errno(ENOTSUP);
 #else
-    if (!System::stat(pid_path).is_error())
+    // No pid file means there is no process to find.
+    if (System::stat(pid_path).is_error())
         return OptionalNone {};
 
     auto file = TRY(File::open(pid_path, File::OpenMode::Read));
