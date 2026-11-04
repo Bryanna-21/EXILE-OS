@@ -1,0 +1,5 @@
+# Variant "cpu-fault": the CPU feature check is forced to fail. Exit status must be 35.
+# CONTAINS
+OMNI8 FAIL: CPU features
+FORBID OMNI8 BOOT: start
+FORBID OMNI8 TEST PASS

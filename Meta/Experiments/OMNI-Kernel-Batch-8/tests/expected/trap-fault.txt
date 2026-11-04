@@ -1,0 +1,7 @@
+# Variant "trap-fault": an unexpected #UD after the IDT is loaded. Exit status must be 35.
+# CONTAINS
+OMNI8 IDT: loaded
+~OMNI8 FATAL EXCEPTION vector=6 name=#UD invalid opcode err=0x0+$
+OMNI8 FAIL: unexpected exception
+FORBID OMNI8 TEST PASS
+FORBID OMNI8 PAGING: wx tables active

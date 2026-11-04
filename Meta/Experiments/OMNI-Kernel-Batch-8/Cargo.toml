@@ -1,0 +1,14 @@
+[package]
+name = "omni-kernel-batch8"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.88"
+description = "Experimental OMNI-Kernel Batch 8: boot, GDT/TSS, IDT, paging, frame allocator, timer and user-mode foundations (x86-64, no_std). Not wired into ExileKernel."
+publish = false
+
+[lib]
+name = "omni8"
+path = "src/lib.rs"
+
+[dependencies]
+omni-kernel-batch7 = { path = "../OMNI-Kernel-Batch-7" }
