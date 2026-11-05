@@ -15,7 +15,7 @@ jobs:
     if: always() && github.repository == 'Bryanna-21/EXILE-OS'
 
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@v7
 
       - name: Label pull request
         uses: actions/github-script@v9
