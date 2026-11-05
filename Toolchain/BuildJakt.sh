@@ -1,0 +1,289 @@
+#!/usr/bin/env bash
+set -eo pipefail
+# This file will need to be run in bash, for now.
+
+# === CONFIGURATION AND SETUP ===
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# serenity | lagom
+FINAL_TARGET="${1:-serenity}"
+
+. "${DIR}/../Meta/shell_include.sh"
+
+exit_if_running_as_root "Do not run BuildJakt.sh as root, your Build directory will become root-owned"
+
+ARCHES=("x86_64" "aarch64" "riscv64")
+PREFIX="$DIR/Local/jakt"
+
+VALID_TOOLCHAINS=()
+
+for ARCH in "${ARCHES[@]}"; do
+  TARGET="$ARCH-serenity"
+
+  eval "BUILD_GNU_${ARCH}=\"$DIR/../Build/$ARCH\""
+  eval "BUILD_CLANG_${ARCH}=\"$DIR/../Build/${ARCH}clang\""
+
+  eval "CXX_GNU_${ARCH}=\"$DIR/Local/$ARCH/bin/$TARGET-g++\""
+  eval "CXX_CLANG_${ARCH}=\"$DIR/Local/clang/bin/$TARGET-clang++\""
+
+  eval "RANLIB_GNU_${ARCH}=\"$DIR/Local/$ARCH/bin/$TARGET-ranlib\""
+  eval "RANLIB_CLANG_${ARCH}=\"$DIR/Local/clang/bin/llvm-ranlib\""
+
+  eval "AR_GNU_${ARCH}=\"$DIR/Local/$ARCH/bin/$TARGET-ar\""
+  eval "AR_CLANG_${ARCH}=\"$DIR/Local/clang/bin/llvm-ar\""
+
+  VAR_CXX_GNU="CXX_GNU_${ARCH}"
+  if [ -x "${!VAR_CXX_GNU}" ]; then
+      VALID_TOOLCHAINS+=("GNU;${ARCH}")
+  fi
+
+  VAR_CXX_CLANG="CXX_CLANG_${ARCH}"
+  if [ -x "${!VAR_CXX_CLANG}" ]; then
+      VALID_TOOLCHAINS+=("CLANG;${ARCH}")
+  fi
+done
+
+if [ "$FINAL_TARGET" = serenity ] && [ "${#VALID_TOOLCHAINS[@]}" -eq 0 ]; then
+    die "Need to build at least one C++ toolchain (either GNU or Clang) before BuildJakt.sh can succeed"
+fi
+
+REALPATH="realpath"
+SYSTEM_NAME="$(uname -s)"
+
+NPROC=$(get_number_of_processing_units)
+
+if [ "$SYSTEM_NAME" = "OpenBSD" ]; then
+    REALPATH="readlink -f"
+    export CXX=eg++
+elif [ "$SYSTEM_NAME" = "Darwin" ]; then
+    REALPATH="perl -e 'use Cwd \"abs_path\"; print abs_path(shift)'"
+fi
+
+if command -v ginstall &>/dev/null; then
+    INSTALL=ginstall
+else
+    INSTALL=install
+fi
+
+buildstep() {
+    NAME=$1
+    shift
+    "$@" 2>&1 | sed $'s|^|\x1b[34m['"${NAME}"$']\x1b[39m |'
+}
+
+buildstep_ninja() {
+    # When ninja writes to a pipe, it strips ANSI escape codes and prints one line per buildstep.
+    # Instead, use NINJA_STATUS so that we get colored output from LLVM's build and fewer lines of output when running in a tty.
+    # ANSI escape codes in NINJA_STATUS are slightly janky (ninja thinks that "\e[34m" needs 5 output characters instead of 5, so
+    # its middle elision is slightly off; also it would happily elide the "\e39m" which messes up the output if the terminal is too
+    # narrow), but it's still working better than the alternative.
+    NAME=$1
+    shift
+    env NINJA_STATUS=$'\e[34m['"${NAME}"$']\e[39m [%f/%t] ' "$@"
+}
+
+mkdir -p "$DIR/Tarballs"
+
+JAKT_COMMIT_HASH="14c980b0f16d9cbe9136818302fb504e26583416"
+JAKT_NAME="jakt-${JAKT_COMMIT_HASH}"
+JAKT_TARBALL="${JAKT_NAME}.tar.gz"
+JAKT_GIT_URL="https://github.com/serenityos/jakt"
+
+function already_available() {
+    local TOOLCHAIN="$1"; shift
+    local ARCH="$1"; shift
+
+    HASH_FILE="${PREFIX}/.jakt-${TOOLCHAIN}-${ARCH}.hash"
+    if [ -f "$HASH_FILE" ] && [ "$JAKT_COMMIT_HASH" = "$(<"$HASH_FILE")" ]; then
+        # Make sure we have a binary.
+        if ! [ -e "$PREFIX/bin/jakt" ]; then
+            # We don't actually have anything, the file lied.
+            echo "$HASH_FILE exists and says we have $JAKT_COMMIT_HASH, but there's no associated binary; rebuilding!"
+            rm "$HASH_FILE"
+        fi
+    fi
+
+    if [ -f "$HASH_FILE" ] && [ "$JAKT_COMMIT_HASH" = "$(<"$HASH_FILE")" ]; then
+        return 0
+    elif [ -f "$HASH_FILE" ]; then
+        echo "Expected $JAKT_COMMIT_HASH but found $(<"$HASH_FILE")"
+        return 1
+    else
+        echo "Expected $JAKT_COMMIT_HASH but found none (for $TOOLCHAIN $ARCH)"
+        return 1
+    fi
+}
+
+function stamp() {
+    local TOOLCHAIN="$1"; shift
+    local ARCH="$1"; shift
+    echo "$JAKT_COMMIT_HASH" > "${PREFIX}/.jakt-$TOOLCHAIN-$ARCH.hash"
+}
+
+DEPENDENCIES_OK=0
+function check_dependencies() {
+    if [ "$DEPENDENCIES_OK" -eq 1 ]; then
+        return 0
+    fi
+
+    buildstep dependencies echo "Checking whether 'ninja' is available..."
+    if ! command -v "${NINJA:-ninja}" >/dev/null; then
+        buildstep dependencies echo "Please make sure to install Ninja (for the '${NINJA:-ninja}' tool)."
+        exit 1
+    fi
+
+    buildstep dependencies echo "Checking whether 'cmake' is available..."
+    if ! command -v cmake >/dev/null; then
+        buildstep dependencies echo "Please make sure to install CMake (for the 'cmake' tool)."
+        exit 1
+    fi
+
+    buildstep dependencies echo "Checking whether your C++ compiler works..."
+    if ! ${CXX:-c++} -o /dev/null -xc++ - >/dev/null <<'PROGRAM'
+    int main() {}
+PROGRAM
+    then
+        buildstep dependencies echo "Please make sure to install a working C++ compiler."
+        exit 1
+    fi
+    DEPENDENCIES_OK=1
+}
+
+DOWNLOAD_OK=0
+function download_and_patch() {
+    if [ "$DOWNLOAD_OK" -eq 1 ]; then
+        return 0
+    fi
+    pushd "$DIR/Tarballs"
+        if [ ! -d "${JAKT_NAME}" ]; then
+            echo "Downloading jakt..."
+            rm -f "$JAKT_TARBALL"
+            curl -L --output "$JAKT_TARBALL" "$JAKT_GIT_URL/archive/$JAKT_COMMIT_HASH.tar.gz"
+
+            echo "Extracting jakt..."
+            tar -xzf "${JAKT_TARBALL}"
+        else
+            echo "Using existing Jakt source directory"
+        fi
+    popd
+    DOWNLOAD_OK=1
+}
+
+build_for() {
+    TOOLCHAIN="$1"
+    ARCH="$2"
+
+    if already_available "$TOOLCHAIN" "$ARCH"; then
+        return 0
+    fi
+
+    check_dependencies
+    download_and_patch
+
+    TARGET="$ARCH-serenity"
+    JAKT_TARGET="$ARCH-unknown-serenity-unknown"
+
+    current_build="BUILD_${TOOLCHAIN}_${ARCH}"
+    current_cxx="CXX_${TOOLCHAIN}_${ARCH}"
+    current_ranlib="RANLIB_${TOOLCHAIN}_${ARCH}"
+    current_ar="AR_${TOOLCHAIN}_${ARCH}"
+
+    BUILD="${!current_build}"
+    TARGET_CXX="${!current_cxx}"
+    TARGET_RANLIB="${!current_ranlib}"
+    TARGET_AR="${!current_ar}"
+
+    # On at least OpenBSD, the path must exist to call realpath(3) on it
+    if [ ! -d "$BUILD" ]; then
+        mkdir -p "$BUILD"
+    fi
+    BUILD=$(eval "$REALPATH" "$BUILD")
+    echo "XXX building jakt support libs in $BUILD with $TARGET_CXX"
+
+    SYSROOT="$BUILD/Root"
+    echo SYSROOT is "$SYSROOT"
+
+    rm -rf "$DIR/Build/jakt-$TOOLCHAIN-$ARCH"
+    mkdir -p "$DIR/Build/jakt-$TOOLCHAIN-$ARCH"
+    pushd "$DIR/Build/jakt-$TOOLCHAIN-$ARCH"
+        echo "XXX serenity libc headers"
+        mkdir -p "$BUILD"
+        pushd "$BUILD"
+            mkdir -p Root/usr/include/
+            SRC_ROOT=$(eval "$REALPATH" "$DIR"/..)
+            FILES=$(find \
+                "$SRC_ROOT"/AK \
+                "$SRC_ROOT"/Kernel/API \
+                "$SRC_ROOT"/Kernel/Arch \
+                "$SRC_ROOT"/Userland/Libraries/LibC \
+                "$SRC_ROOT"/Userland/Libraries/LibELF/ELFABI.h \
+                "$SRC_ROOT"/Userland/Libraries/LibRegex/RegexDefs.h \
+                -name '*.h' -print)
+            for header in $FILES; do
+                target=$(echo "$header" | sed \
+                    -e "s|$SRC_ROOT/AK/|AK/|" \
+                    -e "s|$SRC_ROOT/Userland/Libraries/LibC||" \
+                    -e "s|$SRC_ROOT/Kernel/|Kernel/|" \
+                    -e "s|$SRC_ROOT/Userland/Libraries/LibELF/|LibELF/|" \
+                    -e "s|$SRC_ROOT/Userland/Libraries/LibRegex/|LibRegex/|")
+                buildstep "system_headers" mkdir -p "$(dirname "Root/usr/include/$target")"
+                buildstep "system_headers" "$INSTALL" "$header" "Root/usr/include/$target"
+            done
+            unset SRC_ROOT
+        popd
+
+        echo "XXX build jakt support libs"
+        rm -fr "$SYSROOT/usr/local/lib/$JAKT_TARGET"
+
+        buildstep "jakt/support/build/$TOOLCHAIN" "$PREFIX/bin/jakt" cross \
+                                                            --only-support-libs \
+                                                            --install-root "$PREFIX/usr/local" \
+                                                            --target-triple "$JAKT_TARGET" \
+                                                            --target-links-ak \
+                                                            -C "$TARGET_CXX" \
+                                                            --archiver "$TARGET_AR" \
+                                                            -O \
+                                                            -J "$NPROC"
+
+        buildstep "jakt/support/build/$TOOLCHAIN/ranlib" "$TARGET_RANLIB" "$PREFIX/usr/local/lib/$JAKT_TARGET/libjakt_runtime_$JAKT_TARGET.a"
+        buildstep "jakt/support/build/$TOOLCHAIN/ranlib" "$TARGET_RANLIB" "$PREFIX/usr/local/lib/$JAKT_TARGET/libjakt_main_$JAKT_TARGET.a"
+    popd
+
+    stamp "$TOOLCHAIN" "$ARCH"
+}
+
+if ! already_available local host; then
+    rm -rf "$PREFIX"
+    mkdir -p "$PREFIX"
+
+    check_dependencies
+    download_and_patch
+
+    rm -rf "$DIR/Build/jakt"
+    mkdir -p "$DIR/Build/jakt"
+    pushd "$DIR/Build/jakt"
+        echo "XXX configure jakt"
+        buildstep "jakt/configure" cmake -S "$DIR/Tarballs/${JAKT_NAME}" -B . \
+                                            -DEXILE_SOURCE_DIR="$DIR/.."   \
+                                            -DCMAKE_INSTALL_PREFIX="$PREFIX"  \
+                                            -DCMAKE_BUILD_TYPE=Release        \
+                                            -GNinja                           \
+                || exit 1
+
+        echo "XXX build jakt"
+        buildstep_ninja "jakt/build" ninja jakt_stage1
+        echo "XXX install jakt"
+        buildstep_ninja "jakt/install" ninja install
+    popd
+    stamp local host
+fi
+
+if ! [ "$FINAL_TARGET" = serenity ]; then
+    exit 0
+fi
+
+for TOOLCHAIN_AND_ARCH in "${VALID_TOOLCHAINS[@]}"; do
+    IFS=';' read -r TOOLCHAIN ARCH <<< "$TOOLCHAIN_AND_ARCH"
+    buildstep "build/$TOOLCHAIN/$ARCH" build_for "$TOOLCHAIN" "$ARCH"
+done

@@ -1,0 +1,5 @@
+// Exile OS development container.
+// The pre-built Exile container image will be added once published.
+{
+    "name": "Exile OS Development"
+}

@@ -1,0 +1,7 @@
+[App]
+Name=&XFiles
+Executable=/bin/XFiles
+Category=&Utilities
+
+[Launcher]
+FileTypes=zip

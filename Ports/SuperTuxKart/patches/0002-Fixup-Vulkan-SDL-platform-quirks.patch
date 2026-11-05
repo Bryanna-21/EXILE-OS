@@ -1,0 +1,36 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Dominika Liberda <ja@sdomi.pl>
+Date: Sun, 2 Jul 2023 05:49:46 +0200
+Subject: [PATCH] Fixup Vulkan/SDL platform quirks
+
+---
+ lib/irrlicht/source/Irrlicht/CIrrDeviceSDL.cpp | 2 +-
+ src/graphics/irr_driver.cpp                    | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/lib/irrlicht/source/Irrlicht/CIrrDeviceSDL.cpp b/lib/irrlicht/source/Irrlicht/CIrrDeviceSDL.cpp
+index 9bbeb96b1935eef6279fad4413c8b62575b735d3..faf27da5e60700d96dd9695f0e7bc0cca88b0ab5 100644
+--- a/lib/irrlicht/source/Irrlicht/CIrrDeviceSDL.cpp
++++ b/lib/irrlicht/source/Irrlicht/CIrrDeviceSDL.cpp
+@@ -368,7 +368,7 @@ extern "C" void update_fullscreen_desktop(int val)
+ // Used in OptionsScreenVideo for live updating vertical sync config
+ extern "C" void update_swap_interval(int swap_interval)
+ {
+-#ifndef IOS_STK
++#if !defined(IOS_STK) && !defined(__serenity__)
+ 	// iOS always use vertical sync
+ 	if (swap_interval > 1)
+ 		swap_interval = 1;
+diff --git a/src/graphics/irr_driver.cpp b/src/graphics/irr_driver.cpp
+index 9ee8dd6e76c1dadb207675a9017d1ce5ed0d9125..c3ce97426e32dfbab862f948b915f34ddd1174ec 100644
+--- a/src/graphics/irr_driver.cpp
++++ b/src/graphics/irr_driver.cpp
+@@ -194,7 +194,7 @@ IrrDriver::IrrDriver()
+     p.WindowSize    = core::dimension2d<u32>(1280,720);
+     p.ForceLegacyDevice = UserConfigParams::m_force_legacy_device;
+ #else
+-    p.DriverType    = video::EDT_NULL;
++    p.DriverType    = video::EDT_OPENGL;
+     p.Bits          = 16U;
+     p.WindowSize    = core::dimension2d<u32>(640,480);
+ #endif

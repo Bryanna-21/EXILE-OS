@@ -1,0 +1,25 @@
+#!/usr/bin/env -S bash ../.port_include.sh
+port='angband'
+version='4.2.6'
+workdir="Angband-${version}"
+useconfigure='true'
+files=(
+    "https://github.com/angband/angband/releases/download/${version}/Angband-${version}.tar.gz#8c0ffa2b85d74bd0cc273752f61c0440dba93323cd790be460f90c8dced7cbf4"
+)
+depends=(
+    'ncurses'
+    'SDL2'
+    'SDL2_image'
+    'SDL2_mixer'
+    'SDL2_ttf'
+)
+configopts=(
+    '--prefix=/usr/local'
+    '--bindir=/usr/local/bin'
+    '--disable-x11'
+    '--enable-curses'
+    '--enable-sdl2'
+    '--enable-sdl2-mixer'
+    "--with-ncurses-prefix=${SERENITY_INSTALL_ROOT}/usr/local"
+    "--with-sdl2-prefix=${SERENITY_INSTALL_ROOT}/usr/local"
+)

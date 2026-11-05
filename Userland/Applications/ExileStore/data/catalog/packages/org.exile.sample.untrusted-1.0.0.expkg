@@ -1,0 +1,7 @@
+EXPKG1
+file 101 README.txt
+file 43 bin/sample.txt
+data
+Sample Untrusted Publisher 1.0.0
+This is a development sample payload. It is not a real application.
+placeholder for org.exile.sample.untrusted

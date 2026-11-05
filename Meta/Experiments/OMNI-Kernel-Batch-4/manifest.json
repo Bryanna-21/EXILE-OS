@@ -1,0 +1,121 @@
+{
+  "manifest_schema_version": "1.0",
+  "package_name": "OMNI-Kernel-Batch-4",
+  "batch_id": "batch-4",
+  "batch_scope": "Hosted, architecture-neutral IPC prototype: channels, bounded queues, versioned messages, capability transfer (move/copy, attenuation, rollback), cancellation, timeout and closure, built on the Batch 3 capability kernel. Reuses Batch 2 and Batch 3 unmodified. No architecture boots; no kernel image is produced.",
+  "checksum_algorithm": "SHA-256",
+  "checksum_statement": "Checksums and byte sizes cover the exact bytes of each listed file as extracted from the archive.",
+  "files": [
+    {
+      "path": "EXILE-OS-STATUS.md",
+      "sha256": "8e93afbbaa4d49674c8560baeae9b32ae69b8a12fad61d5bc7d86870d51fcb4c",
+      "bytes": 844
+    },
+    {
+      "path": "README.md",
+      "sha256": "650341358fc0aa0d9b08e1e4a741583ba987c52d2c2be9da8e274e2703518921",
+      "bytes": 2355
+    },
+    {
+      "path": "REPORT.md",
+      "sha256": "77e49bcf02f98295d6159ac35664563f9f84d385fdd6ca4acc1acbb7300d8449",
+      "bytes": 2816
+    },
+    {
+      "path": "build.zig",
+      "sha256": "9ccfb2113ccb2c9fe4ff1d1494bd235dc1082d772da0c82acf002f3f13a21e04",
+      "bytes": 2924
+    },
+    {
+      "path": "build.zig.zon",
+      "sha256": "2b3d26a584ae96b8da29134bae99c5312df9ac32be7bba17ec29df64c5cdb01d",
+      "bytes": 324
+    },
+    {
+      "path": "docs/CANCELLATION-AND-CLOSURE.md",
+      "sha256": "70a9701cdf61bb7c65df4ebe71879ab2bcb4798778dd43affe3b646640a120a8",
+      "bytes": 2749
+    },
+    {
+      "path": "docs/CAPABILITY-TRANSFER.md",
+      "sha256": "4279eb3edcdad381fc1cfab2826c1c65543ea60f5d093e394cf7858f08820120",
+      "bytes": 4038
+    },
+    {
+      "path": "docs/CONCURRENCY.md",
+      "sha256": "35f99360a8e6b3b8fb821fbd0eeda3f60e3a5d284f1faf9d43d6fd94709b1a07",
+      "bytes": 2492
+    },
+    {
+      "path": "docs/IPC-MODEL.md",
+      "sha256": "1a045132c7fffd710124487fd90c6e64d361795d110013dfe5e8ac8ca6051d54",
+      "bytes": 4193
+    },
+    {
+      "path": "docs/PROPOSED-ABI-CHANGES.md",
+      "sha256": "daf47800299d3ba8088e054e2bb7fb6ebe2ff0f03b40f7dc58f6bca1cd4b1710",
+      "bytes": 1262
+    },
+    {
+      "path": "docs/TEST-PLAN.md",
+      "sha256": "cf779130b5e33595a8bf59b8b96138764944a8a0da540cd720628c318ba63af2",
+      "bytes": 1773
+    },
+    {
+      "path": "scripts/verify.sh",
+      "sha256": "0d7dd7fb564e6d6fb4d9a598e283f7565b61572c220330d5c9f1316401ef69b7",
+      "bytes": 6453
+    },
+    {
+      "path": "src/batch2.zig",
+      "sha256": "411c41defed8f7667f6d14a283f3fd51c62118b14d2afa2eafffcd4a18f15f74",
+      "bytes": 599
+    },
+    {
+      "path": "src/ipc.zig",
+      "sha256": "cdfad6b345bc118157887c05a931e0beb08d994c62aedb3b38888c70c40346c8",
+      "bytes": 47372
+    },
+    {
+      "path": "src/tests.zig",
+      "sha256": "8c6b397dcc565dfb5bd529b7c0f15e2dcae9545695723413d8fda2b3122140af",
+      "bytes": 175
+    },
+    {
+      "path": "src/tests/basic.zig",
+      "sha256": "6fc63db8c3168823acf31c1ec0938dedc3dad936865adb72f2673b2d20e8310d",
+      "bytes": 10211
+    },
+    {
+      "path": "src/tests/caps.zig",
+      "sha256": "77a025cfca6dd1ecfcaab4f0d78619a984d105181b0558e84889b1432f22a6da",
+      "bytes": 28418
+    },
+    {
+      "path": "src/tests/common.zig",
+      "sha256": "6b4cb3aa3e2a205fcceb90a51840ccc4630430400713d9fb5682e92c12096805",
+      "bytes": 4091
+    },
+    {
+      "path": "src/tests/endpoint_tests.zig",
+      "sha256": "306080c29884affe5f20d97328413bad717bcf0bd4ace4f87385c987534682f6",
+      "bytes": 7661
+    },
+    {
+      "path": "src/tests/stress.zig",
+      "sha256": "9b0cbba613de9d7079e07dfef8b40f999df326d68ec0c688c514be9993d7550a",
+      "bytes": 14112
+    },
+    {
+      "path": "src/tests/wait.zig",
+      "sha256": "8584d508cc42ad583c746cdea0bdd7b723cfcffa27077debf6f72e2b31335990",
+      "bytes": 19448
+    }
+  ],
+  "excluded_from_file_list": [
+    {
+      "path": "manifest.json",
+      "reason": "A file cannot contain a stable checksum of itself; it is excluded from its own hash list to avoid a circular dependency."
+    }
+  ]
+}

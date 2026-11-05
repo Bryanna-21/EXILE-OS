@@ -1,0 +1,68 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Peter Elliott <pelliott@ualberta.ca>
+Date: Sat, 11 Feb 2023 13:52:12 -0700
+Subject: [PATCH] Remove unsupported OS features
+
+---
+ src/wayland-os.c | 19 -------------------
+ src/wayland-os.h |  3 ---
+ 2 files changed, 22 deletions(-)
+
+diff --git a/src/wayland-os.c b/src/wayland-os.c
+index f00ead4b95e6e207002a665b813d84b6135213dc..ae30aa5bb2b472dd21f7b0c0e0907d7fa0a05ba6 100644
+--- a/src/wayland-os.c
++++ b/src/wayland-os.c
+@@ -33,7 +33,6 @@
+ #include <fcntl.h>
+ #include <errno.h>
+ #include <string.h>
+-#include <sys/epoll.h>
+ #include <sys/mman.h>
+ #include <sys/un.h>
+ #ifdef HAVE_SYS_UCRED_H
+@@ -46,7 +45,6 @@
+ int (*wl_fcntl)(int fildes, int cmd, ...) = fcntl;
+ int (*wl_socket)(int domain, int type, int protocol) = socket;
+ ssize_t (*wl_recvmsg)(int socket, struct msghdr *message, int flags) = recvmsg;
+-int (*wl_epoll_create1)(int flags) = epoll_create1;
+ 
+ static int
+ set_cloexec_or_close(int fd)
+@@ -198,23 +196,6 @@ wl_os_recvmsg_cloexec(int sockfd, struct msghdr *msg, int flags)
+ 	return recvmsg_cloexec_fallback(sockfd, msg, flags);
+ }
+ 
+-int
+-wl_os_epoll_create_cloexec(void)
+-{
+-	int fd;
+-
+-#ifdef EPOLL_CLOEXEC
+-	fd = wl_epoll_create1(EPOLL_CLOEXEC);
+-	if (fd >= 0)
+-		return fd;
+-	if (errno != EINVAL)
+-		return -1;
+-#endif
+-
+-	fd = epoll_create(1);
+-	return set_cloexec_or_close(fd);
+-}
+-
+ int
+ wl_os_accept_cloexec(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
+ {
+diff --git a/src/wayland-os.h b/src/wayland-os.h
+index 068fd2fea3da8e0a13a3ab993fcc7d4c609a366d..ca4de54161b39e612b14332364cfb697e53d9afc 100644
+--- a/src/wayland-os.h
++++ b/src/wayland-os.h
+@@ -41,9 +41,6 @@ wl_os_dupfd_cloexec(int fd, int minfd);
+ ssize_t
+ wl_os_recvmsg_cloexec(int sockfd, struct msghdr *msg, int flags);
+ 
+-int
+-wl_os_epoll_create_cloexec(void);
+-
+ int
+ wl_os_accept_cloexec(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+ 

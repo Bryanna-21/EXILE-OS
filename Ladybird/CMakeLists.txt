@@ -1,0 +1,229 @@
+cmake_minimum_required(VERSION 3.23)
+
+project(ladybird
+    VERSION 0.0.1
+    LANGUAGES CXX
+    DESCRIPTION "Ladybird Web Browser"
+)
+
+include(GNUInstallDirs)
+
+# FIXME: The rpath steps from lagom_install_rules.cmake do not produce a working binary
+#        in the build directory on macOS.
+#        We need to copy the libs into the build directory bundle as the install rules do.
+set(CMAKE_SKIP_BUILD_RPATH FALSE)
+set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+# See slide 100 of the following ppt :^)
+# https://crascit.com/wp-content/uploads/2019/09/Deep-CMake-For-Library-Authors-Craig-Scott-CppCon-2019.pdf
+if (NOT APPLE)
+    set(CMAKE_INSTALL_RPATH $ORIGIN;$ORIGIN/../${CMAKE_INSTALL_LIBDIR})
+endif()
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+if (ENABLE_ADDRESS_SANITIZER)
+    add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address)
+endif()
+
+if (ENABLE_MEMORY_SANITIZER)
+    add_compile_options(-fsanitize=memory -fsanitize-memory-track-origins -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=memory -fsanitize-memory-track-origins)
+endif()
+
+if (ENABLE_UNDEFINED_SANITIZER)
+    add_compile_options(-fsanitize=undefined -fno-omit-frame-pointer)
+    if (UNDEFINED_BEHAVIOR_IS_FATAL)
+        add_compile_options(-fno-sanitize-recover=undefined)
+    endif()
+    if (APPLE AND CMAKE_CXX_COMPILER_ID MATCHES "Clang$" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "17")
+        add_compile_options(-fno-sanitize=function)
+    endif()
+    add_link_options(-fsanitize=undefined)
+endif()
+
+if (HAIKU)
+    # Haiku needs some extra compile definitions to make important stuff in its headers available.
+    add_compile_definitions(_DEFAULT_SOURCE)
+    add_compile_definitions(_GNU_SOURCE)
+    add_compile_definitions(__USE_GNU)
+endif()
+
+# Lagom
+set(LADYBIRD_CUSTOM_TARGET_SUFFIX "-ladybird")
+if (PROJECT_IS_TOP_LEVEL)
+    set(LADYBIRD_CUSTOM_TARGET_SUFFIX "")
+endif()
+
+if (PROJECT_IS_TOP_LEVEL)
+    get_filename_component(
+        EXILE_SOURCE_DIR "${ladybird_SOURCE_DIR}/.."
+        ABSOLUTE
+    )
+    list(APPEND CMAKE_MODULE_PATH "${EXILE_SOURCE_DIR}/Meta/CMake")
+    include(cmake/EnableLagom.cmake)
+    include(use_linker)
+    include(lagom_compile_options)
+    include(lagom_install_options)
+else()
+    # FIXME: Use EXILE_SOURCE_DIR in Lagom/CMakeLists.txt
+    set(EXILE_SOURCE_DIR "${EXILE_PROJECT_ROOT}")
+endif()
+
+add_compile_options(-DAK_DONT_REPLACE_STD)
+add_compile_options(-Wno-expansion-to-defined)
+add_compile_options(-Wno-user-defined-literals)
+
+if (APPLE)
+    exile_option(ENABLE_QT OFF CACHE BOOL "Build ladybird application using Qt GUI")
+else()
+    exile_option(ENABLE_QT ON CACHE BOOL "Build ladybird application using Qt GUI")
+endif()
+
+include(cmake/ResourceFiles.cmake)
+
+set(LADYBIRD_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/HelperProcess.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Utilities.cpp
+)
+set(LADYBIRD_HEADERS
+    HelperProcess.h
+    Types.h
+    Utilities.h
+)
+
+function(create_ladybird_bundle target_name)
+    set_target_properties(${target_name} PROPERTIES
+        OUTPUT_NAME "Ladybird"
+        MACOSX_BUNDLE_GUI_IDENTIFIER org.SerenityOS.Ladybird
+        MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
+        MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+        MACOSX_BUNDLE_INFO_PLIST "${EXILE_SOURCE_DIR}/Ladybird/Info.plist"
+        MACOSX_BUNDLE TRUE
+        WIN32_EXECUTABLE TRUE
+        XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER org.SerenityOS.Ladybird
+    )
+
+    if (APPLE)
+        set(bundle_dir "$<TARGET_BUNDLE_DIR:${target_name}>")
+        add_custom_command(TARGET ${target_name} POST_BUILD
+            COMMAND "${CMAKE_COMMAND}" -E make_directory "${bundle_dir}/Contents/Resources"
+            COMMAND "iconutil" --convert icns "${EXILE_SOURCE_DIR}/Ladybird/Icons/macos/app_icon.iconset" --output "${bundle_dir}/Contents/Resources/app_icon.icns"
+        )
+    endif()
+
+    if (APPLE)
+        set(resource_base_dir "$<TARGET_BUNDLE_DIR:${target_name}>/Contents/Resources")
+    else()
+        set(resource_base_dir "${CMAKE_BINARY_DIR}/${IN_BUILD_PREFIX}${CMAKE_INSTALL_DATADIR}/Lagom")
+    endif()
+
+    copy_resources_to_build(${resource_base_dir} ${target_name})
+endfunction()
+
+# Select UI Framework
+if (ENABLE_QT)
+   add_subdirectory(Qt)
+elseif (APPLE)
+   add_subdirectory(AppKit)
+else()
+    # TODO: Check for other GUI frameworks here when we move them in-tree
+    #       For now, we can export a static library of common files for chromes to link to
+    add_library(ladybird STATIC ${LADYBIRD_SOURCES})
+endif()
+
+if (NOT TARGET ladybird)
+    message(FATAL_ERROR "UI Framework selection must declare a ladybird target")
+endif()
+
+if (APPLE)
+    target_sources(ladybird PRIVATE MachPortServer.cpp)
+    target_link_libraries(ladybird PRIVATE LibThreading)
+endif()
+
+target_sources(ladybird PUBLIC FILE_SET ladybird TYPE HEADERS
+    BASE_DIRS ${EXILE_SOURCE_DIR}
+    FILES ${LADYBIRD_HEADERS}
+)
+target_link_libraries(ladybird PRIVATE AK LibCore LibFileSystem LibGfx LibImageDecoderClient LibIPC LibJS LibMain LibSQL LibWeb LibWebView LibProtocol LibURL)
+
+target_include_directories(ladybird PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(ladybird PRIVATE ${EXILE_SOURCE_DIR}/Userland/)
+target_include_directories(ladybird PRIVATE ${EXILE_SOURCE_DIR}/Userland/Applications/)
+target_include_directories(ladybird PRIVATE ${EXILE_SOURCE_DIR}/Userland/Services/)
+
+function(set_helper_process_properties)
+    set(targets ${ARGV})
+    if (APPLE)
+        # Store helper processes in the same bundle directory as the main application
+        set_target_properties(${targets} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "$<TARGET_FILE_DIR:ladybird>")
+    else()
+        set_target_properties(${targets} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${IN_BUILD_PREFIX}${CMAKE_INSTALL_LIBEXECDIR}")
+
+        if (NOT CMAKE_INSTALL_LIBEXECDIR STREQUAL "libexec")
+            set_source_files_properties(Utilities.cpp PROPERTIES COMPILE_DEFINITIONS LADYBIRD_LIBEXECDIR="${CMAKE_INSTALL_LIBEXECDIR}")
+            set_source_files_properties(Utilities.cpp TARGET_DIRECTORY ladybird PROPERTIES COMPILE_DEFINITIONS LADYBIRD_LIBEXECDIR="${CMAKE_INSTALL_LIBEXECDIR}")
+            set_source_files_properties(Utilities.cpp TARGET_DIRECTORY ${targets} PROPERTIES COMPILE_DEFINITIONS LADYBIRD_LIBEXECDIR="${CMAKE_INSTALL_LIBEXECDIR}")
+        endif()
+    endif()
+endfunction()
+
+add_executable(headless-browser
+    ${EXILE_SOURCE_DIR}/Userland/Utilities/headless-browser.cpp
+    ${LADYBIRD_SOURCES})
+
+target_include_directories(headless-browser PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(headless-browser PRIVATE ${EXILE_SOURCE_DIR}/Userland/)
+target_link_libraries(headless-browser PRIVATE AK LibCore LibWeb LibWebView LibWebSocket LibCrypto LibFileSystem LibGemini LibHTTP LibImageDecoderClient LibJS LibGfx LibMain LibSQL LibTLS LibIPC LibDiff LibProtocol LibURL)
+
+add_custom_target(run${LADYBIRD_CUSTOM_TARGET_SUFFIX}
+    COMMAND "${CMAKE_COMMAND}" -E env "EXILE_SOURCE_DIR=${EXILE_SOURCE_DIR}" "$<TARGET_FILE:ladybird>" $ENV{LAGOM_ARGS}
+    USES_TERMINAL
+    VERBATIM
+)
+
+add_custom_target(debug${LADYBIRD_CUSTOM_TARGET_SUFFIX}
+    COMMAND "${CMAKE_COMMAND}" -E env "EXILE_SOURCE_DIR=${EXILE_SOURCE_DIR}" gdb -ex "set follow-fork-mode child" "$<TARGET_FILE:ladybird>"
+    USES_TERMINAL
+)
+
+add_subdirectory(ImageDecoder)
+add_subdirectory(RequestServer)
+add_subdirectory(SQLServer)
+add_subdirectory(WebContent)
+add_subdirectory(WebDriver)
+add_subdirectory(WebWorker)
+
+set(ladybird_helper_processes ImageDecoder RequestServer SQLServer WebContent WebWorker)
+
+add_dependencies(ladybird ${ladybird_helper_processes})
+add_dependencies(headless-browser ${ladybird_helper_processes})
+add_dependencies(WebDriver ladybird headless-browser)
+
+set_helper_process_properties(${ladybird_helper_processes})
+if (APPLE)
+    set_helper_process_properties(headless-browser WebDriver)
+endif()
+
+if(NOT CMAKE_SKIP_INSTALL_RULES)
+    include(cmake/InstallRules.cmake)
+endif()
+
+include(CTest)
+if (BUILD_TESTING)
+    add_test(
+        NAME LibWeb
+        COMMAND $<TARGET_FILE:headless-browser> --run-tests ${EXILE_SOURCE_DIR}/Tests/LibWeb --dump-failed-ref-tests --per-test-timeout 120
+    )
+    add_test(
+        NAME WPT
+        CONFIGURATIONS Integration
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../Tests/LibWeb/WPT/run.sh
+    )
+    set_tests_properties(LibWeb WPT PROPERTIES
+        DEPENDS ladybird
+        ENVIRONMENT QT_QPA_PLATFORM=offscreen
+        ENVIRONMENT "EXILE_SOURCE_DIR=${EXILE_SOURCE_DIR}"
+    )
+endif()

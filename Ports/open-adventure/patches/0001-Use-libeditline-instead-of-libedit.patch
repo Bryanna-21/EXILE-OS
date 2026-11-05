@@ -1,0 +1,76 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Ninad Sachania <ninad.sachania@gmail.com>
+Date: Thu, 14 Nov 2024 06:37:10 +0000
+Subject: [PATCH] Use libeditline instead of libedit
+
+---
+ Makefile | 10 ++--------
+ cheat.c  |  2 +-
+ main.c   |  2 +-
+ misc.c   |  4 ++--
+ 4 files changed, 6 insertions(+), 12 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index aa2aa10e0f118f0410507b6283ec2c06a0536e4e..e3221d22d13bd57892801b211f1ce61d8878fc82 100644
+--- a/Makefile
++++ b/Makefile
+@@ -15,14 +15,8 @@ VERSION=$(shell sed -n <NEWS.adoc '/^[0-9]/s/:.*//p' | head -1)
+ 
+ CC?=gcc
+ CCFLAGS+=-std=c99 -Wall -Wextra -Werror -D_DEFAULT_SOURCE -DVERSION=\"$(VERSION)\" -O2 -D_FORTIFY_SOURCE=2 -fstack-protector-all $(CFLAGS) -g $(EXTRA)
+-LIBS=$(shell pkg-config --libs libedit)
+-INC+=$(shell pkg-config --cflags libedit)
+-
+-# LLVM/Clang on macOS seems to need -ledit flag for linking
+-UNAME_S := $(shell uname -s)
+-ifeq ($(UNAME_S),Darwin)
+-    LIBS += -ledit
+-endif
++LIBS=$(shell pkg-config --libs libeditline)
++INC+=$(shell pkg-config --cflags libeditline)
+ 
+ OBJS=main.o init.o actions.o score.o misc.o saveresume.o
+ CHEAT_OBJS=cheat.o init.o actions.o score.o misc.o saveresume.o
+diff --git a/cheat.c b/cheat.c
+index bfabae60e2700491cdbe60c8e8eb11a79694c7ce..f7491c1c0c18c7fcbdac337d62b47b88d74c581f 100644
+--- a/cheat.c
++++ b/cheat.c
+@@ -8,7 +8,7 @@
+  * SPDX-License-Identifier: BSD-2-Clause
+  */
+ #include "advent.h"
+-#include <editline/readline.h>
++#include <editline.h>
+ #include <getopt.h>
+ #include <stdbool.h>
+ #include <stdio.h>
+diff --git a/main.c b/main.c
+index f3a60ae562c4706b53272d2bc7d3a76159986af9..8682954bc0ab32c47bb8707b08255c819d4c5cd6 100644
+--- a/main.c
++++ b/main.c
+@@ -4,7 +4,7 @@
+  */
+ 
+ #include <ctype.h>
+-#include <editline/readline.h>
++#include <editline.h>
+ #include <getopt.h>
+ #include <signal.h>
+ #include <stdbool.h>
+diff --git a/misc.c b/misc.c
+index cef674c7c431f560ec2d3b98fcf9ef94a532332e..81a0c79bab0b8146132b351f065ffa48655e98f1 100644
+--- a/misc.c
++++ b/misc.c
+@@ -6,10 +6,10 @@
+  */
+ 
+ #include <ctype.h>
+-#include <editline/readline.h>
++#include <stdio.h>
++#include <editline.h>
+ #include <inttypes.h>
+ #include <stdarg.h>
+-#include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+ #include <strings.h>

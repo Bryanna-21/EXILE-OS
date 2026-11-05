@@ -1,0 +1,29 @@
+#!/usr/bin/env -S bash ../.port_include.sh
+port='freeciv'
+version='3.2.6'
+useconfigure='true'
+configopts=(
+    '--enable-client=sdl2'
+    '--enable-fcmp=no'
+    '--enable-fcdb=no'
+    'CFLAGS=-DU_HAVE_CHAR16_T=0'
+)
+files=(
+    "http://files.freeciv.org/stable/freeciv-${version}.tar.xz#b3ce15f54083b1fca146f62837a5f7d41d298537fa34940cca70eeb09c7a9c6e"
+)
+depends=(
+    'curl'
+    'gettext'
+    'libicu'
+    'SDL2'
+    'SDL2_gfx'
+    'SDL2_image'
+    'SDL2_mixer'
+    'SDL2_ttf'
+    'zstd'
+    'xz'
+)
+launcher_name='Freeciv'
+launcher_category='&Games'
+launcher_command='/usr/local/bin/freeciv-sdl2'
+icon_file='windows/client.ico'

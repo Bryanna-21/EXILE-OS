@@ -1,0 +1,111 @@
+{
+  "manifest_schema_version": "1.0",
+  "package_name": "OMNI-Kernel-Batch-2",
+  "batch_id": "batch-2",
+  "batch_scope": "Hosted, architecture-neutral core abstractions (errors, identifiers, capability table, resource accounting, range validation, IPC message validation), a hosted test harness and an architecture-boundary contract. No architecture boots; no kernel image is produced. Builds on OMNI-Kernel-Batch-1 (OMNI-ABI 0.1 draft).",
+  "checksum_algorithm": "SHA-256",
+  "checksum_statement": "Checksums and byte sizes cover the exact bytes of each listed file as extracted from the archive.",
+  "files": [
+    {
+      "path": "README.md",
+      "sha256": "10493ed6400b458a6e920a8177b3db5493e6c9d48b12ae0f1b06692e20b2d1fc",
+      "bytes": 8729
+    },
+    {
+      "path": "REPORT.md",
+      "sha256": "9c9789892ce79af38125e88a08baa4479b0cb847fb4679e64bc45da1af282f15",
+      "bytes": 13736
+    },
+    {
+      "path": "build.zig",
+      "sha256": "ab724afa14c907107f54e5f59dc2cc8d1c9d6a60c37cab36711be7e3181aeb4e",
+      "bytes": 1258
+    },
+    {
+      "path": "build.zig.zon",
+      "sha256": "4f770eaba855e1b370ec9bf2fa9a2af2742556cdc1801126daf4adca8cc19bbe",
+      "bytes": 317
+    },
+    {
+      "path": "docs/CORE-INTERFACES.md",
+      "sha256": "4c756cee96bcf89d7d2d7fc5d4deed8b6d0985cf27a6a786ed1544132f164395",
+      "bytes": 15818
+    },
+    {
+      "path": "docs/IMPLEMENTATION-PLAN.md",
+      "sha256": "2b919c6ca1d5afa210cca60c934cc19a1f1dce2bc6c659f77bca7ce29c9751b8",
+      "bytes": 6674
+    },
+    {
+      "path": "docs/SECURITY-REVIEW.md",
+      "sha256": "35e1c688a22b555b300e71ea83f83773e00933af1dd12f606677bfacd341604f",
+      "bytes": 9907
+    },
+    {
+      "path": "docs/TEST-PLAN.md",
+      "sha256": "16b082427ababd6c6d2d7b346935f90d13e1edf29776a53f201d8453829e99dc",
+      "bytes": 7013
+    },
+    {
+      "path": "scripts/verify.sh",
+      "sha256": "898a4323a83210694db08462848727d4627685dcf3d68e47aaa13b6082bd9e08",
+      "bytes": 5727
+    },
+    {
+      "path": "src/arch/aarch64/README.md",
+      "sha256": "c629217eae8c5c2f56f52dad76763276830e401f3bb725dfb4129ec334e089ab",
+      "bytes": 2345
+    },
+    {
+      "path": "src/arch/interface.zig",
+      "sha256": "36586ee4f06ab5c98bc6dfb6002f74e72383a91e622da948f2a0725e7fa9cb30",
+      "bytes": 3810
+    },
+    {
+      "path": "src/arch/x86_64/README.md",
+      "sha256": "a3972cce755b62afe74e1b823774cf0416bb4cb07af60de2c7a9d85b565fc0f5",
+      "bytes": 2193
+    },
+    {
+      "path": "src/core/capabilities.zig",
+      "sha256": "40b83b38e2dca25a68553b2d7b93a4e3e4c21e3429e4e0c9e945bf07a58bb285",
+      "bytes": 10459
+    },
+    {
+      "path": "src/core/error.zig",
+      "sha256": "3edc005d9d93d52daba30c4098ace41d66f53df4149184e21015dd324ad80320",
+      "bytes": 4539
+    },
+    {
+      "path": "src/core/ids.zig",
+      "sha256": "15e3b3492135e6189e471f0372ebc2ecfa05a902876160b7261896a3bc488cd5",
+      "bytes": 3512
+    },
+    {
+      "path": "src/core/ipc.zig",
+      "sha256": "cd0049a3f5a4fe1360d843cd0c6deefb6d47055e48ab998cde7da4788381f977",
+      "bytes": 7465
+    },
+    {
+      "path": "src/core/memory.zig",
+      "sha256": "10642230358f2cbe6423497cd014868c164300858ae5143ca38f528d2916fb72",
+      "bytes": 3957
+    },
+    {
+      "path": "src/core/resources.zig",
+      "sha256": "93b51e61cae3908fc57b80bf975b04b37eb65d1f17763fcc1d6db1622ff754a1",
+      "bytes": 4560
+    },
+    {
+      "path": "src/tests.zig",
+      "sha256": "c34d11ff2fe1a4be35e566f435dbb5e89eae7a57c93cab93a55a74dce78e653f",
+      "bytes": 43363
+    }
+  ],
+  "excluded_from_file_list": [
+    {
+      "path": "manifest.json",
+      "reason": "A file cannot contain a stable checksum of itself; it is excluded from its own hash list to avoid a circular dependency."
+    }
+  ]
+}

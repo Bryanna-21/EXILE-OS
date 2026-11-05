@@ -1,0 +1,19 @@
+#!/usr/bin/env -S bash ../.port_include.sh
+port='xz'
+version='5.8.1'
+depends=(
+    'libiconv'
+    'zlib'
+)
+files=(
+    "https://tukaani.org/xz/xz-${version}.tar.gz#507825b599356c10dca1cd720c9d0d0c9d5400b9de300af00e4d1ea150795543"
+)
+useconfigure='true'
+use_fresh_config_sub='true'
+config_sub_paths=(
+    'build-aux/config.sub'
+)
+configopts=(
+    '--disable-static'
+    '--enable-shared'
+)

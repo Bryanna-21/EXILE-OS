@@ -1,0 +1,9 @@
+[App]
+Name=B&ridgeline
+Executable=/bin/Bridgeline
+Arguments=--new-window
+Category=&Internet
+
+[Launcher]
+FileTypes=html,htm
+Protocols=gemini,http,https

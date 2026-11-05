@@ -1,0 +1,22 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Brian Callahan <ibara@users.noreply.github.com>
+Date: Sat, 1 Feb 2020 14:54:04 -0500
+Subject: [PATCH] Use pcre2 for regex instead of libc's regex.h
+
+---
+ regex.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/regex.c b/regex.c
+index beacce2f45a4b36aa2c9d0784ead65720fcfa5ae..a6158f63401113773e54bb5328deb7c10da0cacc 100644
+--- a/regex.c
++++ b/regex.c
+@@ -17,7 +17,7 @@
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+ 
+-#include <regex.h>
++#include <pcre2posix.h>
+ #include <string.h>
+ 
+ #include "ed.h"

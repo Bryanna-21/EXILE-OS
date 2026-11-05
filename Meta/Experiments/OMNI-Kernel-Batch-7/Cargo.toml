@@ -1,0 +1,11 @@
+[package]
+name = "omni-kernel-batch7"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.88"
+description = "Experimental OMNI-Kernel Batch 7: scheduler, context switch, syscall entry logic, user-memory validation (x86-64, no_std). Not wired into ExileKernel."
+publish = false
+
+[lib]
+name = "omni_kernel7"
+path = "kernel/lib.rs"

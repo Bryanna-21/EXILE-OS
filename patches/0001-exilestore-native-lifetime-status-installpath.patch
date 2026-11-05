@@ -1,0 +1,47 @@
+diff --git a/Userland/Applications/ExileStore/CMakeLists.txt b/Userland/Applications/ExileStore/CMakeLists.txt
+index e6bcd4b6..f7f94c02 100644
+--- a/Userland/Applications/ExileStore/CMakeLists.txt
++++ b/Userland/Applications/ExileStore/CMakeLists.txt
+@@ -22,5 +22,5 @@ target_link_libraries(ExileStore PRIVATE
+ 
+ install(
+     DIRECTORY data/
+-    DESTINATION share/exile-store
++    DESTINATION usr/share/exile-store
+ )
+diff --git a/Userland/Applications/ExileStore/src/native_main.cpp b/Userland/Applications/ExileStore/src/native_main.cpp
+index c869104c..2d166460 100644
+--- a/Userland/Applications/ExileStore/src/native_main.cpp
++++ b/Userland/Applications/ExileStore/src/native_main.cpp
+@@ -156,10 +156,14 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
+ 
+     auto entries = load_catalog(status);
+     Vector<size_t> visible_entries;
++    // GUI::ItemListModel keeps a *reference* to its container (ItemListModel.h: `Container const& m_data`),
++    // so the names must outlive the model. They used to be a local of the lambda below and dangled.
++    Vector<ByteString> names;
+     RefPtr<GUI::Model> list_model;
++    bool catalog_loaded = !entries.is_empty();
+ 
+     auto refresh_list = [&](StringView query) {
+-        Vector<ByteString> names;
++        names.clear();
+         visible_entries.clear();
+ 
+         for (size_t i = 0; i < entries.size(); ++i) {
+@@ -187,9 +191,12 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
+                 "Select an application from the list to see its details.");
+         }
+ 
+-        status.set_text(ByteString::formatted(
+-            "{} of {} catalog entries shown. Install and launch are not available in this build.",
+-            visible_entries.size(), entries.size()));
++        if (catalog_loaded) {
++            status.set_text(ByteString::formatted(
++                "{} of {} catalog entries shown. Install and launch are not available in this build.",
++                visible_entries.size(), entries.size()));
++        }
++        // Otherwise keep the specific error that load_catalog() put in the status label.
+     };
+ 
+     search.on_change = [&] {

@@ -1,0 +1,17 @@
+set(TEST_SOURCES
+    SFTP/TestSFTPAttributes.cpp
+    SFTP/TestSFTPClose.cpp
+    SFTP/TestSFTPPeer.cpp
+    SFTP/TestSFTPServerBasic.cpp
+    SFTP/TestSFTPStat.cpp
+    SFTP/TestSFTPRead.cpp
+    SFTP/TestSFTPWrite.cpp
+    TestSSHCipher.cpp
+    TestSSHEncodeDecode.cpp
+    TestSSHIdentificationString.cpp
+    TestSSHPeer.cpp
+)
+
+foreach(source IN LISTS TEST_SOURCES)
+    exile_test("${source}" LibSSH LIBS LibSSH)
+endforeach()

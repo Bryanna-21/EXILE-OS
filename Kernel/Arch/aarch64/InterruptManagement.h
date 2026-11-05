@@ -1,0 +1,34 @@
+/*
+ * Copyright (c) 2020, Liav A. <liavalb@hotmail.co.il>
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
+#pragma once
+
+#include <AK/Vector.h>
+#include <Kernel/Arch/aarch64/IRQController.h>
+#include <Kernel/Library/LockRefPtr.h>
+
+namespace Kernel {
+
+class InterruptManagement {
+public:
+    static InterruptManagement& the();
+    static void initialize();
+    static bool initialized();
+
+    static ErrorOr<void> register_interrupt_controller(NonnullLockRefPtr<IRQController>);
+
+    static InterruptNumber acquire_mapped_interrupt_number(InterruptNumber original_irq);
+
+    Vector<NonnullLockRefPtr<IRQController>> const& controllers();
+    NonnullLockRefPtr<IRQController> get_responsible_irq_controller(InterruptNumber interrupt_vector);
+
+    void enumerate_interrupt_handlers(Function<void(GenericInterruptHandler&)>);
+
+private:
+    InterruptManagement() = default;
+};
+
+}

@@ -1,0 +1,156 @@
+{
+  "manifest_schema_version": "1.0",
+  "package_name": "OMNI-Kernel-Batch-6",
+  "batch_id": "batch-6",
+  "batch_scope": "Hosted models and contract checkers for the architecture and scheduler boundary of OMNI-Kernel IPC: syscall register conventions and entry validation, thread-state machine and scheduler model with a no-lost-wake-up protocol, blocking IPC through that model, user-memory bridge, context-switch contract. Reuses Batches 2 to 5 unmodified. No real syscall entry, context switch or scheduler; not integrated into any kernel; no kernel image is produced.",
+  "checksum_algorithm": "SHA-256",
+  "checksum_statement": "Checksums and byte sizes cover the exact bytes of each listed file as extracted from the archive.",
+  "files": [
+    {
+      "path": "EXILE-OS-STATUS.md",
+      "sha256": "21c3c7240b15ac7871c6273856f5683dfddd24ffd7d2d5aef3c7e61f668607de",
+      "bytes": 1301
+    },
+    {
+      "path": "README.md",
+      "sha256": "3ca62edae9d60656d2d1e80bde4d4ce0491ef0fba670915db4960ff6ae191ec4",
+      "bytes": 2633
+    },
+    {
+      "path": "REPORT.md",
+      "sha256": "95c3b97abff4698c852c30cabae8b788257ce4822e77a24ad5965a037b1e1932",
+      "bytes": 7515
+    },
+    {
+      "path": "build.zig",
+      "sha256": "bed2eda1464fba887634df6f19685677775e3431512f5260eb2acc0b8e7f5293",
+      "bytes": 5077
+    },
+    {
+      "path": "build.zig.zon",
+      "sha256": "ee52062573ec541a3dacf555d8baa9baf0ce31df70a26bc4c3ce9facdd94cebf",
+      "bytes": 324
+    },
+    {
+      "path": "docs/ARCHITECTURE-INTERFACE.md",
+      "sha256": "7331c95fbba16a5ca027895885d37a808d000a6b6e5a5561aa69830ece6e3c1c",
+      "bytes": 6064
+    },
+    {
+      "path": "docs/CONTEXT-SWITCHING.md",
+      "sha256": "0c58e87acf9924804941231b26f8a9c5e39616b284d2b872a716a72f00fbeeac",
+      "bytes": 2968
+    },
+    {
+      "path": "docs/SCHEDULER-INTEGRATION.md",
+      "sha256": "3ee47b7840ace246a34b8f7c214ba1c0bbb421d5e48fb26c7f4c7df979fe024c",
+      "bytes": 5547
+    },
+    {
+      "path": "docs/SECURITY-ANALYSIS.md",
+      "sha256": "80de700000814260f86c4c0836c46c2302877fc8ba9cc20647875f514152e0c0",
+      "bytes": 3577
+    },
+    {
+      "path": "docs/TEST-PLAN.md",
+      "sha256": "cd99743e77f972f735bc01a2780e0241de1c58f7dd5465bac38fef72c65340cd",
+      "bytes": 1919
+    },
+    {
+      "path": "docs/USER-MEMORY-INTEGRATION.md",
+      "sha256": "e8e9eba0cc3948f32a7e626f4e653a5768c22e289bb6362aeeb0f74079c7162b",
+      "bytes": 2978
+    },
+    {
+      "path": "scripts/verify.sh",
+      "sha256": "4d74189e8331daaca1c190ff2b927698fb66f9134845122c10c2b7d5f72328bc",
+      "bytes": 9268
+    },
+    {
+      "path": "src/arch.zig",
+      "sha256": "dad0799d4442754710fee6b4e14aedf16fa66b8289e97869322beb613daf257b",
+      "bytes": 7426
+    },
+    {
+      "path": "src/context.zig",
+      "sha256": "692fa58cc0445365d52a18b4a4875549450a49ff50c405910ca6c84c498d3380",
+      "bytes": 4841
+    },
+    {
+      "path": "src/entry.zig",
+      "sha256": "905c26a34a2c6a1e1c2012285b54ac59e91935b084fc656e6034244cdfd1b59c",
+      "bytes": 3228
+    },
+    {
+      "path": "src/ipc_sched.zig",
+      "sha256": "5a2f5eba5a19beeb1e60052d3d5ef0f161a1af869a052938a10551a6ca5c105b",
+      "bytes": 9619
+    },
+    {
+      "path": "src/omni5.zig",
+      "sha256": "a00b2357b7b2d66d009c1cded754b37defc3fdaa248a3593ac170358503c7f95",
+      "bytes": 581
+    },
+    {
+      "path": "src/sched.zig",
+      "sha256": "1faac8c962d94ca8aab8f84b2ce6d4eec3a1e485b2ee03ab1b425f823dc4439d",
+      "bytes": 16924
+    },
+    {
+      "path": "src/tests.zig",
+      "sha256": "f649647e93d6f9b01a863081f3d2da11a774a6c83351fc63123994d97946ffce",
+      "bytes": 403
+    },
+    {
+      "path": "src/tests/arch_tests.zig",
+      "sha256": "f8833e3d4508817037222cf5b9c70630a94d22b7ae042f1831d43001c7773337",
+      "bytes": 8528
+    },
+    {
+      "path": "src/tests/common.zig",
+      "sha256": "19daf1162184dc6b41250b0f6d299d81fdd582ccfc01119c99deb7c5818f1124",
+      "bytes": 9635
+    },
+    {
+      "path": "src/tests/entry_tests.zig",
+      "sha256": "97de31f7c406329f28b3cb33860fc63d74f50225da9dbe4dcdad4ef3c9b83181",
+      "bytes": 12162
+    },
+    {
+      "path": "src/tests/ipc_tests.zig",
+      "sha256": "7c0d54a15983ddb682935e530c855018fb9af882f359a4f8b8355d3d25b02902",
+      "bytes": 21540
+    },
+    {
+      "path": "src/tests/mem_tests.zig",
+      "sha256": "c9d14b829434180fc7a71a92fc32a2dcd595f05affdf8371315fc40be8584698",
+      "bytes": 12113
+    },
+    {
+      "path": "src/tests/proc_tests.zig",
+      "sha256": "c4b963c0eff6724331599085dbfafa5188c3d47810fd3c75597028e5689ee966",
+      "bytes": 11175
+    },
+    {
+      "path": "src/tests/sched_tests.zig",
+      "sha256": "4d60a5bc1b188b42d6f04cedd7dee1ac83aaf75644bf82f2e7607361509b7442",
+      "bytes": 15748
+    },
+    {
+      "path": "src/thread_state.zig",
+      "sha256": "0fc336e1c11a4946aa349ae901472f44661e6069c07b7de2f714ed0c2e36369d",
+      "bytes": 2110
+    },
+    {
+      "path": "src/user_memory.zig",
+      "sha256": "912aba51238bed87fec3ea0f1c352cbd7072f45e7ceda77772b8a19faab14bec",
+      "bytes": 11130
+    }
+  ],
+  "excluded_from_file_list": [
+    {
+      "path": "manifest.json",
+      "reason": "A file cannot contain a stable checksum of itself; it is excluded from its own hash list to avoid a circular dependency."
+    }
+  ]
+}

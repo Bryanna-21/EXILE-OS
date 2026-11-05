@@ -1,0 +1,105 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Andrew Kaster <akaster@serenityos.org>
+Date: Fri, 4 Mar 2022 15:13:42 -0700
+Subject: [PATCH] [compiler-rt] Enable profile instrumentation for SerenityOS
+
+Treat SerenityOS the same as other *NIX platforms that behave close
+enough to linux to use the pre-canned InstrProfiling implementation.
+---
+ clang/lib/Driver/ToolChains/Serenity.cpp      |  3 +++
+ clang/test/Driver/instrprof-ld.c              | 20 +++++++++++++++++++
+ compiler-rt/cmake/config-ix.cmake             |  2 +-
+ .../lib/profile/InstrProfilingPlatformLinux.c |  1 +
+ .../lib/profile/InstrProfilingPlatformOther.c |  2 +-
+ 5 files changed, 26 insertions(+), 2 deletions(-)
+
+diff --git a/clang/lib/Driver/ToolChains/Serenity.cpp b/clang/lib/Driver/ToolChains/Serenity.cpp
+index 4a3146fbe7c70ded76cca17551458ce5f513113e..a68341c95c4bb5344a996045b6f2f5d50fd3b083 100644
+--- a/clang/lib/Driver/ToolChains/Serenity.cpp
++++ b/clang/lib/Driver/ToolChains/Serenity.cpp
+@@ -161,6 +161,9 @@ void tools::serenity::Linker::ConstructJob(Compilation &C, const JobAction &JA,
+     CmdArgs.push_back(Args.MakeArgString(crtend_path));
+   }
+ 
++  if (ShouldLinkCompilerRuntime)
++    TC.addProfileRTLibs(Args, CmdArgs);
++
+   const char *Exec = Args.MakeArgString(TC.GetLinkerPath());
+   C.addCommand(std::make_unique<Command>(JA, *this,
+                                          ResponseFileSupport::AtFileCurCP(),
+diff --git a/clang/test/Driver/instrprof-ld.c b/clang/test/Driver/instrprof-ld.c
+index 25b185bcd209de175f6a0ff2ec6506fdb4e6de3b..65818a4845f4e8747b37b706636af8d8e1e96c59 100644
+--- a/clang/test/Driver/instrprof-ld.c
++++ b/clang/test/Driver/instrprof-ld.c
+@@ -54,6 +54,15 @@
+ // CHECK-OPENBSD-X86-64: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
+ // CHECK-OPENBSD-X86-64: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-openbsd{{/|\\\\}}libclang_rt.profile.a"
+ 
++// RUN: %clang -### %s 2>&1 \
++// RUN:     --target=x86_64-pc-serenity -fprofile-instr-generate -fuse-ld=ld \
++// RUN:     -resource-dir=%S/Inputs/resource_dir \
++// RUN:     --sysroot=%S/Inputs/serenity_x86_64_tree \
++// RUN:   | FileCheck --check-prefix=CHECK-SERENITY-X86-64 %s
++
++// CHECK-SERENITY-X86-64: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
++// CHECK-SERENITY-X86-64: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}x86_64-pc-serenity{{/|\\\\}}libclang_rt.profile.a"
++
+ // RUN: %clang -### %s 2>&1 \
+ // RUN:     -shared \
+ // RUN:     --target=i386-unknown-linux -fprofile-instr-generate -fuse-ld=ld \
+@@ -104,6 +113,17 @@
+ // CHECK-OPENBSD-X86-64-SHARED: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
+ // CHECK-OPENBSD-X86-64-SHARED: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-openbsd{{/|\\\\}}libclang_rt.profile.a"
+ 
++// RUN: %clang -### %s 2>&1 \
++// RUN:     -shared \
++// RUN:     --target=x86_64-pc-serenity -fprofile-instr-generate -fuse-ld=ld \
++// RUN:     -resource-dir=%S/Inputs/resource_dir \
++// RUN:     --sysroot=%S/Inputs/serenity_x86_64_tree \
++// RUN:   | FileCheck --check-prefix=CHECK-SERENITY-X86-64-SHARED %s
++
++// CHECK-SERENITY-X86-64-SHARED: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
++// CHECK-SERENITY-X86-64-SHARED: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}x86_64-pc-serenity{{/|\\\\}}libclang_rt.profile.a"
++
++
+ // RUN: %clang -### %s 2>&1 \
+ // RUN:     --target=x86_64-apple-darwin14 -fprofile-instr-generate -fuse-ld=ld \
+ // RUN:     -resource-dir=%S/Inputs/resource_dir \
+diff --git a/compiler-rt/cmake/config-ix.cmake b/compiler-rt/cmake/config-ix.cmake
+index 083f1c98d0f169da99d28fafbe808b4c4e5a7fdc..0690fbae0e2ba29ba36b3a500c428af094c7bd49 100644
+--- a/compiler-rt/cmake/config-ix.cmake
++++ b/compiler-rt/cmake/config-ix.cmake
+@@ -847,7 +847,7 @@ else()
+ endif()
+ 
+ if (PROFILE_SUPPORTED_ARCH AND NOT LLVM_USE_SANITIZER AND
+-    (OS_NAME MATCHES "Darwin|Linux|FreeBSD|Windows|Android|Fuchsia|SunOS|NetBSD|AIX|WASI|Haiku" OR COMPILER_RT_PROFILE_BAREMETAL))
++    (OS_NAME MATCHES "Darwin|Linux|FreeBSD|Windows|Android|Fuchsia|SunOS|NetBSD|AIX|WASI|Haiku|SerenityOS" OR COMPILER_RT_PROFILE_BAREMETAL))
+   set(COMPILER_RT_HAS_PROFILE TRUE)
+ else()
+   set(COMPILER_RT_HAS_PROFILE FALSE)
+diff --git a/compiler-rt/lib/profile/InstrProfilingPlatformLinux.c b/compiler-rt/lib/profile/InstrProfilingPlatformLinux.c
+index 7a22be6bb58619949473e8e0d6ef8f97da2fc4ae..2a028bf0af9775ee1e6264c46347ec90e89b5e89 100644
+--- a/compiler-rt/lib/profile/InstrProfilingPlatformLinux.c
++++ b/compiler-rt/lib/profile/InstrProfilingPlatformLinux.c
+@@ -23,6 +23,7 @@
+ #if defined(__linux__) || defined(__FreeBSD__) || defined(__Fuchsia__) ||      \
+     (defined(__sun__) && defined(__svr4__)) || defined(__NetBSD__) ||          \
+     defined(_AIX) || defined(__wasm__) || defined(__HAIKU__) ||                \
++    defined(__serenity__) ||                                                   \
+     (defined(COMPILER_RT_PROFILE_BAREMETAL) && !defined(__NVPTX__))
+ 
+ #if !defined(_AIX) && !defined(__wasm__) &&                                    \
+diff --git a/compiler-rt/lib/profile/InstrProfilingPlatformOther.c b/compiler-rt/lib/profile/InstrProfilingPlatformOther.c
+index 205bba1060c3bd64f5b84516fa4a94393c754c9a..f76cc2ff19be3f4dd0592543e72c7a48487d10ee 100644
+--- a/compiler-rt/lib/profile/InstrProfilingPlatformOther.c
++++ b/compiler-rt/lib/profile/InstrProfilingPlatformOther.c
+@@ -16,7 +16,7 @@
+ #if (!defined(__APPLE__) && !defined(__linux__) && !defined(__FreeBSD__) &&    \
+      !defined(__Fuchsia__) && !(defined(__sun__) && defined(__svr4__)) &&      \
+      !defined(__NetBSD__) && !defined(_WIN32) && !defined(_AIX) &&             \
+-     !defined(__wasm__) && !defined(__HAIKU__) &&                              \
++     !defined(__wasm__) && !defined(__HAIKU__) && !defined(__serenity__) &&    \
+      !defined(COMPILER_RT_PROFILE_BAREMETAL)) ||                               \
+     defined(__NVPTX__)
+ 

@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Peter Elliott <pelliott@ualberta.ca>
+Date: Sat, 11 Feb 2023 13:40:47 -0700
+Subject: [PATCH] Use native wayland-scanner
+
+---
+ src/meson.build | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/src/meson.build b/src/meson.build
+index ca1302de112b498d501d50b13c8a21747799b9ad..c689f5a9ab4f96baa81b769cd3f316ce2d283043 100644
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -80,8 +80,7 @@ if get_option('scanner')
+ endif
+ 
+ if meson.is_cross_build() or not get_option('scanner')
+-	scanner_dep = dependency('wayland-scanner', native: true, version: meson.project_version())
+-	wayland_scanner_for_build = find_program(scanner_dep.get_variable(pkgconfig: 'wayland_scanner'))
++	wayland_scanner_for_build = find_program('wayland-scanner')
+ else
+ 	wayland_scanner_for_build = wayland_scanner
+ endif

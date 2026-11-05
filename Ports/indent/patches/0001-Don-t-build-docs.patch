@@ -1,0 +1,22 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Brendan Coles <bcoles@gmail.com>
+Date: Mon, 9 Nov 2020 10:52:11 +0000
+Subject: [PATCH] Don't build docs
+
+---
+ Makefile.in | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Makefile.in b/Makefile.in
+index 8bbbce04000a598a139680d558342b685fcc0001..1972118b97e661157b137be8cee3a02d5b2a1519 100644
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -336,7 +336,7 @@ top_build_prefix = @top_build_prefix@
+ top_builddir = @top_builddir@
+ top_srcdir = @top_srcdir@
+ AUTOMAKE_OPTIONS = no-texinfo.tex
+-SUBDIRS = src doc po man regression
++SUBDIRS = src po regression
+ BUILT_SOURCES = 
+ DISTFILES = $(DIST_COMMON:README=README.md) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
+ EXTRA_DIST = README.md \

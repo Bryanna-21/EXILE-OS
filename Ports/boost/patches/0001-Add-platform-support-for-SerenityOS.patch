@@ -1,0 +1,66 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Gunnar Beutner <gunnar@beutner.name>
+Date: Sun, 23 Oct 2022 10:04:53 +0200
+Subject: [PATCH] Add platform support for SerenityOS
+
+---
+ .../config/detail/select_platform_config.hpp  |  5 ++++
+ .../boost/config/platform/serenity.hpp        | 26 +++++++++++++++++++
+ 2 files changed, 31 insertions(+)
+ create mode 100644 libs/config/include/boost/config/platform/serenity.hpp
+
+diff --git a/libs/config/include/boost/config/detail/select_platform_config.hpp b/libs/config/include/boost/config/detail/select_platform_config.hpp
+index dbff74aaf74ea59eaf204f463bf2b37df9c432a5..d280ed5c02ff90b5eb0dfef3948d17a2d4310109 100644
+--- a/libs/config/include/boost/config/detail/select_platform_config.hpp
++++ b/libs/config/include/boost/config/detail/select_platform_config.hpp
+@@ -93,6 +93,10 @@
+ // Web assembly:
+ #  define BOOST_PLATFORM_CONFIG "boost/config/platform/wasm.hpp"
+ 
++#elif defined (__serenity__)
++// SerenityOS:
++#  define BOOST_PLATFORM_CONFIG "boost/config/platform/serenity.hpp"
++
+ #else
+ 
+ #  if defined(unix) \
+@@ -139,6 +143,7 @@
+ #  include "boost/config/platform/symbian.hpp" 
+ #  include "boost/config/platform/cray.hpp" 
+ #  include "boost/config/platform/vms.hpp" 
++#  include "boost/config/platform/serenity.hpp"
+ #  include <boost/config/detail/posix_features.hpp>
+ 
+ 
+diff --git a/libs/config/include/boost/config/platform/serenity.hpp b/libs/config/include/boost/config/platform/serenity.hpp
+new file mode 100644
+index 0000000000000000000000000000000000000000..ecde1fe0e4adf068aaf44aee75757a26df5e1af9
+--- /dev/null
++++ b/libs/config/include/boost/config/platform/serenity.hpp
+@@ -0,0 +1,26 @@
++//  (C) Copyright 2022 Gunnar Beutner
++//  Use, modification and distribution are subject to the
++//  Boost Software License, Version 1.0. (See accompanying file
++//  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
++
++//  See http://www.boost.org for most recent version.
++
++//  SerenityOS specific config options:
++
++#define BOOST_PLATFORM "SerenityOS"
++
++#define BOOST_HAS_UNISTD_H
++#define BOOST_HAS_STDINT_H
++
++#ifndef BOOST_DISABLE_THREADS
++#  define BOOST_HAS_THREADS
++#endif
++
++//
++// thread API's not auto detected:
++//
++#define BOOST_HAS_SCHED_YIELD
++#define BOOST_HAS_GETTIMEOFDAY
++
++// boilerplate code:
++#include <boost/config/detail/posix_features.hpp>

@@ -1,0 +1,22 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Gunnar Beutner <gunnar@beutner.name>
+Date: Sun, 23 Oct 2022 10:27:07 +0200
+Subject: [PATCH] Fix building Boost.Interprocess
+
+---
+ .../include/boost/interprocess/detail/workaround.hpp            | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/libs/interprocess/include/boost/interprocess/detail/workaround.hpp b/libs/interprocess/include/boost/interprocess/detail/workaround.hpp
+index b9438a5f1722d5e4c79f72d895a0f7e20ab01538..b02e25c242ce3957e0aab4de5387a64553c58f4e 100644
+--- a/libs/interprocess/include/boost/interprocess/detail/workaround.hpp
++++ b/libs/interprocess/include/boost/interprocess/detail/workaround.hpp
+@@ -41,7 +41,7 @@
+    //////////////////////////////////////////////////////
+    //Check for XSI shared memory objects. They are available in nearly all UNIX platforms
+    //////////////////////////////////////////////////////
+-   #if !defined(__QNXNTO__) && !defined(__ANDROID__) && !defined(__HAIKU__) && !defined(__VXWORKS__) && !defined(__EMSCRIPTEN__)
++   #if !defined(__QNXNTO__) && !defined(__ANDROID__) && !defined(__HAIKU__) && !defined(__VXWORKS__) && !defined(__EMSCRIPTEN__) && !defined(__serenity__)
+       #define BOOST_INTERPROCESS_XSI_SHARED_MEMORY_OBJECTS
+    #endif
+ 

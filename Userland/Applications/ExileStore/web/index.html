@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="referrer" content="no-referrer">
+<title>Exile Store</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#050807">
+<link rel="stylesheet" href="/app.css">
+</head>
+<body data-layout="compact" data-input="touch">
+<div class="splash" id="splash" role="status" aria-live="polite">
+  <svg class="mark" viewBox="0 0 512 512" aria-hidden="true">
+    <defs>
+      <linearGradient id="sp-tile" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#101a16"/><stop offset="1" stop-color="#040706"/></linearGradient>
+      <linearGradient id="sp-blue" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7db6ff"/><stop offset="1" stop-color="#1f6fe5"/></linearGradient>
+      <linearGradient id="sp-green" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#1fb868"/><stop offset="1" stop-color="#5df0a0"/></linearGradient>
+    </defs>
+    <rect class="m-tile" x="16" y="16" width="480" height="480" rx="112" fill="url(#sp-tile)" stroke="#2a3a33" stroke-width="3"/>
+    <path class="m-blue" pathLength="100" d="M164 164 L348 348" fill="none" stroke="url(#sp-blue)" stroke-width="58" stroke-linecap="round"/>
+    <path class="m-cut" d="M206 306 L306 206" fill="none" stroke="#08110d" stroke-width="88"/>
+    <path class="m-green" pathLength="100" d="M164 348 L344 168 M262 168 L344 168 L344 250" fill="none" stroke="url(#sp-green)" stroke-width="58" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <div class="word">EXILE <span>STORE</span></div>
+  <div class="splash-bar" aria-hidden="true"><i></i></div>
+  <span class="sr">Loading the store</span>
+</div>
+<a class="skip" href="#main">Skip to content</a>
+<div class="app" id="app">
+  <nav class="nav" id="nav" aria-label="Main"></nav>
+  <div class="column">
+    <div class="banners" id="banners" role="status"></div>
+    <main id="main" tabindex="-1" aria-busy="true"></main>
+  </div>
+</div>
+<div class="tray" id="tray" aria-label="Downloads and installs" aria-live="polite"></div>
+<div class="modal-root" id="modal-root"></div>
+<noscript><p class="loading">The Exile Store needs JavaScript, which this browser has turned off.</p></noscript>
+<script src="/app.js"></script>
+</body>
+</html>

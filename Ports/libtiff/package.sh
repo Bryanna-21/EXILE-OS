@@ -1,0 +1,19 @@
+#!/usr/bin/env -S bash ../.port_include.sh
+port='libtiff'
+version='4.7.2'
+files=(
+    "http://download.osgeo.org/libtiff/tiff-${version}.tar.xz#4996f0c4f93094719b1ca5c6279b20e588773ba8a247533e486416fb662ddb88"
+)
+useconfigure='true'
+configopts=(
+    "--with-sysroot=${SERENITY_INSTALL_ROOT}"
+    '--prefix=/usr/local'
+    '--disable-static'
+    '--enable-shared'
+)
+workdir="tiff-${version}"
+depends=(
+    'libjpeg'
+    'xz'
+    'zstd'
+)
