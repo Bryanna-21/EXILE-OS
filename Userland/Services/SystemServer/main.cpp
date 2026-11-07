@@ -86,13 +86,11 @@ static ErrorOr<void> determine_system_mode()
     auto file_or_error = Core::File::open("/sys/kernel/system_mode"sv, Core::File::OpenMode::Read);
     if (file_or_error.is_error()) {
         dbgln("Failed to read system_mode: {}", file_or_error.error());
-        // Continue and assume "text" mode.
         return {};
     }
     auto const system_mode_buf_or_error = file_or_error.value()->read_until_eof();
     if (system_mode_buf_or_error.is_error()) {
         dbgln("Failed to read system_mode: {}", system_mode_buf_or_error.error());
-        // Continue and assume "text" mode.
         return {};
     }
     ByteString const system_mode = ByteString::copy(system_mode_buf_or_error.value(), Chomp);
@@ -156,8 +154,12 @@ static ErrorOr<void> activate_services(Core::ConfigFile const& config)
                 }
             }
         }
-        if (dependency_failed)
+        if (dependency_failed) {
+            // Propagate this failure as well. Without recording the blocked
+            // service, its own dependents could incorrectly start later.
+            TRY(failed_services.try_append(service_name));
             continue;
+        }
 
         if (auto result = service->setup_sockets(); result.is_error()) {
             warnln("{}: Failed to set up service sockets: {}", service->name(), result.release_error());
@@ -200,8 +202,6 @@ static ErrorOr<void> activate_base_services_based_on_system_mode()
 
         TRY(watcher->add_watch("/dev/gpu/", Core::FileWatcherEvent::Type::ChildCreated));
 
-        // The GPU might have appeared while we were setting up the watcher.
-        // Only wait for the file if we can't stat it.
         if (Core::System::lstat("/dev/gpu/connector0"sv).is_error()) {
             log->start();
             timeout->start();
@@ -209,7 +209,6 @@ static ErrorOr<void> activate_base_services_based_on_system_mode()
         }
     }
 
-    // Read our config and instantiate services.
     auto config = TRY(Core::ConfigFile::open_for_system("SystemServer"));
     TRY(activate_services(*config));
     return {};
