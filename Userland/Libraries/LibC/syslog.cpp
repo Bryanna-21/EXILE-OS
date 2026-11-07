@@ -1,27 +1,23 @@
 /*
  * Copyright (c) 2018-2020, Andreas Kling <kling@serenityos.org>
+ * Copyright (c) 2026, Exile OS contributors
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-// Has to be defined before including due to legacy Unices
 #define SYSLOG_NAMES 1
 
 #include <AK/ByteString.h>
 #include <AK/StringBuilder.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #include <syslog.h>
 #include <unistd.h>
 
-// This implementation doesn't talk to a syslog server. Any options related to
-// that are no-ops.
-
 extern "C" {
 
-// For implementation simplicity, we actually only use the re-entrant version
-// of each function, and the version that isn't just redirects with a static
-// struct to share.
 static struct syslog_data global_log_data = {
     .ident = nullptr,
     .logopt = 0,
@@ -29,13 +25,9 @@ static struct syslog_data global_log_data = {
     .maskpri = LOG_UPTO(LOG_DEBUG)
 };
 
-// Used when ident is null, since syslog traditionally prints the program's
-// own name; the process name will always be the same unless we exec.
 static char program_name_buffer[256];
 static bool program_name_set = false;
 
-// Convenience function for initialization and checking what string to use
-// for the program name.
 static char const* get_syslog_ident(struct syslog_data* data)
 {
     if (!program_name_set && data->ident == nullptr)
@@ -43,10 +35,9 @@ static char const* get_syslog_ident(struct syslog_data* data)
 
     if (data->ident != nullptr)
         return data->ident;
-    else if (program_name_set)
+    if (program_name_set)
         return program_name_buffer;
-
-    VERIFY_NOT_REACHED();
+    return "unknown";
 }
 
 void openlog_r(char const* ident, int logopt, int facility, struct syslog_data* data)
@@ -54,9 +45,7 @@ void openlog_r(char const* ident, int logopt, int facility, struct syslog_data* 
     data->ident = ident;
     data->logopt = logopt;
     data->facility = facility;
-    // default value
     data->maskpri = LOG_UPTO(LOG_DEBUG);
-    // would be where we connect to a daemon
 }
 
 void openlog(char const* ident, int logopt, int facility)
@@ -66,8 +55,6 @@ void openlog(char const* ident, int logopt, int facility)
 
 void closelog_r(struct syslog_data* data)
 {
-    // would be where we disconnect from a daemon
-    // restore defaults
     data->ident = nullptr;
     data->logopt = 0;
     data->facility = LOG_USER;
@@ -81,7 +68,6 @@ void closelog(void)
 
 int setlogmask_r(int maskpri, struct syslog_data* data)
 {
-    // Remember, this takes the input of LOG_MASK/LOG_UPTO
     int old_maskpri = data->maskpri;
     data->maskpri = maskpri;
     return old_maskpri;
@@ -110,30 +96,54 @@ void syslog(int priority, char const* message, ...)
 
 void vsyslog_r(int priority, struct syslog_data* data, char const* message, va_list args)
 {
-    StringBuilder combined;
-
     int real_priority = LOG_PRI(priority);
-    // Lots of parens, but it just extracts the priority from combo and masks.
-    if (!(data->maskpri & LOG_MASK(real_priority)))
+    if (real_priority < LOG_EMERG || real_priority > LOG_DEBUG || !(data->maskpri & LOG_MASK(real_priority)))
         return;
 
-    // Some metadata would be consumed by a syslog daemon, if we had one.
+    char formatted_message[1500];
+    va_list copied_args;
+    va_copy(copied_args, args);
+    int message_length = vsnprintf(formatted_message, sizeof(formatted_message), message, copied_args);
+    va_end(copied_args);
+    if (message_length < 0)
+        return;
+    auto bounded_length = min(static_cast<size_t>(message_length), sizeof(formatted_message) - 1);
+
+    StringBuilder record;
+    record.appendff("<{}>{}", real_priority, get_syslog_ident(data));
     if (data->logopt & LOG_PID)
-        combined.appendff("{}[{}]: ", get_syslog_ident(data), getpid());
-    else
-        combined.appendff("{}: ", get_syslog_ident(data));
+        record.appendff("[{}]", getpid());
+    record.append(": "sv);
+    record.append(StringView { formatted_message, bounded_length });
+    auto bytes = record.to_byte_string();
 
-    combined.appendvf(message, args);
-    auto combined_string = combined.to_byte_string();
+    int fd = socket(AF_LOCAL, SOCK_DGRAM | SOCK_CLOEXEC, 0);
+    if (fd >= 0) {
+        struct sockaddr_un address {};
+        address.sun_family = AF_LOCAL;
+        constexpr char path[] = "/tmp/portal/syslog";
+        if (sizeof(path) <= sizeof(address.sun_path)) {
+            memcpy(address.sun_path, path, sizeof(path));
+            auto sent = sendto(fd, bytes.characters(), bytes.length(), MSG_NOSIGNAL,
+                reinterpret_cast<struct sockaddr*>(&address), sizeof(address));
+            close(fd);
+            if (sent == static_cast<ssize_t>(bytes.length()))
+                return;
+        } else {
+            close(fd);
+        }
+    }
 
+    // Keep syslog useful before SystemLog is available or if its socket is down.
     if (data->logopt & LOG_CONS)
-        dbgputstr(combined_string.characters(), combined_string.length());
+        dbgputstr(bytes.characters(), bytes.length());
     if (data->logopt & LOG_PERROR)
-        fputs(combined_string.characters(), stderr);
+        fputs(bytes.characters(), stderr);
 }
 
 void vsyslog(int priority, char const* message, va_list args)
 {
     vsyslog_r(priority, &global_log_data, message, args);
 }
+
 }
