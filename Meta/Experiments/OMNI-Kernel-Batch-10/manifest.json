@@ -1,0 +1,316 @@
+{
+  "manifest_schema_version": "1.0",
+  "package_name": "OMNI-Kernel-Batch-10",
+  "package_version": "0.10.0",
+  "overlay_root": "Meta/Experiments/OMNI-Kernel-Batch-10/",
+  "repository": "Bryanna-21/EXILE-OS",
+  "base_commit": "686eecaf6598f34c84b06f783f508ab35f764398",
+  "batch8_dependency": {
+    "commit": "4ab10276f316280eec5cf15a5b33688b1ce9b88e",
+    "branch": "experiment/omni-kernel-batch-8",
+    "bundle_sha256": "dbfd15538a95f5f7b2e00c323918a94e02ce63a01a145282728a529e9bb126e2",
+    "merged_into_base": false
+  },
+  "batch9_dependency": {
+    "package": "EXILE-OS-OMNI-KERNEL-BATCH-9.zip",
+    "zip_sha256": "616b313784d8c23c0f4ace7265c985eb8ccc4b8f7a7f8ecc4f78ae11726c5ed3",
+    "committed": false
+  },
+  "checksum_algorithm": "SHA-256",
+  "checksum_statement": "Sizes and hashes cover the exact bytes of each listed file. manifest.json and SHA256SUMS do not list themselves; SHA256SUMS also lists manifest.json.",
+  "files": [
+    {
+      "path": "APPLY_BATCH_10.md",
+      "bytes": 961,
+      "sha256": "b8138a865d8b8f19d27434b22ed4d30c896c383b268137096091106680a713ac"
+    },
+    {
+      "path": "Cargo.lock",
+      "bytes": 536,
+      "sha256": "851dfac478016b8e02a7174fb677eb4448071430ef3d76e3c12ab97ff395b39a"
+    },
+    {
+      "path": "Cargo.toml",
+      "bytes": 773,
+      "sha256": "b0dd215222800a1c87c2f89a3f0be2d1e385bf4fa4c60f0e7dcb5aa298687e05"
+    },
+    {
+      "path": "README.md",
+      "bytes": 784,
+      "sha256": "23467b0e22bba1d6d2013ab482b95ee227265d62ac7d9ca5e5ec72c9ecafc811"
+    },
+    {
+      "path": "docs/ARCHITECTURE_DECISION.md",
+      "bytes": 4915,
+      "sha256": "80795e64996db95658fe9d1a8ff8d541686f0e50bf9f41d1f4459087990988c4"
+    },
+    {
+      "path": "docs/BATCH_10_VERIFICATION_REPORT.md",
+      "bytes": 3990,
+      "sha256": "09e2b742795a28dcbbb00047dd1e542573fdba430e5aaf174ae74d1dee9a4662"
+    },
+    {
+      "path": "docs/PROGRAMME_STATUS.md",
+      "bytes": 5326,
+      "sha256": "ba0294c2c3ea769d6b10e0a5e74f1604e12f3af5dc6470692fcbadf9adcc5f48"
+    },
+    {
+      "path": "docs/SECURITY_STATUS.md",
+      "bytes": 3478,
+      "sha256": "b33f2a17ddeeac02ffb7ad898abc83d03c9d746425f90bf695eff5cb54128183"
+    },
+    {
+      "path": "scripts/check_toolchain.py",
+      "bytes": 2644,
+      "sha256": "aedb27eee1a51163005c402786b2eacd8db01e476d12e1f834877d442f882282"
+    },
+    {
+      "path": "scripts/gen_manifest.py",
+      "bytes": 4879,
+      "sha256": "b3e6dfd8dad63f859bb430869d7ba27a03182014377bad56eb210ea0b8a39dbe"
+    },
+    {
+      "path": "scripts/verify.sh",
+      "bytes": 13848,
+      "sha256": "09b7b85782662bd6f9bd52b4f296a2af8195cfd4b017c111c4bb7fe65ef32a10"
+    },
+    {
+      "path": "src/abi.rs",
+      "bytes": 3468,
+      "sha256": "b163560db67a259dc5a1b1b2a5c9e320cad39b3ad863f460ad392e743241ae6a"
+    },
+    {
+      "path": "src/irqlock.rs",
+      "bytes": 4421,
+      "sha256": "e3f3046a95cac3363c4fc22a14df5a9eb0f5e055bdc95a78f73d3bef8122035a"
+    },
+    {
+      "path": "src/lib.rs",
+      "bytes": 774,
+      "sha256": "2301114019624c5a0eac3aeddb0e76982d598aa92311e805641a012654942db0"
+    },
+    {
+      "path": "src/txmap.rs",
+      "bytes": 7186,
+      "sha256": "c80b47e99e589b381bd08663781bcb18798eb01d8a0654b10ab4394b86b8ea62"
+    },
+    {
+      "path": "tests/abi.rs",
+      "bytes": 5612,
+      "sha256": "3448598f97716341332637e386ad4c750dc0a3077d1aae83a765e16273d41d48"
+    },
+    {
+      "path": "tests/irqlock.rs",
+      "bytes": 6226,
+      "sha256": "56325df70478f3404f67639d84d1cf24dd3398e4e8e5d5d04b21b11d035fab04"
+    },
+    {
+      "path": "tests/txmap.rs",
+      "bytes": 11268,
+      "sha256": "aeca35c9ce7bd5783be6c10dfda8c040ce6444902a7e40399276007dd6d865a3"
+    },
+    {
+      "path": "toolchain.pin",
+      "bytes": 324,
+      "sha256": "ca20a005032eb41b6264ba39d352c92139a5a0caeafbfc34e9f0631064c4ecec"
+    }
+  ],
+  "added_files": [
+    "APPLY_BATCH_10.md",
+    "Cargo.lock",
+    "Cargo.toml",
+    "README.md",
+    "docs/ARCHITECTURE_DECISION.md",
+    "docs/BATCH_10_VERIFICATION_REPORT.md",
+    "docs/PROGRAMME_STATUS.md",
+    "docs/SECURITY_STATUS.md",
+    "scripts/check_toolchain.py",
+    "scripts/gen_manifest.py",
+    "scripts/verify.sh",
+    "src/abi.rs",
+    "src/irqlock.rs",
+    "src/lib.rs",
+    "src/txmap.rs",
+    "tests/abi.rs",
+    "tests/irqlock.rs",
+    "tests/txmap.rs",
+    "toolchain.pin",
+    "manifest.json",
+    "SHA256SUMS"
+  ],
+  "modified_files": [],
+  "removed_files": [],
+  "test_commands": [
+    "cd Meta/Experiments/OMNI-Kernel-Batch-10 && scripts/verify.sh",
+    "cargo test --offline --locked",
+    "cargo test --offline --locked --release",
+    "cargo clippy --offline --all-targets --features x86-ring0 -- -D warnings",
+    "python3 -I scripts/check_toolchain.py",
+    "cargo test --offline --locked --manifest-path ../OMNI-Kernel-Batch-N/Cargo.toml   # N = 7, 8, 9",
+    "python3 -I ../OMNI-Kernel-Batch-9/scripts/check_abi_conformance.py [--self-test]",
+    "(cd ../OMNI-Kernel-Batch-N && zig build test --summary all)   # N = 2..6, zig 0.15.2"
+  ],
+  "test_results": [
+    {
+      "name": "missing required file",
+      "result": "FAIL",
+      "detail": "missing required file: scripts/gen_manifest.py"
+    },
+    {
+      "name": "rustc is 1.97.0, not the pinned 1.91.1; results are NOT evid",
+      "result": "WARN",
+      "detail": "rustc is 1.97.0, not the pinned 1.91.1; results are NOT evidence for the pinned compiler"
+    },
+    {
+      "name": "toolchain does not match toolchain.pin (set OMNI10_REQUIRE_P",
+      "result": "WARN",
+      "detail": "toolchain does not match toolchain.pin (set OMNI10_REQUIRE_PINNED=1 to make this fatal)"
+    },
+    {
+      "name": "zig is the required 0.15.2",
+      "result": "PASS",
+      "detail": "zig is the required 0.15.2"
+    },
+    {
+      "name": "cargo fmt --check",
+      "result": "PASS",
+      "detail": "cargo fmt --check"
+    },
+    {
+      "name": "cargo clippy --all-targets -D warnings (Batch 10 crate)",
+      "result": "PASS",
+      "detail": "cargo clippy --all-targets -D warnings (Batch 10 crate)"
+    },
+    {
+      "name": "Batch 10 cargo test (debug)",
+      "result": "PASS",
+      "detail": "Batch 10 cargo test (debug): 24 passed, 0 ignored"
+    },
+    {
+      "name": "Batch 10 cargo test (release)",
+      "result": "PASS",
+      "detail": "Batch 10 cargo test (release): 24 passed, 0 ignored"
+    },
+    {
+      "name": "ABI conformance",
+      "result": "PASS",
+      "detail": "ABI conformance: check_abi_conformance: 23 passed, 0 failed (source text only; nothing executed)"
+    },
+    {
+      "name": "ABI conformance self-test",
+      "result": "PASS",
+      "detail": "ABI conformance self-test: self-test: 7 of 7 mutations detected"
+    },
+    {
+      "name": "Batch 7 hosted tests (debug)",
+      "result": "PASS",
+      "detail": "Batch 7 hosted tests (debug): 56 passed, 0 ignored"
+    },
+    {
+      "name": "Batch 8 hosted tests (debug)",
+      "result": "PASS",
+      "detail": "Batch 8 hosted tests (debug): 65 passed, 0 ignored"
+    },
+    {
+      "name": "Batch 9 hosted tests (debug)",
+      "result": "PASS",
+      "detail": "Batch 9 hosted tests (debug): 34 passed, 0 ignored"
+    },
+    {
+      "name": "Batch 8 verify.sh (OMNI10_SKIP_B8_VERIFY=1)",
+      "result": "SKIPPED",
+      "detail": "Batch 8 verify.sh (OMNI10_SKIP_B8_VERIFY=1)"
+    },
+    {
+      "name": "Batch 2 Zig tests",
+      "result": "PASS",
+      "detail": "Batch 2 Zig tests: Build Summary: 3/3 steps succeeded; 59/59 tests passed"
+    },
+    {
+      "name": "Batch 3 Zig tests",
+      "result": "PASS",
+      "detail": "Batch 3 Zig tests: Build Summary: 6/6 steps succeeded; 116/116 tests passed"
+    },
+    {
+      "name": "Batch 4 Zig tests",
+      "result": "PASS",
+      "detail": "Batch 4 Zig tests: Build Summary: 8/8 steps succeeded; 171/171 tests passed"
+    },
+    {
+      "name": "Batch 5 Zig tests",
+      "result": "PASS",
+      "detail": "Batch 5 Zig tests: Build Summary: 10/10 steps succeeded; 228/228 tests passed"
+    },
+    {
+      "name": "Batch 6 Zig tests",
+      "result": "PASS",
+      "detail": "Batch 6 Zig tests: Build Summary: 13/13 steps succeeded; 282/282 tests passed"
+    },
+    {
+      "name": "manifest.json and SHA256SUMS checks (OMNI10_PHASE=pre)",
+      "result": "SKIPPED",
+      "detail": "manifest.json and SHA256SUMS checks (OMNI10_PHASE=pre)"
+    },
+    {
+      "name": "no absolute paths, session links, watermarks or banned colou",
+      "result": "PASS",
+      "detail": "no absolute paths, session links, watermarks or banned colour terms in the package"
+    },
+    {
+      "name": "no build artifact or cache directories in the package",
+      "result": "PASS",
+      "detail": "no build artifact or cache directories in the package"
+    },
+    {
+      "name": "git diff --check",
+      "result": "PASS",
+      "detail": "git diff --check"
+    },
+    {
+      "name": "no trailing whitespace in package files",
+      "result": "PASS",
+      "detail": "no trailing whitespace in package files"
+    },
+    {
+      "name": "protected paths (Kernel/, ExileKernel/, Documentation/, Batc",
+      "result": "PASS",
+      "detail": "protected paths (Kernel/, ExileKernel/, Documentation/, Batches 2-7) have no local modifications"
+    },
+    {
+      "name": "the work tree differs from HEAD only under Meta/Experiments/",
+      "result": "PASS",
+      "detail": "the work tree differs from HEAD only under Meta/Experiments/OMNI-Kernel-Batch-8/, -9/ and -10/"
+    },
+    {
+      "name": "tracked files equal 686eecaf6598f34c84b06f783f508ab35f764398",
+      "result": "PASS",
+      "detail": "tracked files equal 686eecaf6598f34c84b06f783f508ab35f764398 outside Batch 8, 9 and 10"
+    },
+    {
+      "name": "QEMU boot tests",
+      "result": "NOT RUN",
+      "detail": "qemu, grub-mkrescue, xorriso missing"
+    },
+    {
+      "name": "pinned rustc 1.91.1 / x86_64-unknown-none",
+      "result": "NOT RUN",
+      "detail": "unavailable offline"
+    },
+    {
+      "name": "Kernel/ build and Tests/Kernel",
+      "result": "NOT RUN",
+      "detail": "no cross toolchain"
+    }
+  ],
+  "known_limitations": [
+    "Experimental; not production-ready.",
+    "Hosted tests only: nothing booted, nothing run under QEMU or on hardware (QEMU NOT RUN).",
+    "Built with rustc 1.97.0 on the host target, not the pinned 1.91.1 / x86_64-unknown-none.",
+    "Kernel/ was not built or run; statements about it come from reading source.",
+    "Architecture decision is PROPOSED and needs owner approval; Kernel/ and ExileKernel/ untouched.",
+    "Batch 8 is not merged into the base and Batch 9 is not committed; both must be present as dependencies.",
+    "Real x86 interrupt control (feature x86-ring0) compiles but was never executed.",
+    "Most programme phases (boot validation, preemption, SMP, ARM64, drivers, storage, networking, IPC, capabilities in Rust) are NOT done; see docs/PROGRAMME_STATUS.md.",
+    "Nothing was committed or pushed."
+  ]
+}

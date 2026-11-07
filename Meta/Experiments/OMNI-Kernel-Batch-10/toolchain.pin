@@ -1,0 +1,9 @@
+# Pinned verification toolchain for the OMNI/EUK kernel programme. One "name=value" per line.
+rustc=1.91.1
+rust_target=x86_64-unknown-none
+zig=0.15.2
+# Tools whose PRESENCE is required for runtime validation (any version).
+need_tool=qemu-system-x86_64
+need_tool=qemu-system-aarch64
+need_tool=grub-mkrescue
+need_tool=xorriso

@@ -1,0 +1,24 @@
+[package]
+name = "omni-kernel-batch10"
+version = "0.10.0"
+edition = "2024"
+rust-version = "1.88"
+description = "Experimental OMNI-Kernel Batch 10: transactional page mapping, interrupt-safe locking and a versioned syscall ABI layer. Hosted tests only; no QEMU or hardware result."
+publish = false
+
+[lib]
+name = "omni10"
+path = "src/lib.rs"
+
+[features]
+# Compiles the real x86-64 interrupt-flag implementation. It is never executed by any test
+# here: cli/sti need ring 0.
+x86-ring0 = []
+
+[dependencies]
+omni-kernel-batch7 = { path = "../OMNI-Kernel-Batch-7" }
+omni-kernel-batch8 = { path = "../OMNI-Kernel-Batch-8" }
+
+[dev-dependencies]
+# The abi tests reuse the Batch 9 fixtures, which need Batch 9's PagedBacking.
+omni-kernel-batch9 = { path = "../OMNI-Kernel-Batch-9" }
