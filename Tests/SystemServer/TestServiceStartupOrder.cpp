@@ -1,0 +1,72 @@
+#include <Userland/Services/SystemServer/ServiceStartupOrder.h>
+#include <LibTest/TestCase.h>
+
+using namespace SystemServer;
+
+static HashMap<ByteString, Vector<ByteString>> dependencies_for(std::initializer_list<std::pair<ByteString, Vector<ByteString>>> entries)
+{
+    HashMap<ByteString, Vector<ByteString>> dependencies;
+    for (auto const& entry : entries)
+        dependencies.set(entry.first, entry.second);
+    return dependencies;
+}
+
+TEST_CASE(dependency_order_is_stable_and_dependency_first)
+{
+    Vector<ByteString> services { "Consumer"sv, "Independent"sv, "Provider"sv };
+    auto dependencies = dependencies_for({ { "Consumer"sv, { "Provider"sv } } });
+
+    auto order = resolve_service_startup_order(services, dependencies);
+    EXPECT(!order.is_error());
+    if (order.is_error())
+        return;
+
+    auto const& result = order.value();
+    EXPECT_EQ(result.size(), 3u);
+    if (result.size() == 3u) {
+        EXPECT_EQ(result[0], 1u);
+        EXPECT_EQ(result[1], 2u);
+        EXPECT_EQ(result[2], 0u);
+    }
+}
+
+TEST_CASE(missing_dependency_blocks_service_and_dependents)
+{
+    Vector<ByteString> services { "Consumer"sv, "Middle"sv, "Independent"sv };
+    auto dependencies = dependencies_for({
+        { "Consumer"sv, { "Middle"sv } },
+        { "Middle"sv, { "Missing"sv } },
+    });
+
+    auto order = resolve_service_startup_order(services, dependencies);
+    EXPECT(!order.is_error());
+    if (order.is_error())
+        return;
+
+    EXPECT_EQ(order.value().size(), 1u);
+    if (order.value().size() == 1u)
+        EXPECT_EQ(order.value()[0], 2u);
+}
+
+TEST_CASE(circular_dependency_is_rejected)
+{
+    Vector<ByteString> services { "First"sv, "Second"sv };
+    auto dependencies = dependencies_for({
+        { "First"sv, { "Second"sv } },
+        { "Second"sv, { "First"sv } },
+    });
+
+    auto order = resolve_service_startup_order(services, dependencies);
+    EXPECT(order.is_error());
+}
+
+TEST_CASE(self_dependency_is_rejected)
+{
+    Vector<ByteString> services { "Self"sv };
+    auto dependencies = dependencies_for({ { "Self"sv, { "Self"sv } } });
+
+    auto order = resolve_service_startup_order(services, dependencies);
+    EXPECT(!order.is_error());
+    if (!order.is_error())
+        EXPECT(order.value().is_empty());
+}

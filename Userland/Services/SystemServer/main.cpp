@@ -7,9 +7,11 @@
  */
 
 #include "Service.h"
+#include "ServiceStartupOrder.h"
 #include <AK/Assertions.h>
 #include <AK/ByteBuffer.h>
 #include <AK/Debug.h>
+#include <AK/HashMap.h>
 #include <AK/String.h>
 #include <AK/Vector.h>
 #include <Kernel/API/DeviceEvent.h>
@@ -102,145 +104,71 @@ static ErrorOr<void> determine_system_mode()
     return {};
 }
 
-static Optional<size_t> find_service_index(Vector<NonnullRefPtr<Service>> const& services, StringView name)
-{
-    for (size_t i = 0; i < services.size(); ++i) {
-        if (services[i]->name() == name)
-            return i;
-    }
-    return {};
-}
-
-// Return a stable topological order. Missing or mode-disabled dependencies block
-// the service and its dependents; a cycle is rejected before any service is spawned.
-static ErrorOr<Vector<size_t>> service_startup_order(Core::ConfigFile const& config, Vector<NonnullRefPtr<Service>> const& services)
-{
-    Vector<u8> blocked;
-    Vector<u8> scheduled;
-    TRY(blocked.try_resize(services.size()));
-    TRY(scheduled.try_resize(services.size()));
-    for (size_t i = 0; i < services.size(); ++i) {
-        blocked[i] = 0;
-        scheduled[i] = 0;
-    }
-
-    auto dependencies_for = [&](size_t index) {
-        auto service_name = ByteString::copy(services[index]->name());
-        return config.read_entry(service_name, "Dependencies").split(',');
-    };
-
-    // First mark direct references that are absent from this active configuration.
-    for (size_t i = 0; i < services.size(); ++i) {
-        for (auto const& dependency : dependencies_for(i)) {
-            if (dependency.is_empty())
-                continue;
-            if (!find_service_index(services, dependency)) {
-                warnln("Service {} is blocked: dependency {} is not enabled in this system mode", services[i]->name(), dependency);
-                blocked[i] = 1;
-            }
-        }
-    }
-
-    // Propagate dependency failure before ordering, so no dependent starts after
-    // an unavailable dependency has been discovered.
-    bool changed = true;
-    while (changed) {
-        changed = false;
-        for (size_t i = 0; i < services.size(); ++i) {
-            if (blocked[i])
-                continue;
-            for (auto const& dependency : dependencies_for(i)) {
-                if (dependency.is_empty())
-                    continue;
-                auto dependency_index = find_service_index(services, dependency);
-                if (!dependency_index.has_value() || blocked[dependency_index.value()]) {
-                    warnln("Service {} is blocked because dependency {} is unavailable", services[i]->name(), dependency);
-                    blocked[i] = 1;
-                    changed = true;
-                    break;
-                }
-            }
-        }
-    }
-
-    Vector<size_t> order;
-    bool made_progress = true;
-    while (made_progress) {
-        made_progress = false;
-        for (size_t i = 0; i < services.size(); ++i) {
-            if (blocked[i] || scheduled[i])
-                continue;
-            bool dependencies_scheduled = true;
-            for (auto const& dependency : dependencies_for(i)) {
-                if (dependency.is_empty())
-                    continue;
-                auto dependency_index = find_service_index(services, dependency);
-                if (dependency_index.has_value() && !scheduled[dependency_index.value()]) {
-                    dependencies_scheduled = false;
-                    break;
-                }
-            }
-            if (!dependencies_scheduled)
-                continue;
-            TRY(order.try_append(i));
-            scheduled[i] = 1;
-            made_progress = true;
-        }
-    }
-
-    for (size_t i = 0; i < services.size(); ++i) {
-        if (!blocked[i] && !scheduled[i])
-            return Error::from_string_literal("Circular service dependency detected; no services in this configuration were started");
-    }
-    return order;
-}
-
 static ErrorOr<void> activate_services(Core::ConfigFile const& config)
 {
     Vector<NonnullRefPtr<Service>> services_to_activate;
+    Vector<ByteString> service_names;
+    HashMap<ByteString, Vector<ByteString>> dependencies;
+
     for (auto const& name : config.groups()) {
         auto service = TRY(Service::try_create(config, name));
-        if (service->is_enabled_for_system_mode(g_system_mode)) {
-            g_services.append(move(service));
-            services_to_activate.append(g_services.last());
-        }
+        if (!service->is_enabled_for_system_mode(g_system_mode))
+            continue;
+
+        auto name_copy = ByteString::copy(name);
+        auto dependency_list = config.read_entry(name, "Dependencies").split(',');
+        dependencies.set(name_copy, move(dependency_list));
+        TRY(service_names.try_append(name_copy));
+        g_services.append(move(service));
+        TRY(services_to_activate.try_append(g_services.last()));
     }
 
-    auto order = TRY(service_startup_order(config, services_to_activate));
+    // Resolve the complete graph before creating sockets or starting processes.
+    auto order = TRY(resolve_service_startup_order(service_names, dependencies));
 
-    // Create service sockets only after validating the dependency graph. A socket
-    // setup failure is recorded so that dependents will not be launched.
+    Vector<u8> scheduled;
+    TRY(scheduled.try_resize(service_names.size()));
+    for (size_t i = 0; i < service_names.size(); ++i)
+        scheduled[i] = 0;
+    for (auto index : order)
+        scheduled[index] = 1;
+    for (size_t i = 0; i < service_names.size(); ++i) {
+        if (!scheduled[i])
+            warnln("Service {} is blocked by a missing or unavailable dependency", service_names[i]);
+    }
+
     Vector<ByteString> failed_services;
-    for (auto index : order) {
-        auto& service = services_to_activate[index];
-        if (auto result = service->setup_sockets(); result.is_error()) {
-            warnln("{}: Failed to set up service sockets: {}", service->name(), result.release_error());
-            failed_services.append(ByteString::copy(service->name()));
-        }
-    }
-
     dbgln("Activating {} services in dependency order...", order.size());
     for (auto index : order) {
         auto& service = services_to_activate[index];
+        auto const& service_name = service_names[index];
+
         bool dependency_failed = false;
-        for (auto const& dependency : config.read_entry(ByteString::copy(service->name()), "Dependencies").split(',')) {
-            if (!dependency.is_empty() && failed_services.contains_slow(dependency)) {
-                warnln("{}: Not starting because dependency {} failed", service->name(), dependency);
-                dependency_failed = true;
-                break;
+        auto dependency_it = dependencies.find(service_name);
+        if (dependency_it != dependencies.end()) {
+            for (auto const& dependency : dependency_it->value) {
+                if (dependency.is_empty())
+                    continue;
+                if (failed_services.contains_slow(dependency)) {
+                    warnln("{}: Not starting because dependency {} failed", service->name(), dependency);
+                    dependency_failed = true;
+                    break;
+                }
             }
         }
         if (dependency_failed)
             continue;
 
-        // A service whose socket setup failed is itself marked failed above.
-        if (failed_services.contains_slow(ByteString::copy(service->name())))
+        if (auto result = service->setup_sockets(); result.is_error()) {
+            warnln("{}: Failed to set up service sockets: {}", service->name(), result.release_error());
+            TRY(failed_services.try_append(service_name));
             continue;
+        }
 
         dbgln_if(SYSTEMSERVER_DEBUG, "Activating {}", service->name());
         if (auto result = service->activate(); result.is_error()) {
             warnln("{}: Failed to activate service: {}", service->name(), result.release_error());
-            failed_services.append(ByteString::copy(service->name()));
+            TRY(failed_services.try_append(service_name));
         }
     }
     return {};
@@ -282,7 +210,6 @@ static ErrorOr<void> activate_base_services_based_on_system_mode()
     }
 
     // Read our config and instantiate services.
-    // This takes care of setting up sockets.
     auto config = TRY(Core::ConfigFile::open_for_system("SystemServer"));
     TRY(activate_services(*config));
     return {};
@@ -290,14 +217,11 @@ static ErrorOr<void> activate_base_services_based_on_system_mode()
 
 static ErrorOr<void> activate_user_services_based_on_system_mode()
 {
-    // Read system wide user config and instantiate services.
     auto config = TRY(Core::ConfigFile::open_for_system("SystemServerUser"));
     TRY(activate_services(*config));
 
-    // Try to read user config.
-    if (auto config = Core::ConfigFile::open_for_app("SystemServer"); !config.is_error()) {
+    if (auto config = Core::ConfigFile::open_for_app("SystemServer"); !config.is_error())
         TRY(activate_services(config.release_value()));
-    }
     return {};
 }
 
