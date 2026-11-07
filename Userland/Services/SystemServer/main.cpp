@@ -7,10 +7,13 @@
  */
 
 #include "Service.h"
+#include "ServiceStartupOrder.h"
 #include <AK/Assertions.h>
 #include <AK/ByteBuffer.h>
 #include <AK/Debug.h>
+#include <AK/HashMap.h>
 #include <AK/String.h>
+#include <AK/Vector.h>
 #include <Kernel/API/DeviceEvent.h>
 #include <LibCore/ArgsParser.h>
 #include <LibCore/ConfigFile.h>
@@ -83,13 +86,11 @@ static ErrorOr<void> determine_system_mode()
     auto file_or_error = Core::File::open("/sys/kernel/system_mode"sv, Core::File::OpenMode::Read);
     if (file_or_error.is_error()) {
         dbgln("Failed to read system_mode: {}", file_or_error.error());
-        // Continue and assume "text" mode.
         return {};
     }
     auto const system_mode_buf_or_error = file_or_error.value()->read_until_eof();
     if (system_mode_buf_or_error.is_error()) {
         dbgln("Failed to read system_mode: {}", system_mode_buf_or_error.error());
-        // Continue and assume "text" mode.
         return {};
     }
     ByteString const system_mode = ByteString::copy(system_mode_buf_or_error.value(), Chomp);
@@ -104,21 +105,73 @@ static ErrorOr<void> determine_system_mode()
 static ErrorOr<void> activate_services(Core::ConfigFile const& config)
 {
     Vector<NonnullRefPtr<Service>> services_to_activate;
+    Vector<ByteString> service_names;
+    HashMap<ByteString, Vector<ByteString>> dependencies;
+
     for (auto const& name : config.groups()) {
         auto service = TRY(Service::try_create(config, name));
-        if (service->is_enabled_for_system_mode(g_system_mode)) {
-            TRY(service->setup_sockets());
-            g_services.append(move(service));
-            services_to_activate.append(g_services.last());
-        }
+        if (!service->is_enabled_for_system_mode(g_system_mode))
+            continue;
+
+        auto name_copy = ByteString::copy(name);
+        auto dependency_list = config.read_entry(name, "Dependencies").split(',');
+        dependencies.set(name_copy, move(dependency_list));
+        TRY(service_names.try_append(name_copy));
+        g_services.append(move(service));
+        TRY(services_to_activate.try_append(g_services.last()));
     }
 
-    // After we've set them all up, activate only those just added!
-    dbgln("Activating {} services...", services_to_activate.size());
-    for (auto& service : services_to_activate) {
+    // Resolve the complete graph before creating sockets or starting processes.
+    auto order = TRY(resolve_service_startup_order(service_names, dependencies));
+
+    Vector<u8> scheduled;
+    TRY(scheduled.try_resize(service_names.size()));
+    for (size_t i = 0; i < service_names.size(); ++i)
+        scheduled[i] = 0;
+    for (auto index : order)
+        scheduled[index] = 1;
+    for (size_t i = 0; i < service_names.size(); ++i) {
+        if (!scheduled[i])
+            warnln("Service {} is blocked by a missing or unavailable dependency", service_names[i]);
+    }
+
+    Vector<ByteString> failed_services;
+    dbgln("Activating {} services in dependency order...", order.size());
+    for (auto index : order) {
+        auto& service = services_to_activate[index];
+        auto const& service_name = service_names[index];
+
+        bool dependency_failed = false;
+        auto dependency_it = dependencies.find(service_name);
+        if (dependency_it != dependencies.end()) {
+            for (auto const& dependency : dependency_it->value) {
+                if (dependency.is_empty())
+                    continue;
+                if (failed_services.contains_slow(dependency)) {
+                    warnln("{}: Not starting because dependency {} failed", service->name(), dependency);
+                    dependency_failed = true;
+                    break;
+                }
+            }
+        }
+        if (dependency_failed) {
+            // Propagate this failure as well. Without recording the blocked
+            // service, its own dependents could incorrectly start later.
+            TRY(failed_services.try_append(service_name));
+            continue;
+        }
+
+        if (auto result = service->setup_sockets(); result.is_error()) {
+            warnln("{}: Failed to set up service sockets: {}", service->name(), result.release_error());
+            TRY(failed_services.try_append(service_name));
+            continue;
+        }
+
         dbgln_if(SYSTEMSERVER_DEBUG, "Activating {}", service->name());
-        if (auto result = service->activate(); result.is_error())
-            dbgln("{}: {}", service->name(), result.release_error());
+        if (auto result = service->activate(); result.is_error()) {
+            warnln("{}: Failed to activate service: {}", service->name(), result.release_error());
+            TRY(failed_services.try_append(service_name));
+        }
     }
     return {};
 }
@@ -149,8 +202,6 @@ static ErrorOr<void> activate_base_services_based_on_system_mode()
 
         TRY(watcher->add_watch("/dev/gpu/", Core::FileWatcherEvent::Type::ChildCreated));
 
-        // The GPU might have appeared while we were setting up the watcher.
-        // Only wait for the file if we can't stat it.
         if (Core::System::lstat("/dev/gpu/connector0"sv).is_error()) {
             log->start();
             timeout->start();
@@ -158,8 +209,6 @@ static ErrorOr<void> activate_base_services_based_on_system_mode()
         }
     }
 
-    // Read our config and instantiate services.
-    // This takes care of setting up sockets.
     auto config = TRY(Core::ConfigFile::open_for_system("SystemServer"));
     TRY(activate_services(*config));
     return {};
@@ -167,15 +216,11 @@ static ErrorOr<void> activate_base_services_based_on_system_mode()
 
 static ErrorOr<void> activate_user_services_based_on_system_mode()
 {
-    // Read system wide user config and instantiate services.
-    // This takes care of setting up sockets.
     auto config = TRY(Core::ConfigFile::open_for_system("SystemServerUser"));
     TRY(activate_services(*config));
 
-    // Try to read user config and instantiate services.
-    if (auto config = Core::ConfigFile::open_for_app("SystemServer"); !config.is_error()) {
+    if (auto config = Core::ConfigFile::open_for_app("SystemServer"); !config.is_error())
         TRY(activate_services(config.release_value()));
-    }
     return {};
 }
 
