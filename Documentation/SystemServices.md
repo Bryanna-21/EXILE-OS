@@ -12,8 +12,8 @@ Executable=/bin/LookupServer
 Dependencies=NetworkServer
 ```
 
-Within one SystemServer configuration activation, dependencies are started before dependents. Unknown, disabled-in-mode, or failed dependencies block the dependent service. Circular dependency graphs are rejected before sockets are set up or child processes are launched. Avoid whitespace around identifiers; use the exact INI group name.
+Within one SystemServer configuration activation, dependencies are started before dependents. Unknown, disabled-in-mode, or failed dependencies block the dependent service. Circular graphs, self-dependencies and duplicate active service names are rejected before sockets are set up or child processes are launched. Avoid whitespace around identifiers; use the exact INI group name.
 
-The current behavior reports process spawn success, not application readiness. Dependencies across separate configuration batches, readiness checks, dependency-aware restart, lifecycle status APIs, and stop/restart commands are not implemented by this contract. The existing `KeepAlive` restart policy remains in effect and has not been replaced by this change.
+The current behavior reports successful fork/spawn, not successful `exec`, application readiness, or ongoing health. The existing SIGCHLD handler records child termination through `waitpid`, but this batch does not add lifecycle status APIs, readiness checks, dependency-aware restart, startup/shutdown timeouts, or explicit stop/restart commands. The existing `KeepAlive` restart policy remains in effect and has not been replaced by this change.
 
 Environment entries continue to use the existing SystemServer format and must not be interpreted as shell commands. Resource limits, health checks, and structured service logs are not yet supported by this definition format.

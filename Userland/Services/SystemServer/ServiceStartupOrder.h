@@ -16,8 +16,18 @@ static Optional<size_t> find_service_index(Vector<ByteString> const& services, S
     return {};
 }
 
+// Resolve a stable dependency-first order. Unknown dependencies block their
+// dependents, while cycles and duplicate service identifiers are configuration
+// errors and must be rejected before SystemServer creates sockets or processes.
 static ErrorOr<Vector<size_t>> resolve_service_startup_order(Vector<ByteString> const& services, HashMap<ByteString, Vector<ByteString>> const& dependencies)
 {
+    for (size_t i = 0; i < services.size(); ++i) {
+        for (size_t j = i + 1; j < services.size(); ++j) {
+            if (services[i] == services[j])
+                return Error::from_string_literal("Duplicate service name in startup graph");
+        }
+    }
+
     Vector<u8> blocked;
     Vector<u8> scheduled;
     TRY(blocked.try_resize(services.size()));
@@ -27,27 +37,21 @@ static ErrorOr<Vector<size_t>> resolve_service_startup_order(Vector<ByteString> 
         scheduled[i] = 0;
     }
 
+    // Mark references to services that are not active in this configuration.
     for (size_t i = 0; i < services.size(); ++i) {
-        auto const& service_name = services[i];
-        auto dependency_it = dependencies.find(service_name);
+        auto dependency_it = dependencies.find(services[i]);
         if (dependency_it == dependencies.end())
             continue;
-
         for (auto const& dependency : dependency_it->value) {
             if (dependency.is_empty())
                 continue;
-            auto dependency_index = find_service_index(services, dependency);
-            if (!dependency_index.has_value()) {
+            if (!find_service_index(services, dependency))
                 blocked[i] = 1;
-                continue;
-            }
-            if (dependency_index.value() == i) {
-                blocked[i] = 1;
-                continue;
-            }
         }
     }
 
+    // A service depending on a blocked service is itself blocked. Propagate until
+    // the set is stable so that no dependent gets into the startup order.
     bool changed = true;
     while (changed) {
         changed = false;
@@ -78,21 +82,16 @@ static ErrorOr<Vector<size_t>> resolve_service_startup_order(Vector<ByteString> 
             if (blocked[i] || scheduled[i])
                 continue;
             auto dependency_it = dependencies.find(services[i]);
-            if (dependency_it == dependencies.end()) {
-                TRY(order.try_append(i));
-                scheduled[i] = 1;
-                made_progress = true;
-                continue;
-            }
-
             bool dependencies_scheduled = true;
-            for (auto const& dependency : dependency_it->value) {
-                if (dependency.is_empty())
-                    continue;
-                auto dependency_index = find_service_index(services, dependency);
-                if (dependency_index.has_value() && !scheduled[dependency_index.value()]) {
-                    dependencies_scheduled = false;
-                    break;
+            if (dependency_it != dependencies.end()) {
+                for (auto const& dependency : dependency_it->value) {
+                    if (dependency.is_empty())
+                        continue;
+                    auto dependency_index = find_service_index(services, dependency);
+                    if (dependency_index.has_value() && !scheduled[dependency_index.value()]) {
+                        dependencies_scheduled = false;
+                        break;
+                    }
                 }
             }
             if (!dependencies_scheduled)
@@ -103,9 +102,11 @@ static ErrorOr<Vector<size_t>> resolve_service_startup_order(Vector<ByteString> 
         }
     }
 
+    // Any remaining unblocked node is part of or depends on a cycle. Do not
+    // silently classify a self-dependency as an ordinary unavailable service.
     for (size_t i = 0; i < services.size(); ++i) {
         if (!blocked[i] && !scheduled[i])
-            return Error::from_string_literal("Circular service dependency detected; no services in this configuration were started");
+            return Error::from_string_literal("Circular service dependency detected");
     }
     return order;
 }

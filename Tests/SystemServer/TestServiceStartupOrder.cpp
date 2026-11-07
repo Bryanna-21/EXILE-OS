@@ -66,6 +66,24 @@ TEST_CASE(self_dependency_is_rejected)
     auto dependencies = dependencies_for({ { "Self"sv, { "Self"sv } } });
 
     auto order = resolve_service_startup_order(services, dependencies);
+    EXPECT(order.is_error());
+}
+
+TEST_CASE(duplicate_service_names_are_rejected)
+{
+    Vector<ByteString> services { "Duplicate"sv, "Duplicate"sv };
+    HashMap<ByteString, Vector<ByteString>> dependencies;
+
+    auto order = resolve_service_startup_order(services, dependencies);
+    EXPECT(order.is_error());
+}
+
+TEST_CASE(empty_service_graph_is_valid)
+{
+    Vector<ByteString> services;
+    HashMap<ByteString, Vector<ByteString>> dependencies;
+
+    auto order = resolve_service_startup_order(services, dependencies);
     EXPECT(!order.is_error());
     if (!order.is_error())
         EXPECT(order.value().is_empty());
