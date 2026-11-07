@@ -1,0 +1,265 @@
+{
+  "manifest_schema_version": "1.0",
+  "package_name": "OMNI-Kernel-Batch-8",
+  "batch_id": "batch-8",
+  "batch_scope": "x86-64 bare-metal kernel image (Multiboot v1), GDT/TSS/IDT, W^X paging, frame allocator, timer test, scheduler scenario on Batch 7, optional ring-3/SYSCALL stage, hosted tests, QEMU scripts. Built and statically checked; never booted; QEMU tests NOT RUN; host-target toolchain fallback; no preemption, no SMP, no ARM64; not integrated into ExileKernel/ or Kernel/.",
+  "checksum_algorithm": "SHA-256",
+  "checksum_statement": "Checksums and byte sizes cover the exact bytes of each listed file; manifest.json does not list itself.",
+  "files": [
+    {
+      "path": "Cargo.lock",
+      "sha256": "b64c7c89549ae447235b1281b467cfcead68bf434c323501a4b779df2caeb01c",
+      "bytes": 263
+    },
+    {
+      "path": "Cargo.toml",
+      "sha256": "aa30bef041e14c5ba283f7eda40796a1d0c8eafdbf3bc084709c33ee3df9283b",
+      "bytes": 399
+    },
+    {
+      "path": "EXILE-OS-STATUS.md",
+      "sha256": "733ed0ebc5763773d1844e201ec16035416bd7cd224be07ad788ca52b0277753",
+      "bytes": 901
+    },
+    {
+      "path": "README.md",
+      "sha256": "147a6febb83e7470363dde23efa520722fedc6fbd58aeea04516b17509f500be",
+      "bytes": 2828
+    },
+    {
+      "path": "REPORT.md",
+      "sha256": "572d0b73a1ff88cbdaf2b7e6da33941aedcbd20881cbfda18e8cbf343d0f63ec",
+      "bytes": 4421
+    },
+    {
+      "path": "arch/x86_64/boot.S",
+      "sha256": "909fe45740e9ab0f04ad98e658cb9c00065da49b902717634286e2a3599dd52a",
+      "bytes": 4321
+    },
+    {
+      "path": "arch/x86_64/isr.S",
+      "sha256": "107d7fc107826e84314765a4ae63fec0790e5b2e5a9a250e64654de004f11e84",
+      "bytes": 10344
+    },
+    {
+      "path": "arch/x86_64/probe.S",
+      "sha256": "3e4982ea82b23a47b0eed379d3c4035b22e134b1b781653a6f9de66150557eaa",
+      "bytes": 2961
+    },
+    {
+      "path": "boot/grub.cfg",
+      "sha256": "cdfa23248daa761cf4bd860163a3c23dd586a28c38284da23fcb996c2f8aa638",
+      "bytes": 106
+    },
+    {
+      "path": "docs/AUDIT.md",
+      "sha256": "77476a8c116c7727a7ece937e21fbe2b2a7c7266bf438707b31d190138d6d49a",
+      "bytes": 4679
+    },
+    {
+      "path": "docs/BOOT.md",
+      "sha256": "6b4856a400897b96372949dd7e5c74664f495c118d3bb421e2cd2dec28815cc6",
+      "bytes": 4124
+    },
+    {
+      "path": "docs/GDT-TSS.md",
+      "sha256": "6b5da5f27dd1615d142dba39fd5a3593353ce9095717a1202509e34de82ee7fa",
+      "bytes": 1409
+    },
+    {
+      "path": "docs/IDT-EXCEPTIONS.md",
+      "sha256": "033e0fccce6c04aca63135bc6d3b9d8f40d7f488e17583a216226121557abab2",
+      "bytes": 2111
+    },
+    {
+      "path": "docs/MEMORY.md",
+      "sha256": "dafd6d81ad4aca1f2020aa72faf7f0dc0fb85e3e65b5fe02a059343297d700ed",
+      "bytes": 3196
+    },
+    {
+      "path": "docs/PRIVILEGE-TRANSITION.md",
+      "sha256": "845301b9b6cdbeed538b883946a0953c1703d9ab034940cb1514c53ccc95fdd4",
+      "bytes": 2278
+    },
+    {
+      "path": "docs/SCHEDULER.md",
+      "sha256": "b2d28c48bda46b6207ab386bbce46cdddd60d9997f062a4312cae7059a77bc88",
+      "bytes": 1982
+    },
+    {
+      "path": "docs/SECURITY.md",
+      "sha256": "16c167b3a397dc10dd0c18f28832ec119f4fe2d785ac2c0fa08030189b332da8",
+      "bytes": 3007
+    },
+    {
+      "path": "docs/SYSCALL.md",
+      "sha256": "7b987a5761cc8820c487967020c0a7afa227b8453d8d4bc50ea9e9fd5e6a157d",
+      "bytes": 1078
+    },
+    {
+      "path": "docs/TEST-PLAN.md",
+      "sha256": "f78a180de652f17b1fadc36d12ab52e83799f73567d7be8cb40ba6db2f45d02f",
+      "bytes": 4423
+    },
+    {
+      "path": "docs/TIMER.md",
+      "sha256": "b577396e1457ac507414428b70d1431f3c769379949cca6b398e6b8a8e82696e",
+      "bytes": 1010
+    },
+    {
+      "path": "kernel/main.rs",
+      "sha256": "82fa1b1c8c97c861f50a596e908ec79b1fdb72a7a900e20474a22e92e5d2cb24",
+      "bytes": 32291
+    },
+    {
+      "path": "link/linker.ld",
+      "sha256": "440a87dd8eed69a24fcbee1e3d429cf4ff9f1758788d611ab6cafbcf40c9c089",
+      "bytes": 1165
+    },
+    {
+      "path": "scripts/build.sh",
+      "sha256": "ea6fea8f8fd31d20479147692bf34c118324daedbf927e910bc9118b7eeaaa80",
+      "bytes": 4169
+    },
+    {
+      "path": "scripts/check_asm.py",
+      "sha256": "f8c1b21d90e9a83208e29a8a73a5952230ba767ef3c0e017b312c9abf532f4ed",
+      "bytes": 4561
+    },
+    {
+      "path": "scripts/check_image.py",
+      "sha256": "a4e1f7a1a14e7720c6ef2e41fce5cee975b601dc6bf35c82fa4f6a67782c894e",
+      "bytes": 8136
+    },
+    {
+      "path": "scripts/gen_isr.py",
+      "sha256": "ca423d1ea76e3d48dee1dbc8d72797d97dd5165b5c5b17078c5ea8fa94825976",
+      "bytes": 3644
+    },
+    {
+      "path": "scripts/qemu_test.py",
+      "sha256": "fd83a0d0f3c017e94e6ed82f1ac63a0dabe25b60f1982749ac692eeed3980753",
+      "bytes": 9317
+    },
+    {
+      "path": "scripts/verify.sh",
+      "sha256": "2e2a89ddcc9b6a6fcca68d2d36c1dea6ecc9642a2de8e3dd9bf4f26e2146280e",
+      "bytes": 13679
+    },
+    {
+      "path": "src/desc.rs",
+      "sha256": "291d19e703a1a7d4a4b086d661ba8c7e53773d87ca704a9bce1e2696f01acd80",
+      "bytes": 7026
+    },
+    {
+      "path": "src/frames.rs",
+      "sha256": "b1806250a0c73b9a9e8712190e0ea724797ec4d8ecda02070c828dbcc03a864b",
+      "bytes": 4804
+    },
+    {
+      "path": "src/idt.rs",
+      "sha256": "b15f8ccba0cd7d1c0c857de5256f4613d795379a8cda5a5c202571bc485c6cd9",
+      "bytes": 7174
+    },
+    {
+      "path": "src/lib.rs",
+      "sha256": "bcf7fd9154684c40cf4837705fb0666fb221859f69111cd9c603b8cc138c272d",
+      "bytes": 1030
+    },
+    {
+      "path": "src/multiboot.rs",
+      "sha256": "7ff69002eec45aa7e27b673161587bd9fccea756e160b531e0f68ebd5b43b8ec",
+      "bytes": 8955
+    },
+    {
+      "path": "src/paging.rs",
+      "sha256": "de2679227be2c5627eb28cd8faa5e8541ef7bd5273c55c1dbba6ca6b60c76163",
+      "bytes": 12605
+    },
+    {
+      "path": "src/report.rs",
+      "sha256": "f20816a27c4f969e4d67c600849b717e8ab70c81c91c626dc88e1a1f766743bc",
+      "bytes": 1958
+    },
+    {
+      "path": "src/selftest.rs",
+      "sha256": "4bb3d1ab89f466df40825d69b6549b207d7671b1e7e5a097c8d989146b13fcc2",
+      "bytes": 4442
+    },
+    {
+      "path": "src/timer.rs",
+      "sha256": "aadb0929f447f9003d91de4f13b6d9d63fcd84babf570bd303609d39fae60b21",
+      "bytes": 2753
+    },
+    {
+      "path": "src/usermode.rs",
+      "sha256": "b6dfb8f2e01e9dc12b83fa3105070032e5fd362dfedf5bf0544a39beb15ea1ce",
+      "bytes": 1368
+    },
+    {
+      "path": "tests/desc_tests.rs",
+      "sha256": "67ea895d1848191dca3e666fd294a9c88bb46f54aceb4056354a8493e687071d",
+      "bytes": 5306
+    },
+    {
+      "path": "tests/expected/base.txt",
+      "sha256": "3877dea2b99a3ea031a1822d5b5ca8d9b3fb5e2f4884bb5be072f94b606bc925",
+      "bytes": 862
+    },
+    {
+      "path": "tests/expected/cpu-fault.txt",
+      "sha256": "850c69626b0c72de682e10af5f375637e0989b21936b53bfd0068c80864f5f3b",
+      "bytes": 172
+    },
+    {
+      "path": "tests/expected/magic-fault.txt",
+      "sha256": "29e65f129a9f0775c0f2411a621cc74a947eda30e4f73e7aaab454b27af34e51",
+      "bytes": 160
+    },
+    {
+      "path": "tests/expected/ring3-fault.txt",
+      "sha256": "ca8b566abbcce3762f85e76463bf226264d68c49512d0f6c536787a8241105ff",
+      "bytes": 472
+    },
+    {
+      "path": "tests/expected/ring3.txt",
+      "sha256": "5f395357efdd7f83e973dfb5f92f58f5794a8cd9eca525b79a7c1d4e26a5e0dd",
+      "bytes": 952
+    },
+    {
+      "path": "tests/expected/trap-fault.txt",
+      "sha256": "3c189839f61b9e4670edeb4ce13bf95b499d6d56deae00a29d80418524105d43",
+      "bytes": 280
+    },
+    {
+      "path": "tests/frames_tests.rs",
+      "sha256": "08457acd17dd247ae046d977b2c1d9e4a29f661916d121c3912e66c9445491d5",
+      "bytes": 4207
+    },
+    {
+      "path": "tests/idt_tests.rs",
+      "sha256": "47049d562147333dca9374c5f7961ed43d1ded5f6e3d57432b5eec4b4900bfe8",
+      "bytes": 7581
+    },
+    {
+      "path": "tests/multiboot_tests.rs",
+      "sha256": "2dc50969dea3a2f938721417620b09b09935abb06270f0fa5085665150e46810",
+      "bytes": 9873
+    },
+    {
+      "path": "tests/paging_tests.rs",
+      "sha256": "b6285f783779926b7e518b3edf849ea1402898befe692bc6f004a0c5e1f5b430",
+      "bytes": 11274
+    },
+    {
+      "path": "tests/selftest_tests.rs",
+      "sha256": "be2ef8bebf064144d5ee8a80ebbaafd7f6d5729bdf4dcb9cd96224b96362a0c3",
+      "bytes": 2921
+    },
+    {
+      "path": "tests/timer_usermode_tests.rs",
+      "sha256": "f4d1385cc45ce665b6bdf5a4579de16181ef526005d967947c89f6ed44933df5",
+      "bytes": 5276
+    }
+  ]
+}
