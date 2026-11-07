@@ -6,6 +6,7 @@
 
 #include <AK/Debug.h>
 #include <AK/StringBuilder.h>
+#include <LibCore/Directory.h>
 #include <LibCore/EventLoop.h>
 #include <LibCore/Notifier.h>
 #include <LibCore/System.h>
@@ -26,21 +27,6 @@ static constexpr char first_archive_path[] = "/var/log/system.log.1";
 static constexpr char second_archive_path[] = "/var/log/system.log.2";
 static constexpr size_t maximum_log_bytes = 1024 * 1024;
 static constexpr size_t maximum_record_bytes = 2048;
-
-static void rotate_if_needed(int fd, size_t incoming_size)
-{
-    struct stat status {};
-    if (fstat(fd, &status) < 0 || status.st_size < 0)
-        return;
-    auto current_size = static_cast<size_t>(status.st_size);
-    if (incoming_size > maximum_log_bytes || current_size <= maximum_log_bytes - incoming_size)
-        return;
-
-    close(fd);
-    (void)unlink(second_archive_path);
-    (void)rename(first_archive_path, second_archive_path);
-    (void)rename(log_path, first_archive_path);
-}
 
 static StringView severity_name(unsigned priority)
 {
@@ -63,6 +49,29 @@ static StringView severity_name(unsigned priority)
     }
 }
 
+static ErrorOr<void> rotate_if_needed(size_t incoming_size)
+{
+    struct stat status {};
+    if (stat(log_path, &status) < 0) {
+        if (errno == ENOENT)
+            return {};
+        return Error::from_errno(errno);
+    }
+    if (status.st_size < 0)
+        return Error::from_errno(EIO);
+    auto current_size = static_cast<size_t>(status.st_size);
+    if (incoming_size > maximum_log_bytes || current_size <= maximum_log_bytes - incoming_size)
+        return {};
+
+    if (unlink(second_archive_path) < 0 && errno != ENOENT)
+        return Error::from_errno(errno);
+    if (rename(first_archive_path, second_archive_path) < 0 && errno != ENOENT)
+        return Error::from_errno(errno);
+    if (rename(log_path, first_archive_path) < 0)
+        return Error::from_errno(errno);
+    return {};
+}
+
 static ErrorOr<void> append_record(StringView payload, unsigned priority)
 {
     auto now = time(nullptr);
@@ -74,27 +83,37 @@ static ErrorOr<void> append_record(StringView payload, unsigned priority)
     if (strftime(timestamp, sizeof(timestamp), "%Y-%m-%dT%H:%M:%SZ", &utc_time) == 0)
         return Error::from_errno(EOVERFLOW);
 
+    // syslog's ident is a bounded source prefix ending at ':'; the remainder is
+    // the message. Keep the two fields distinct in the stored record.
+    auto separator = payload.find(':');
+    StringView source = "unknown"sv;
+    StringView message = payload;
+    if (separator.has_value() && separator.value() > 0) {
+        source = payload.substring_view(0, separator.value());
+        message = payload.substring_view(separator.value() + 1).trim_whitespace(TrimWhitespace::Yes);
+    }
+
     StringBuilder line;
-    TRY(line.try_appendff("{} {} {}\n", timestamp, severity_name(priority), payload));
+    TRY(line.try_appendff("{} {} {} {}\n", timestamp, severity_name(priority), source, message));
     if (line.length() > maximum_record_bytes)
         return Error::from_errno(EMSGSIZE);
 
-    auto fd = open(log_path, O_WRONLY | O_APPEND | O_CREAT | O_CLOEXEC, 0640);
+    TRY(rotate_if_needed(line.length()));
+    int fd = open(log_path, O_WRONLY | O_APPEND | O_CREAT | O_CLOEXEC, 0644);
     if (fd < 0)
         return Error::from_errno(errno);
-    rotate_if_needed(fd, line.length());
-
-    // Rotation may have closed the original descriptor. Reopen append-only so
-    // the record always goes to the active bounded log, not an archived inode.
-    if (fcntl(fd, F_GETFD) < 0 && errno == EBADF)
-        fd = open(log_path, O_WRONLY | O_APPEND | O_CREAT | O_CLOEXEC, 0640);
-    if (fd < 0)
-        return Error::from_errno(errno);
+    if (fchmod(fd, 0644) < 0) {
+        auto error = errno;
+        close(fd);
+        return Error::from_errno(error);
+    }
 
     size_t written = 0;
     while (written < line.length()) {
-        auto rc = write(fd, line.string_view().substring_view(written).characters_without_null_termination(), line.length() - written);
+        auto rc = write(fd, line.string_view().characters_without_null_termination() + written, line.length() - written);
         if (rc < 0) {
+            if (errno == EINTR)
+                continue;
             auto error = errno;
             close(fd);
             return Error::from_errno(error);
@@ -117,11 +136,13 @@ static ErrorOr<void> append_record(StringView payload, unsigned priority)
 ErrorOr<int> serenity_main(Main::Arguments)
 {
     TRY(Core::System::pledge("stdio rpath wpath cpath dpath unix"));
-    TRY(Core::System::unveil("/tmp/portal", "rwc"));
-    TRY(Core::System::unveil("/var/log", "rwc"));
+    TRY(Core::System::unveil("/tmp", "rwc"sv));
+    TRY(Core::System::unveil("/var/log", "rwc"sv));
+
+    TRY(Core::Directory::create("/tmp/portal"sv, Core::Directory::CreateDirectories::Yes));
+    TRY(Core::Directory::create("/var/log"sv, Core::Directory::CreateDirectories::Yes));
     TRY(Core::System::unveil(nullptr, nullptr));
 
-    (void)mkdir("/var/log", 0755);
     (void)unlink(socket_path);
     int fd = TRY(Core::System::socket(AF_LOCAL, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0));
     ScopeGuard close_socket = [&] {
@@ -134,7 +155,9 @@ ErrorOr<int> serenity_main(Main::Arguments)
         return Error::from_errno(ENAMETOOLONG);
     memcpy(address.sun_path, socket_path, sizeof(socket_path));
     TRY(Core::System::bind(fd, reinterpret_cast<struct sockaddr const*>(&address), sizeof(address)));
-    TRY(Core::System::chmod(socket_path, 0660));
+    // Syslog is intentionally write-only for unprivileged senders. They may
+    // submit records but cannot read or replace the socket's log file.
+    TRY(Core::System::chmod(socket_path, 0622));
 
     Core::EventLoop event_loop;
     auto notifier = Core::Notifier::construct(fd, Core::Notifier::Type::Read);
@@ -150,6 +173,10 @@ ErrorOr<int> serenity_main(Main::Arguments)
             }
             if (received == 0)
                 return;
+            if (static_cast<size_t>(received) > maximum_record_bytes) {
+                warnln("SystemLog: rejecting oversized record");
+                continue;
+            }
 
             StringView record { buffer, static_cast<size_t>(received) };
             if (!record.starts_with("<"sv)) {
@@ -168,8 +195,6 @@ ErrorOr<int> serenity_main(Main::Arguments)
             }
 
             auto payload = record.substring_view(close_bracket.value() + 1);
-            // Avoid control characters and embedded newlines creating forged
-            // records in the persistent log.
             StringBuilder sanitized;
             for (auto ch : payload) {
                 if (ch == '\n' || ch == '\r' || ch == '\0')
@@ -178,7 +203,7 @@ ErrorOr<int> serenity_main(Main::Arguments)
                     sanitized.append(ch);
             }
             if (sanitized.is_empty())
-                sanitized.append("(empty message)"sv);
+                sanitized.append("unknown: (empty message)"sv);
 
             if (auto result = append_record(sanitized.string_view(), priority_value.value()); result.is_error())
                 warnln("SystemLog: unable to persist record: {}", result.error());
