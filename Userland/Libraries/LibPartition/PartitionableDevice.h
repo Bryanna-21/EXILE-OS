@@ -23,10 +23,8 @@ class PartitionableDevice {
 public:
 #ifdef KERNEL
     PartitionableDevice(Kernel::StorageDevice&);
-    // Userland doesn't get an implicit constructor.
 #endif
     PartitionableDevice(PartitionableDevice&&) = default;
-    // Unused, and "move out of reference" isn't well-defined anyway:
     PartitionableDevice& operator=(PartitionableDevice&&) = delete;
 
 #ifdef KERNEL
@@ -39,15 +37,17 @@ public:
     PartitionableDevice clone_unowned();
     ErrorOr<PartitionableDevice> clone_owned();
     size_t block_size() const;
+    u64 block_count() const;
     ErrorOr<void> read_block(size_t block_index, Bytes block_buffer);
 
 private:
 #ifdef KERNEL
     Kernel::StorageDevice& m_device;
 #else
-    explicit PartitionableDevice(MaybeOwned<Core::File>, size_t block_size);
+    explicit PartitionableDevice(MaybeOwned<Core::File>, size_t block_size, u64 block_count);
     MaybeOwned<Core::File> m_device_file;
     size_t m_block_size;
+    u64 m_block_count;
 #endif
 };
 

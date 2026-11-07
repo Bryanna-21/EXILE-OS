@@ -6,10 +6,6 @@
 
 #include <LibPartition/PartitionTable.h>
 
-#ifndef KERNEL
-#    include <sys/ioctl.h>
-#endif
-
 namespace Partition {
 
 PartitionTable::PartitionTable(PartitionableDevice&& device)
@@ -19,7 +15,7 @@ PartitionTable::PartitionTable(PartitionableDevice&& device)
 
 Optional<DiskPartitionMetadata> PartitionTable::partition(unsigned index) const
 {
-    if (index > partitions_count())
+    if (index >= partitions_count())
         return {};
     return m_partitions[index];
 }
