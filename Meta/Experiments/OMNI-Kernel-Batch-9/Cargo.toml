@@ -1,0 +1,15 @@
+[package]
+name = "omni-kernel-batch9"
+version = "0.9.0"
+edition = "2024"
+rust-version = "1.88"
+description = "Experimental OMNI-Kernel Batch 9: final integration. Joins the Batch 7 user-address contract to Batch 8 page tables and adds cross-batch end-to-end tests. Hosted only."
+publish = false
+
+[lib]
+name = "omni9"
+path = "src/lib.rs"
+
+[dependencies]
+omni-kernel-batch7 = { path = "../OMNI-Kernel-Batch-7" }
+omni-kernel-batch8 = { path = "../OMNI-Kernel-Batch-8" }

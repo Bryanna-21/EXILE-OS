@@ -1,0 +1,5 @@
+# Variant "magic-fault": the boot magic is corrupted. Exit status must be 35.
+# CONTAINS
+OMNI8 FAIL: boot magic
+FORBID OMNI8 BOOT: start
+FORBID OMNI8 TEST PASS
