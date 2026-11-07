@@ -8,15 +8,12 @@ build_dir = root / 'build'
 build_dir.mkdir(exist_ok=True)
 
 rustc = os.environ.get('EUK_HOST_RUSTC', 'rustc')
-subprocess.run(
-    [
-        rustc,
-        '--edition=2024',
-        '--test',
-        root / 'src/memory.rs',
-        '-o',
-        build_dir / 'memory-tests',
-    ],
-    check=True,
-)
-subprocess.run([build_dir / 'memory-tests'], check=True)
+for source, output in [
+    (root / 'src/memory.rs', build_dir / 'memory-tests'),
+    (root / 'src/platform.rs', build_dir / 'platform-tests'),
+]:
+    subprocess.run(
+        [rustc, '--edition=2024', '--test', source, '-o', output],
+        check=True,
+    )
+    subprocess.run([output], check=True)

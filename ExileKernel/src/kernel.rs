@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 mod memory;
+mod platform;
 use core::arch::asm;
 use core::panic::PanicInfo;
 use memory::{Region, parse_map};
@@ -56,6 +57,9 @@ unsafe fn read32(address: usize) -> u32 {
 #[unsafe(no_mangle)]
 pub extern "C" fn kernel_main(magic: u32, info: u32) -> ! {
     serial("EUK: x86-64 long mode\n");
+    serial("EUK platform profile: ");
+    serial(platform::architecture_name());
+    serial("\n");
     if magic != 0x2badb002 {
         fail("boot magic");
     }
