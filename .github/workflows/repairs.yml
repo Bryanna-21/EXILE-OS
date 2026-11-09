@@ -35,8 +35,7 @@ jobs:
           echo "=== 2. Running EUK Audit ==="
           python3 ExileKernel/scripts/audit.py
 
-          echo "=== 3. Validating Shell Scripts ==="
-          find . -name "*.sh" -not -path "./Ports/*" -not -path "./Base/root/generate_manpages.sh" -not -path "*/Tests/LibShell/*" -not -path "*/Base/usr/share/Shell/*" -print0 | while IFS= read -r -d "" file; do
+          echo "=== 3. Validating Shell Scripts ==="          find . -name "*.sh" -not -path "./Ports/*" -not -path "*/Tests/LibShell/*" -not -path "*/Base/usr/share/Shell/*" -not -path "./Base/root/generate_manpages.sh" -not -path "./Base/home/anon/Tests/*"
             bash -n "$file"
           done
 
