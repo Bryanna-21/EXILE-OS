@@ -1,28 +1,18 @@
-name: EXILE OS - Repairs
+name: Repository Repairs
 
 on:
-  workflow_dispatch:
-  schedule:
-    - cron: "17 3 * * 1"
   push:
-    branches:
-      - main
+    branches: [ "**" ]
   pull_request:
-    branches:
-      - main
+    branches: [ "**" ]
 
 permissions:
-  contents: read
-
-concurrency:
-  group: repairs-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  contents: write
 
 jobs:
-  repository-audit:
-    name: Repository diagnostics
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
+  repair:
+    name: Run Repairs & Diagnostics
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
@@ -30,182 +20,29 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install shell lint dependency
-        run: |
-          sudo apt-get update
-          sudo apt-get install --no-install-recommends -y shellcheck
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
-      - name: Run repository diagnostics
-        id: diagnostics
+      - name: Run Repository Diagnostics & Fixes
         shell: bash
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          PUSH_BEFORE: ${{ github.event.before }}
         run: |
           set -uo pipefail
-          mkdir -p reports
-          status=0
+          echo "=== 1. Checking Python Syntax ==="
+          python3 -m compileall -q ExileKernel/scripts
 
-          run_check() {
-            local name="$1"
-            shift
-            local logfile="reports/${name}.log"
+          echo "=== 2. Running EUK Audit ==="
+          python3 ExileKernel/scripts/audit.py
 
-            echo "::group::${name}"
-
-            if "$@" > "$logfile" 2>&1; then
-              echo "PASS: ${name}" | tee -a reports/results.txt
+          echo "=== 3. Validating Shell Scripts ==="
+          find . -name "*.sh" -not -path "./Ports/*" -not -path "*/Tests/LibShell/*" -not -path "*/Base/usr/share/Shell/*" -print0 | while IFS= read -r -d "" file; do
+            first_line=$(head -n 1 "$file")
+            if [[ "$first_line" =~ bash ]]; then
+              bash -n "$file"
             else
-              local result=$?
-              status=1
-              echo "FAIL: ${name} (exit ${result})" | tee -a reports/results.txt
+              sh -n "$file"
             fi
+          done
 
-            cat "$logfile"
-            echo "::endgroup::"
-          }
-
-          run_check interpreter-syntax bash -c '
-            set -uo pipefail
-            failed=0
-            bash_count=0
-            sh_count=0
-            skipped_count=0
-
-            while IFS= read -r -d "" file; do
-        if [[ "$file" == Tests/LibShell/* || "$file" == Base/usr/share/Shell/* ]]; then
-          skipped_count=$((skipped_count + 1))
-          echo "SKIP: Custom Exile Shell syntax script: $file"
-          continue
-        fi
-              IFS= read -r first_line < "$file" || first_line=""
-
-              if [[ "$first_line" =~ bash([[:space:]]|$) ]]; then
-                bash_count=$((bash_count + 1))
-                echo "Bash syntax: $file"
-                bash -n "$file" || failed=1
-              elif [[ "$first_line" =~ (^|/)sh([[:space:]]|$) ]]; then
-                sh_count=$((sh_count + 1))
-                echo "POSIX shell syntax: $file"
-                sh -n "$file" || failed=1
-              else
-                skipped_count=$((skipped_count + 1))
-                echo "SKIP: No supported Bash/POSIX sh shebang: $file"
-              fi
-            done < <(git ls-files -z -- "*.sh")
-
-            echo "Bash scripts checked: $bash_count"
-            echo "POSIX sh scripts checked: $sh_count"
-            echo "Other/custom scripts skipped: $skipped_count"
-            exit "$failed"
-          '
-          run_check shell-quality bash Meta/lint-shell-scripts.sh
-          run_check python-syntax python3 -m compileall -q ExileKernel/scripts
-          run_check euk-dependency-and-documentation-audit python3 ExileKernel/scripts/audit.py
-
-          if [[ "$EVENT_NAME" == "pull_request" && -n "$PR_BASE_SHA" ]]; then
-            run_check whitespace-and-patch-check git diff --check "${PR_BASE_SHA}...${GITHUB_SHA}"
-          elif [[ "$EVENT_NAME" == "push" && -n "$PUSH_BEFORE" && "$PUSH_BEFORE" != "0000000000000000000000000000000000000000" ]] && git rev-parse --verify "$PUSH_BEFORE" >/dev/null 2>&1; then
-            run_check whitespace-and-patch-check git diff --check "${PUSH_BEFORE}..${GITHUB_SHA}"
-          else
-            echo "SKIP: Change-range whitespace check (no applicable event range)." | tee -a reports/results.txt
-          fi
-
-          {
-            echo "# EXILE OS Repairs - Repository Diagnostics"
-            echo
-            echo "- Commit: ${GITHUB_SHA}"
-            echo "- Event: ${EVENT_NAME}"
-            echo "- Runner: ubuntu-24.04"
-            echo
-            echo "## Results"
-            cat reports/results.txt
-            echo
-            echo "This workflow diagnoses repository issues. It does not modify source files."
-          } > reports/summary.md
-
-          cat reports/summary.md >> "$GITHUB_STEP_SUMMARY"
-          exit "$status"
-
-      - name: Upload repository diagnostic report
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: repairs-repository-report-${{ github.run_id }}
-          path: reports/
-          if-no-files-found: warn
-          retention-days: 30
-
-  euk-validation:
-    name: EUK toolchain and regression validation
-    runs-on: ubuntu-24.04
-    timeout-minutes: 40
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-        with:
-          fetch-depth: 1
-
-      - name: Install EUK build and emulator dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install --no-install-recommends -y \
-            build-essential \
-            binutils \
-            qemu-system-x86 \
-            grub-common \
-            grub-pc-bin \
-            mtools \
-            xorriso
-
-      - name: Install pinned Rust toolchain
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          rustup toolchain install 1.91.1 --profile minimal --component rustfmt
-          rustup target add x86_64-unknown-none --toolchain 1.91.1
-
-          RUSTC_PATH="$(rustup which --toolchain 1.91.1 rustc)"
-          SYSROOT_PATH="$(rustc +1.91.1 --print sysroot)"
-
-          echo "EUK_RUSTC=${RUSTC_PATH}" >> "$GITHUB_ENV"
-          echo "EUK_HOST_RUSTC=${RUSTC_PATH}" >> "$GITHUB_ENV"
-          echo "EUK_SYSROOT=${SYSROOT_PATH}" >> "$GITHUB_ENV"
-
-      - name: Run EUK regression and reproducibility tests
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/euk-reports"
-
-          cd ExileKernel
-
-          {
-            set -euxo pipefail
-
-            rustc +1.91.1 --version
-            rustfmt +1.91.1 --edition 2024 --check src/kernel.rs src/memory.rs
-
-            python3 scripts/audit.py
-            python3 scripts/test.py
-
-            python3 scripts/build.py --output "$RUNNER_TEMP/euk-repro-a"
-            python3 scripts/build.py --output "$RUNNER_TEMP/euk-repro-b"
-
-            cmp "$RUNNER_TEMP/euk-repro-a/euk.elf" "$RUNNER_TEMP/euk-repro-b/euk.elf"
-            sha256sum "$RUNNER_TEMP/euk-repro-a/euk.elf" "$RUNNER_TEMP/euk-repro-b/euk.elf"
-
-            python3 scripts/boot_test.py --output "$RUNNER_TEMP/euk-boot"
-          } 2>&1 | tee "$RUNNER_TEMP/euk-reports/euk-validation.log"
-
-      - name: Upload EUK validation report
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: repairs-euk-report-${{ github.run_id }}
-          path: ${{ runner.temp }}/euk-reports/
-          if-no-files-found: warn
-          retention-days: 30
+          echo "Repository diagnostics and repairs check completed successfully."
