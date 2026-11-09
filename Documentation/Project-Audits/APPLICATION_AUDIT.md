@@ -42,7 +42,6 @@ Columns: *Src* present in source; *Reg* registered in CMake; *.af* launcher entr
 | ExileStore | Applications | Y | N | 12982 | 0 | 1/3 | app-help |
 | FileManager | Applications | Y | Y | 4753 | 9 | 2/0 | app-file-manager |
 | FontEditor | Applications | Y | Y | 2751 | 1 | 1/3 | app-font-editor |
-| GamesSettings | Applications | Y | Y | 810 | 0 | 1/5 | games |
 | Help | Applications | Y | Y | 836 | 1 | 1/6 | app-help |
 | HexEditor | Applications | Y | Y | 4078 | 13 | 1/3 | app-hex-editor |
 | ImageViewer | Applications | Y | Y | 984 | 4 | 1/6 | app-image-viewer |
@@ -90,19 +89,6 @@ Columns: *Src* present in source; *Reg* registered in CMake; *.af* launcher entr
 | HackStudio | DevTools | Y | Y | 10376 | 13 | 5/4 | app-hack-studio |
 | Profiler | DevTools | Y | Y | 4370 | 7 | 0/0 | app-profiler |
 | SQLStudio | DevTools | Y | Y | 864 | 0 | 0/0 | app-sql-studio |
-| BrickGame | Games | Y | Y | 855 | 2 | 2/3 | app-brickgame |
-| Chess | Games | Y | Y | 2050 | 7 | 1/7 | app-chess |
-| ColorLines | Games | Y | Y | 1076 | 0 | 2/3 | app-colorlines |
-| FlappyBug | Games | Y | Y | 424 | 0 | 2/3 | app-flappybug |
-| Flood | Games | Y | Y | 749 | 1 | 2/3 | app-flood |
-| GameOfLife | Games | Y | Y | 1072 | 0 | 2/3 | app-gameoflife |
-| Hearts | Games | Y | Y | 1697 | 2 | 2/4 | app-hearts |
-| MasterWord | Games | Y | Y | 603 | 1 | 2/4 | app-masterword |
-| Minesweeper | Games | Y | Y | 1192 | 1 | 2/3 | app-minesweeper |
-| Snake | Games | Y | Y | 984 | 0 | 2/3 | app-snake |
-| Solitaire | Games | Y | Y | 1294 | 0 | 2/3 | app-solitaire |
-| Spider | Games | Y | Y | 958 | 0 | 2/3 | app-spider |
-| TwentyFourtyEight | Games | Y | Y | 1218 | 0 | 2/3 | app-2048 |
 
 ## 2. Build and runtime verification matrix
 
@@ -241,7 +227,6 @@ Still **not** done (blocked by missing OS infrastructure, not faked): installing
 * **FontEditor** (`Userland/Applications/FontEditor`, 2751 LOC): built/runtime unverified. Flags: 14 'serenity' mentions; no man page found; no tests found. Recommendation: KEEP pending deeper review. Features, UX and accessibility: *not assessed*.
 * **GMLPlayground** (`Userland/DevTools/GMLPlayground`, 507 LOC): built/runtime unverified. Flags: 12 'serenity' mentions; no man page found; no tests found. Recommendation: KEEP pending deeper review. Features, UX and accessibility: *not assessed*.
 * **GameOfLife** (`Userland/Games/GameOfLife`, 1072 LOC): built/runtime unverified. Flags: 10 'serenity' mentions; no tests found. Recommendation: KEEP pending deeper review. Features, UX and accessibility: *not assessed*.
-* **GamesSettings** (`Userland/Applications/GamesSettings`, 810 LOC): built/runtime unverified. Flags: 8 'serenity' mentions; no man page found; no tests found. Recommendation: KEEP pending deeper review. Features, UX and accessibility: *not assessed*.
 * **Gradient** (`Userland/Demos/Gradient`, 111 LOC): built/runtime unverified. Flags: 2 'serenity' mentions; no man page found; no tests found. Recommendation: KEEP pending deeper review. Features, UX and accessibility: *not assessed*.
 * **Hearts** (`Userland/Games/Hearts`, 1697 LOC): built/runtime unverified. Flags: 16 'serenity' mentions; no tests found. Recommendation: KEEP pending deeper review. Features, UX and accessibility: *not assessed*.
 * **Help** (`Userland/Applications/Help`, 836 LOC): built/runtime unverified. Flags: 14 'serenity' mentions; no man page found; no tests found. Recommendation: KEEP pending deeper review. Features, UX and accessibility: *not assessed*.

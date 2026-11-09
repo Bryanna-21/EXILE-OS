@@ -10,7 +10,6 @@ Note that many applications can be disabled at Exile OS build time if desired. T
 
 ## See also
 
--   Documentation for Exile OS Games in section 6
 
 ### List of Application manpages
 

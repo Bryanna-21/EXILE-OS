@@ -68,7 +68,7 @@ Sizes are the line counts described in section 1. "Tests" counts files under `Te
 | CrashDaemon | 48 | Works (inherited) | Coredump collection |
 | FileSystemAccessServer, FileOperation, Clipboard | 240 / 376 / 210 | Works (inherited) | |
 | RequestServer, WebContent, WebWorker, WebDriver, ImageDecoder | | Works (inherited) | Browser engine support |
-| SSHServer, TelnetServer, WebServer, EchoServer, SpiceAgent, SQLServer, ChessEngine | | Works (inherited) | Not core to the boot path |
+| SSHServer, TelnetServer, WebServer, EchoServer, SpiceAgent, SQLServer | | Works (inherited) | Not core to the boot path |
 
 Missing as services (nothing found by path or content search): a system log service (only `Userland/Libraries/LibC/syslog.h`), a health or diagnostics monitor, a time-synchronisation service (only the one-shot tool `Userland/Utilities/ntpquery.cpp`), a firewall or packet filter, a Wi-Fi manager, a connection monitor, an update service, a storage monitor or disk-error reporter, a unified session and permission service. `Base/etc/` holds flat configuration files: `SystemServer.ini`, `Network.ini`, `fstab`, `passwd`, `shadow`, `group`, `timezone`.
 

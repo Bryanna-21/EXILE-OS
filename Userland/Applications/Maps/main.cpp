@@ -118,7 +118,7 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     favorites_panel->load_favorites();
     main_widget.insert_child_before(favorites_panel, map_widget);
 
-    auto favorites_icon = TRY(Gfx::Bitmap::load_from_uri("resource://icons/16x16/app-hearts.png"sv));
+    auto favorites_icon = TRY(Gfx::Bitmap::load_from_uri("resource://icons/16x16/bookmark-filled.png"sv));
     map_widget.add_context_menu_action(GUI::Action::create(
         "Add to &Favorites", favorites_icon, [favorites_panel, &map_widget](auto&) {
             favorites_panel->add_favorite({ "Unnamed place"_string, map_widget.context_menu_latlng(), map_widget.zoom() });

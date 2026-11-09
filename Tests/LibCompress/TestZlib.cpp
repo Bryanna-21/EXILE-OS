@@ -48,7 +48,7 @@ TEST_CASE(zlib_compress_simple)
 
 TEST_CASE(zlib_decompress_with_missing_end_bits)
 {
-    // This test case has been extracted from compressed PNG data of `/res/icons/16x16/app-masterword.png`.
+    // This test case has been extracted from compressed PNG data of a game icon.
     // The decompression results have been confirmed using the `zlib-flate` tool.
     // Note: It is unconfirmed whether there are actually bits missing.
     //       However, our decompressor implementation ends up in a weird state nonetheless.
