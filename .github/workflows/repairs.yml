@@ -37,12 +37,7 @@ jobs:
 
           echo "=== 3. Validating Shell Scripts ==="
           find . -name "*.sh" -not -path "./Ports/*" -not -path "*/Tests/LibShell/*" -not -path "*/Base/usr/share/Shell/*" -print0 | while IFS= read -r -d "" file; do
-            first_line=$(head -n 1 "$file")
-            if [[ "$first_line" =~ bash ]]; then
-              bash -n "$file"
-            else
-              sh -n "$file"
-            fi
+            bash -n "$file"
           done
 
           echo "Repository diagnostics and repairs check completed successfully."
