@@ -74,6 +74,11 @@ jobs:
             skipped_count=0
 
             while IFS= read -r -d "" file; do
+        if [[ "$file" == Tests/LibShell/* || "$file" == Base/usr/share/Shell/* ]]; then
+          skipped_count=$((skipped_count + 1))
+          echo "SKIP: Custom Exile Shell syntax script: $file"
+          continue
+        fi
               IFS= read -r first_line < "$file" || first_line=""
 
               if [[ "$first_line" =~ bash([[:space:]]|$) ]]; then
@@ -101,7 +106,7 @@ jobs:
 
           if [[ "$EVENT_NAME" == "pull_request" && -n "$PR_BASE_SHA" ]]; then
             run_check whitespace-and-patch-check git diff --check "${PR_BASE_SHA}...${GITHUB_SHA}"
-          elif [[ "$EVENT_NAME" == "push" && -n "$PUSH_BEFORE" && "$PUSH_BEFORE" != "0000000000000000000000000000000000000000" ]]; then
+          elif [[ "$EVENT_NAME" == "push" && -n "$PUSH_BEFORE" && "$PUSH_BEFORE" != "0000000000000000000000000000000000000000" ]] && git rev-parse --verify "$PUSH_BEFORE" >/dev/null 2>&1; then
             run_check whitespace-and-patch-check git diff --check "${PUSH_BEFORE}..${GITHUB_SHA}"
           else
             echo "SKIP: Change-range whitespace check (no applicable event range)." | tee -a reports/results.txt
