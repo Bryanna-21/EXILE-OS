@@ -67,7 +67,7 @@ install() {
     )
 
     for puzzle in blackbox bridges cube dominosa fifteen filling flip flood galaxies guess inertia keen lightup loopy magnets map mines mosaic net netslide palisade pattern pearl pegs range rect samegame signpost singles sixteen slant solo tents towers tracks twiddle undead unequal unruly untangle; do
-        install_launcher "$puzzle" "&Games/Puzzles" "/usr/local/bin/$puzzle" ""
+        install_launcher "$puzzle" "&Utilities" "/usr/local/bin/$puzzle" ""
         install_icon "host-build/icons/${puzzle}.ico" "/usr/local/bin/$puzzle"
     done
 }
