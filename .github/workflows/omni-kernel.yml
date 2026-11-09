@@ -1,0 +1,33 @@
+# OMNI kernel experiments: hosted tests and conformance checks. Authored without the ability to run GitHub Actions;
+# only the YAML syntax was checked. The QEMU jobs are best-effort and are allowed to report NOT RUN.
+name: omni-kernel
+on:
+  pull_request:
+    paths:
+      - "Meta/Experiments/OMNI-Kernel-Batch-*/**"
+      - ".github/workflows/omni-kernel.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  hosted:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Zig
+        run: |
+          sudo snap install zig --classic --beta || true
+          zig version
+      - name: Rust toolchain
+        run: rustup toolchain install stable --profile minimal -c clippy,rustfmt && rustup default stable
+      - name: Verify Batch 11
+        run: bash Meta/Experiments/OMNI-Kernel-Batch-11/scripts/verify.sh
+  qemu-x86:
+    runs-on: ubuntu-24.04
+    needs: hosted
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y qemu-system-x86 grub-pc-bin grub-common xorriso mtools
+      - run: python3 Meta/Experiments/OMNI-Kernel-Batch-11/scripts/qemu_x86_q35.py

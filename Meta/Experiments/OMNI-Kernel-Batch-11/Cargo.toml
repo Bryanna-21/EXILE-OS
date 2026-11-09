@@ -1,0 +1,20 @@
+[package]
+name = "omni-kernel-batch11"
+version = "0.11.0"
+edition = "2024"
+rust-version = "1.88"
+description = "Experimental OMNI-Kernel Batch 11: enforced capabilities and channel IPC for the Rust kernel (Batch 7 scheduler), syscalls 0x100..0x107. Hosted tests only."
+publish = false
+
+[lib]
+name = "omni11"
+path = "src/lib.rs"
+
+[dependencies]
+omni-kernel-batch7 = { path = "../OMNI-Kernel-Batch-7" }
+omni-kernel-batch10 = { path = "../OMNI-Kernel-Batch-10" }
+
+[dev-dependencies]
+# Test fixtures (software page tables, scheduler helpers) come from Batch 9 and 8.
+omni-kernel-batch8 = { path = "../OMNI-Kernel-Batch-8" }
+omni-kernel-batch9 = { path = "../OMNI-Kernel-Batch-9" }
