@@ -329,8 +329,9 @@ void QuickLaunchWidget::load_entries(bool save)
         }
     } else {
         // Default entries when no config is found
-        config_entries.append({ 0, "Browser.af" });
-        config_entries.append({ 1, "FileManager.af" });
+        // Must name launcher files that exist in Base/res/apps (checked by Meta/lint-app-launchers.py).
+        config_entries.append({ 0, "Bridgeline.af" });
+        config_entries.append({ 1, "XFiles.af" });
         config_entries.append({ 2, "Terminal.af" });
         config_entries.append({ 3, "TextEditor.af" });
     }

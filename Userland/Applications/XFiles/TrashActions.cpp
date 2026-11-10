@@ -23,7 +23,8 @@ static void show_trash_unavailable(GUI::Window* window, Error const& error)
 static ByteString trash_name_for_path(FileSystem::Trash const& trash, ByteString const& path)
 {
     LexicalPath lexical { path };
-    if (lexical.dirname() != trash.files_directory().view())
+    auto const files_directory = trash.files_directory();
+    if (lexical.dirname() != files_directory.view())
         return {};
     return lexical.basename();
 }
