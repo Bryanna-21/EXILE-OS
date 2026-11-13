@@ -1,6 +1,6 @@
 # Exile OS — Application Audit (read-only)
 
-Status: **proposed draft**. Does not overwrite the six existing documents in this folder. No source change in the OS tree was committed; one optional patch is supplied separately (`patches/`).
+Status: **proposed draft**. Does not overwrite the six existing documents in this folder. No source change in the OS tree was committed; one optional patch is supplied separately (`Meta/Patches/`).
 
 ## 0. Method and honesty statement
 
