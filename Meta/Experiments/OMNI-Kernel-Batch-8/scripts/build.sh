@@ -8,7 +8,7 @@
 # assembly stubs using GNU ld and a custom linker script. When a bare-metal target is
 # available, pass --target x86_64-unknown-none and the same flags apply.
 #
-# usage: build.sh [--variant base|ring3|ring3-fault|trap-fault|magic-fault|cpu-fault]
+# usage: build.sh [--variant base|ring3|preempt|ring3-fault|trap-fault|magic-fault|cpu-fault]
 #                 [--test-exit] [--profile release|debug] [--out DIR] [--target TRIPLE]
 # Output: DIR/kernel.elf (ELF64), DIR/kernel32.elf (ELF32 copy for qemu -kernel),
 #         DIR/build-info.txt
@@ -39,6 +39,7 @@ RUSTCFG=(); ASMDEF=()
 case "$VARIANT" in
     base) ;;
     ring3) RUSTCFG+=(--cfg omni8_ring3) ;;
+    preempt) RUSTCFG+=(--cfg omni8_preempt) ;;
     ring3-fault) RUSTCFG+=(--cfg omni8_ring3 --cfg omni8_user_fault) ;;
     trap-fault) RUSTCFG+=(--cfg omni8_fault_trap) ;;
     magic-fault) ASMDEF+=(-DFAULT_MAGIC) ;;
@@ -52,7 +53,7 @@ case "$PROFILE" in
     *) echo "build.sh: unknown profile: $PROFILE" >&2; exit 2 ;;
 esac
 
-CHECKCFG=(--check-cfg 'cfg(test_exit)' --check-cfg 'cfg(omni8_ring3)' --check-cfg 'cfg(omni8_user_fault)' --check-cfg 'cfg(omni8_fault_trap)')
+CHECKCFG=(--check-cfg 'cfg(test_exit)' --check-cfg 'cfg(omni8_ring3)' --check-cfg 'cfg(omni8_preempt)' --check-cfg 'cfg(omni8_user_fault)' --check-cfg 'cfg(omni8_fault_trap)')
 COMMON=(--edition 2024 -C panic=abort -C relocation-model=static -C no-redzone=yes -C debuginfo=0
         -C codegen-units=1 -C embed-bitcode=no "${OPT[@]}" --remap-path-prefix "$ROOT=." --remap-path-prefix "$B7=../OMNI-Kernel-Batch-7"
         -L "dependency=$OUT")

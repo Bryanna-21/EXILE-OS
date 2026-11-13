@@ -9,4 +9,4 @@ This directory contains the experimental OMNI-Kernel Batch 8 package.
 - **Not integrated** into `ExileKernel/` or `Kernel/` and not part of the Exile OS build. Neither was modified, nor were
   Batches 1 to 7.
 - Built with rustc 1.97.0 for the host target as a documented fallback, not the 1.91.1 that ExileKernel pins.
-- No preemption, no SMP, no ARM64. Syscall numbers remain provisional and the register convention differs from `Kernel/`.
+- No asynchronous preemption (safe-point preemption requests exist in the `preempt` variant, not booted), no SMP, no ARM64. Syscall numbers remain provisional and the register convention differs from `Kernel/`.

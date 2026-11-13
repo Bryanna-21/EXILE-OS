@@ -2,7 +2,7 @@
   "manifest_schema_version": "1.0",
   "package_name": "OMNI-Kernel-Batch-8",
   "batch_id": "batch-8",
-  "batch_scope": "x86-64 bare-metal kernel image (Multiboot v1), GDT/TSS/IDT, W^X paging, frame allocator, timer test, scheduler scenario on Batch 7, optional ring-3/SYSCALL stage, hosted tests, QEMU scripts. Built and statically checked; never booted; QEMU tests NOT RUN; host-target toolchain fallback; no preemption, no SMP, no ARM64; not integrated into ExileKernel/ or Kernel/.",
+  "batch_scope": "x86-64 bare-metal kernel image (Multiboot v1), GDT/TSS/IDT, W^X paging, frame allocator, timer test, scheduler scenario on Batch 7, optional ring-3/SYSCALL stage, hosted tests, QEMU scripts. Built and statically checked; never booted; QEMU tests NOT RUN; host-target toolchain fallback; no asynchronous preemption (safe-point preemption in the preempt variant, hosted-tested only), no SMP, no ARM64; not integrated into ExileKernel/ or Kernel/.",
   "checksum_algorithm": "SHA-256",
   "checksum_statement": "Checksums and byte sizes cover the exact bytes of each listed file; manifest.json does not list itself.",
   "files": [
@@ -18,18 +18,18 @@
     },
     {
       "path": "EXILE-OS-STATUS.md",
-      "sha256": "733ed0ebc5763773d1844e201ec16035416bd7cd224be07ad788ca52b0277753",
-      "bytes": 901
+      "sha256": "62c4401d83453085faa98f55aed4d58f6f3ad469260dac03e70c23fc1e24a1dd",
+      "bytes": 990
     },
     {
       "path": "README.md",
-      "sha256": "147a6febb83e7470363dde23efa520722fedc6fbd58aeea04516b17509f500be",
-      "bytes": 2828
+      "sha256": "a5904f0c6457495794b851b2f162fddee1b269dbcce243300929896faddd9359",
+      "bytes": 2953
     },
     {
       "path": "REPORT.md",
-      "sha256": "572d0b73a1ff88cbdaf2b7e6da33941aedcbd20881cbfda18e8cbf343d0f63ec",
-      "bytes": 4421
+      "sha256": "765697351d8c7b31837662d5b37438499d64960c96d8ad3dbf832d083dc2f7c1",
+      "bytes": 4737
     },
     {
       "path": "arch/x86_64/boot.S",
@@ -83,8 +83,8 @@
     },
     {
       "path": "docs/SCHEDULER.md",
-      "sha256": "b2d28c48bda46b6207ab386bbce46cdddd60d9997f062a4312cae7059a77bc88",
-      "bytes": 1982
+      "sha256": "edc8d5283168cd2f74b67995c96b9e459d199be401da65bf78c9531b30d3e94d",
+      "bytes": 2528
     },
     {
       "path": "docs/SECURITY.md",
@@ -108,8 +108,8 @@
     },
     {
       "path": "kernel/main.rs",
-      "sha256": "82fa1b1c8c97c861f50a596e908ec79b1fdb72a7a900e20474a22e92e5d2cb24",
-      "bytes": 32291
+      "sha256": "4547ea7109f88fa36b0865adfbf64cfbd9dcdcbb6e5f67420a15ee8ab9949feb",
+      "bytes": 35791
     },
     {
       "path": "link/linker.ld",
@@ -118,8 +118,8 @@
     },
     {
       "path": "scripts/build.sh",
-      "sha256": "ea6fea8f8fd31d20479147692bf34c118324daedbf927e910bc9118b7eeaaa80",
-      "bytes": 4169
+      "sha256": "5ca5ee8dd4be91b8acf5610681e30063f1c6711ae16f06bfcc8bdab3de38276c",
+      "bytes": 4257
     },
     {
       "path": "scripts/check_asm.py",
@@ -138,13 +138,13 @@
     },
     {
       "path": "scripts/qemu_test.py",
-      "sha256": "fd83a0d0f3c017e94e6ed82f1ac63a0dabe25b60f1982749ac692eeed3980753",
-      "bytes": 9317
+      "sha256": "a14f1cf53223db49de6361c7e51602216137de5b53f08fa737524d71281cfdcd",
+      "bytes": 9358
     },
     {
       "path": "scripts/verify.sh",
-      "sha256": "2e2a89ddcc9b6a6fcca68d2d36c1dea6ecc9642a2de8e3dd9bf4f26e2146280e",
-      "bytes": 13679
+      "sha256": "ed216be5ef95a7f5b4b499e79ea0af9229bf50190af9233998abb85b7fef5013",
+      "bytes": 13722
     },
     {
       "path": "src/desc.rs",
@@ -163,8 +163,8 @@
     },
     {
       "path": "src/lib.rs",
-      "sha256": "bcf7fd9154684c40cf4837705fb0666fb221859f69111cd9c603b8cc138c272d",
-      "bytes": 1030
+      "sha256": "8c902cf92e33c6eb6eb7cf02f57290b6934167a1c918490bc4c3eed4a7331f6a",
+      "bytes": 1047
     },
     {
       "path": "src/multiboot.rs",
@@ -177,14 +177,19 @@
       "bytes": 12605
     },
     {
+      "path": "src/preempt.rs",
+      "sha256": "e963d816e1e57e5780e4f23cc4313a30b36e932a2ac91350cdecf5cd39573eb7",
+      "bytes": 3697
+    },
+    {
       "path": "src/report.rs",
       "sha256": "f20816a27c4f969e4d67c600849b717e8ab70c81c91c626dc88e1a1f766743bc",
       "bytes": 1958
     },
     {
       "path": "src/selftest.rs",
-      "sha256": "4bb3d1ab89f466df40825d69b6549b207d7671b1e7e5a097c8d989146b13fcc2",
-      "bytes": 4442
+      "sha256": "50b635ed5bbbec9acad8eb4c6b11916ce88568cd42199d2a62bee708003842ee",
+      "bytes": 8711
     },
     {
       "path": "src/timer.rs",
@@ -215,6 +220,11 @@
       "path": "tests/expected/magic-fault.txt",
       "sha256": "29e65f129a9f0775c0f2411a621cc74a947eda30e4f73e7aaab454b27af34e51",
       "bytes": 160
+    },
+    {
+      "path": "tests/expected/preempt.txt",
+      "sha256": "b67c60b261cf47f08feaed55fb725e0246eee1401403abf9cddb80f1e388d799",
+      "bytes": 905
     },
     {
       "path": "tests/expected/ring3-fault.txt",
@@ -252,9 +262,14 @@
       "bytes": 11274
     },
     {
+      "path": "tests/preempt_tests.rs",
+      "sha256": "897be8a9d3baa37f5136b5155c5304a78b911e9ccbadd59cb90e60bed6faebf3",
+      "bytes": 1949
+    },
+    {
       "path": "tests/selftest_tests.rs",
-      "sha256": "be2ef8bebf064144d5ee8a80ebbaafd7f6d5729bdf4dcb9cd96224b96362a0c3",
-      "bytes": 2921
+      "sha256": "acbc50409f1fcad09aaeba6e7539e777ffd4358c7e33164513351feea7609e66",
+      "bytes": 4780
     },
     {
       "path": "tests/timer_usermode_tests.rs",

@@ -10,7 +10,15 @@ switches into threads 12 (three threads times four slices); every thread slot mu
 function runs in the hosted tests on the real Batch 7 assembly (`selftest_tests`) and in the kernel after paging is on.
 A second run on a full log is detected as a failure.
 
-## No preemption
+## No asynchronous preemption
+
+A `preempt` variant adds *deferred* preemption: `src/preempt.rs`. The timer interrupt only does lock-free time-slice
+accounting (it must not take the scheduler lock, which the interrupted thread may hold); a thread honours the raised
+request at a safe point by calling `Sched::yield_now`. A thread that never reaches a safe point is never preempted.
+Hosted tests run this on the real Batch 7 scheduler with a simulated tick source; the booted behaviour (real PIT
+ticks) is untested until the CI boot job has run.
+
+### Original text
 
 The timer handler counts ticks and sends EOI. It never calls the scheduler and never switches context. Interrupts are
 enabled only for the bounded timer test, then disabled again with every IRQ masked. Preemption would need per-thread

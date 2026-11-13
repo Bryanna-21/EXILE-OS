@@ -19,6 +19,7 @@ pub mod frames;
 pub mod idt;
 pub mod multiboot;
 pub mod paging;
+pub mod preempt;
 pub mod report;
 pub mod selftest;
 pub mod timer;

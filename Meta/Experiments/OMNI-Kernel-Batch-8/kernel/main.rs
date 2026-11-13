@@ -5,6 +5,7 @@
 //! see REPORT.md. Build-time `--cfg` switches:
 //!   test_exit        exit QEMU through isa-debug-exit (0x10 -> status 33, 0x11 -> status 35)
 //!   omni8_ring3      also run the ring-3 / SYSCALL stage
+//!   omni8_preempt    also run the tick-driven preemption stage (real PIT ticks, two kernel threads)
 //!   omni8_user_fault (with omni8_ring3) run the ring-3 program that must fault
 //!   omni8_fault_trap deliberately take an unexpected #UD to exercise the fatal path
 #![no_std]
@@ -34,6 +35,7 @@ use omni8::multiboot::{self, INFO_BYTES, Region};
 use omni8::paging::{
     FrameSource, HUGE_SIZE, MapError, Mapper, PAGE_SIZE, Perms, PhysMem, UserWindow,
 };
+use omni8::preempt::Preempt;
 use omni8::selftest::{self, Expectation, Observation, OrderLog};
 use omni8::timer::{self, Ticks};
 
@@ -80,6 +82,11 @@ static IST_STACKS: [Stack; 5] = [
     Stack::new(),
 ];
 static TICKS: Ticks = Ticks::new();
+/// Time-slice accounting for deferred preemption: only the timer interrupt writes it, atomics only.
+static PREEMPT: Preempt = match Preempt::new(2) {
+    Ok(p) => p,
+    Err(_) => panic!("invalid preemption quantum"),
+};
 static ORDER_LOG: OrderLog = OrderLog::new();
 static KERNEL: Kernel = Kernel::new(&NoUserBacking, false);
 
@@ -324,6 +331,8 @@ pub unsafe extern "C" fn omni8_trap_dispatch(f: *mut TrapFrame) {
     let v = f.vector;
     if v == TIMER_VECTOR as u64 {
         TICKS.tick();
+        // Lock-free time-slice accounting only: the interrupted thread may hold the scheduler lock.
+        PREEMPT.on_tick();
         outb(timer::PIC1_CMD, timer::PIC_EOI);
         return;
     }
@@ -795,6 +804,86 @@ fn selftest_timer() {
     out!("OMNI8 TIMER: ticks ok\n");
 }
 
+// ---- tick-driven preemption (variant omni8_preempt) --------------------------------------
+
+#[cfg(omni8_preempt)]
+mod preempt_stage {
+    use super::*;
+    use core::sync::atomic::AtomicU32;
+    use omni_kernel7::sched::{KERNEL_SPACE, RunExit};
+
+    /// Yields each thread must perform because of a timer-raised request.
+    const YIELDS_PER_THREAD: u32 = 3;
+    const SPIN_GUARD: u64 = 400_000_000;
+    static DONE: AtomicU32 = AtomicU32::new(0);
+    static TIMED_OUT: AtomicBool = AtomicBool::new(false);
+
+    extern "C" fn worker(_: usize) {
+        let mut yields = 0u32;
+        let mut spins = 0u64;
+        while yields < YIELDS_PER_THREAD {
+            // SAFETY: spin hint.
+            unsafe { asm!("pause", options(nomem, nostack, preserves_flags)) };
+            spins += 1;
+            if spins > SPIN_GUARD {
+                TIMED_OUT.store(true, Ordering::SeqCst);
+                break;
+            }
+            // Safe point: honour a request raised by the timer interrupt.
+            if PREEMPT.take_request() {
+                yields += 1;
+                let _ = KERNEL.sched.yield_now();
+            }
+        }
+        DONE.fetch_add(1, Ordering::SeqCst);
+    }
+
+    pub fn run() {
+        let pic = match timer::pic_sequence(0x20, 0x28, 0xFE, 0xFF) {
+            Ok(s) => s,
+            Err(_) => fail("preempt: pic sequence"),
+        };
+        let pit = match timer::pit_sequence(100) {
+            Ok(s) => s,
+            Err(_) => fail("preempt: pit sequence"),
+        };
+        for t in 0..2 {
+            if KERNEL.sched.spawn(KERNEL_SPACE, worker, t).is_err() {
+                fail("preempt: spawn");
+            }
+        }
+        for (p, v) in pic.iter().chain(pit.iter()) {
+            outb(*p, *v);
+        }
+        // SAFETY: the IDT is loaded; IRQ0 is the only unmasked source and its handler touches atomics only.
+        unsafe { asm!("sti", options(nomem, nostack)) };
+        let exit = KERNEL.sched.run(|_| false);
+        // SAFETY: mask interrupts again.
+        unsafe { asm!("cli", options(nomem, nostack)) };
+        outb(timer::PIC1_DATA, 0xFF);
+        outb(timer::PIC2_DATA, 0xFF);
+        if exit != RunExit::AllDone {
+            fail("preempt: scheduler did not finish");
+        }
+        if TIMED_OUT.load(Ordering::SeqCst) {
+            fail("preempt: no timer-driven request arrived");
+        }
+        if DONE.load(Ordering::SeqCst) != 2 {
+            fail("preempt: a thread did not finish");
+        }
+        if PREEMPT.honoured() != (2 * YIELDS_PER_THREAD) as u64 {
+            fail("preempt: honoured request count");
+        }
+        if PREEMPT.requests() < PREEMPT.honoured() {
+            fail("preempt: more yields than requests");
+        }
+        if KERNEL.sched.live() != 0 {
+            fail("preempt: thread slot leaked");
+        }
+        out!("OMNI8 PREEMPT: tick-driven yields ok\n");
+    }
+}
+
 // ---- ring 3 ------------------------------------------------------------------------------
 
 #[cfg(omni8_ring3)]
@@ -943,7 +1032,9 @@ pub extern "C" fn omni8_main(magic: u32, info: u32) -> ! {
     }
     #[cfg(omni8_ring3)]
     out!("OMNI8 VARIANT: ring3\n");
-    #[cfg(not(omni8_ring3))]
+    #[cfg(omni8_preempt)]
+    out!("OMNI8 VARIANT: preempt\n");
+    #[cfg(not(any(omni8_ring3, omni8_preempt)))]
     out!("OMNI8 VARIANT: base\n");
     let ram_top = init_memory(info as u64);
     install_gdt_tss();
@@ -958,6 +1049,8 @@ pub extern "C" fn omni8_main(magic: u32, info: u32) -> ! {
     selftest_traps();
     selftest_sched();
     selftest_timer();
+    #[cfg(omni8_preempt)]
+    preempt_stage::run();
     #[cfg(omni8_ring3)]
     ring3::run(ram_top);
     #[cfg(not(omni8_ring3))]

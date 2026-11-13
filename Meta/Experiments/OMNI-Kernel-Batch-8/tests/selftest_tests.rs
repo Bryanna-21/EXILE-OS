@@ -79,3 +79,53 @@ fn st_03_scenario_detects_a_wrong_order() {
     assert_eq!(run_order_scenario(sched, log), Err(ScenarioError::Order));
     assert!(OrderLog::new().is_empty());
 }
+
+fn new_sched() -> &'static Sched {
+    let addr = big_stack(|| Box::into_raw(Box::new(Sched::new())) as usize);
+    unsafe { &*(addr as *const Sched) }
+}
+
+#[test]
+fn st_10_tick_driven_preemption_interleaves_two_threads_on_the_real_scheduler() {
+    use omni8::preempt::Preempt;
+    let sched = new_sched();
+    let preempt = Box::leak(Box::new(Preempt::new(PREEMPT_QUANTUM).unwrap()));
+    let log = Box::leak(Box::new(PreemptLog::new()));
+    assert_eq!(run_preempt_scenario(sched, preempt, log), Ok(()));
+    assert_eq!(log.snapshot(), PREEMPT_EXPECTED_ORDER);
+    assert_eq!(preempt.requests(), 6);
+    assert_eq!(preempt.honoured(), 6);
+    assert_eq!(sched.stats().switches, PREEMPT_EXPECTED_SWITCHES);
+    assert_eq!(PREEMPT_EXPECTED_SWITCHES, 8);
+}
+
+#[test]
+fn st_11_a_different_quantum_changes_the_interleaving() {
+    use omni8::preempt::Preempt;
+    let sched = new_sched();
+    let preempt = Box::leak(Box::new(Preempt::new(4).unwrap()));
+    let log = Box::leak(Box::new(PreemptLog::new()));
+    assert_eq!(
+        run_preempt_scenario(sched, preempt, log),
+        Err(PreemptScenarioError::Order)
+    );
+}
+
+#[test]
+fn st_12_disabled_preemption_means_no_thread_is_ever_switched_away_from() {
+    use omni8::preempt::Preempt;
+    let sched = new_sched();
+    let preempt = Box::leak(Box::new(Preempt::new(PREEMPT_QUANTUM).unwrap()));
+    let log = Box::leak(Box::new(PreemptLog::new()));
+    preempt.disable();
+    assert_eq!(
+        run_preempt_scenario(sched, preempt, log),
+        Err(PreemptScenarioError::Order)
+    );
+    // thread 0 ran all of its work first, then thread 1: nothing was preempted
+    let snap = log.snapshot();
+    assert!(snap[..PREEMPT_ITERATIONS].iter().all(|&v| v == 0));
+    assert!(snap[PREEMPT_ITERATIONS..].iter().all(|&v| v == 1));
+    assert_eq!(preempt.honoured(), 0);
+    assert!(preempt.requests() > 0);
+}

@@ -29,6 +29,7 @@ PASS_STATUS, FAIL_STATUS = 33, 35  # isa-debug-exit: (value << 1) | 1 for 0x10 a
 CASES = {
     "base": ("base", PASS_STATUS),
     "ring3": ("ring3", PASS_STATUS),
+    "preempt": ("preempt", PASS_STATUS),
     "ring3-fault": ("ring3-fault", FAIL_STATUS),
     "trap-fault": ("trap-fault", FAIL_STATUS),
     "magic-fault": ("magic-fault", FAIL_STATUS),

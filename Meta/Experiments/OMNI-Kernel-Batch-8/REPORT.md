@@ -22,7 +22,8 @@ statically checked, and they are written as tests that report NOT RUN here.
 | PIC/PIT timer test (no preemption) | yes | yes | sequences only | **NOT RUN** | no |
 | Ring-3 entry, SYSCALL from ring 3 | yes (variant) | yes | `iret_frame` only | **NOT RUN** | no |
 | Boot image generation (GRUB ISO) | script | n/a | no | **NOT RUN** | no |
-| Preemptive scheduling, SMP, ARM64, ExileKernel integration | **not implemented** | | | | |
+| Tick-driven preemption at safe points (`preempt` variant: ISR does lock-free slice accounting, threads yield at safe points) | yes | yes | 11 hosted tests incl. a scenario on the real Batch 7 scheduler; image builds and passes static checks | **NOT RUN** (needs the CI boot job) | no |
+| Asynchronous preemption from inside the interrupt, SMP, ARM64, ExileKernel integration | **not implemented** | | | | |
 
 ## Results actually obtained
 

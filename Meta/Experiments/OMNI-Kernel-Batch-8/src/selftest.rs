@@ -2,6 +2,7 @@
 //! like, and the scheduler ordering scenario that runs on the Batch 7 scheduler both here on
 //! the host and in the booted kernel.
 
+use crate::preempt::Preempt;
 use core::sync::atomic::{AtomicU8, AtomicUsize, Ordering};
 use omni_kernel7::sched::{KERNEL_SPACE, RunExit, Sched, SchedError};
 
@@ -150,6 +151,143 @@ pub fn run_order_scenario(sched: &Sched, log: &OrderLog) -> Result<(), ScenarioE
     }
     if sched.live() != 0 {
         return Err(ScenarioError::Leak(sched.live()));
+    }
+    Ok(())
+}
+
+// ---- tick-driven preemption scenario ----------------------------------------------------
+
+/// Two threads each do `PREEMPT_ITERATIONS` units of work and check a preemption safe point after every
+/// unit. On the host each unit also simulates one timer tick (`on_tick`), so the interleaving is fully
+/// deterministic: a slice of `PREEMPT_QUANTUM` ticks lets a thread run `PREEMPT_QUANTUM` units.
+pub const PREEMPT_THREADS: usize = 2;
+pub const PREEMPT_ITERATIONS: usize = 9;
+pub const PREEMPT_QUANTUM: u32 = 3;
+pub const PREEMPT_EXPECTED_ORDER: [u8; PREEMPT_THREADS * PREEMPT_ITERATIONS] =
+    [0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1];
+/// 18 ticks / 3 = 6 requests, each honoured by one yield; plus the first dispatch of each thread.
+pub const PREEMPT_EXPECTED_YIELDS: u64 = 6;
+pub const PREEMPT_EXPECTED_SWITCHES: u64 = PREEMPT_EXPECTED_YIELDS + PREEMPT_THREADS as u64;
+
+pub struct PreemptLog {
+    len: AtomicUsize,
+    slots: [AtomicU8; PREEMPT_THREADS * PREEMPT_ITERATIONS],
+}
+
+impl Default for PreemptLog {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl PreemptLog {
+    pub const fn new() -> Self {
+        PreemptLog {
+            len: AtomicUsize::new(0),
+            slots: [const { AtomicU8::new(0xFF) }; PREEMPT_THREADS * PREEMPT_ITERATIONS],
+        }
+    }
+    fn push(&self, v: u8) {
+        let i = self.len.fetch_add(1, Ordering::SeqCst);
+        if let Some(s) = self.slots.get(i) {
+            s.store(v, Ordering::SeqCst);
+        }
+    }
+    pub fn len(&self) -> usize {
+        self.len.load(Ordering::SeqCst)
+    }
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+    pub fn snapshot(&self) -> [u8; PREEMPT_THREADS * PREEMPT_ITERATIONS] {
+        let mut out = [0xFF; PREEMPT_THREADS * PREEMPT_ITERATIONS];
+        for (o, s) in out.iter_mut().zip(self.slots.iter()) {
+            *o = s.load(Ordering::SeqCst);
+        }
+        out
+    }
+}
+
+pub struct PreemptCtx<'a> {
+    pub sched: &'a Sched,
+    pub preempt: &'a Preempt,
+    pub log: &'a PreemptLog,
+    pub id: u8,
+}
+
+/// Thread entry; `arg` is a `*const PreemptCtx` that outlives the run.
+pub extern "C" fn preempt_thread(arg: usize) {
+    // SAFETY: `run_preempt_scenario` passes a pointer to a live PreemptCtx.
+    let ctx = unsafe { &*(arg as *const PreemptCtx) };
+    for _ in 0..PREEMPT_ITERATIONS {
+        ctx.log.push(ctx.id);
+        ctx.preempt.on_tick(); // stands in for the timer interrupt on the host
+        if ctx.preempt.take_request() {
+            let _ = ctx.sched.yield_now();
+        }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum PreemptScenarioError {
+    Spawn(SchedError),
+    Run(RunExit),
+    Order,
+    Requests(u64),
+    Honoured(u64),
+    Switches(u64),
+    Leak(usize),
+}
+
+pub fn run_preempt_scenario(
+    sched: &Sched,
+    preempt: &Preempt,
+    log: &PreemptLog,
+) -> Result<(), PreemptScenarioError> {
+    let before = sched.stats().switches;
+    let ctxs = [
+        PreemptCtx {
+            sched,
+            preempt,
+            log,
+            id: 0,
+        },
+        PreemptCtx {
+            sched,
+            preempt,
+            log,
+            id: 1,
+        },
+    ];
+    for c in &ctxs {
+        sched
+            .spawn(
+                KERNEL_SPACE,
+                preempt_thread,
+                c as *const PreemptCtx as usize,
+            )
+            .map_err(PreemptScenarioError::Spawn)?;
+    }
+    let exit = sched.run(|_| false);
+    if exit != RunExit::AllDone {
+        return Err(PreemptScenarioError::Run(exit));
+    }
+    if log.len() != PREEMPT_THREADS * PREEMPT_ITERATIONS || log.snapshot() != PREEMPT_EXPECTED_ORDER
+    {
+        return Err(PreemptScenarioError::Order);
+    }
+    if preempt.requests() != PREEMPT_EXPECTED_YIELDS {
+        return Err(PreemptScenarioError::Requests(preempt.requests()));
+    }
+    if preempt.honoured() != PREEMPT_EXPECTED_YIELDS {
+        return Err(PreemptScenarioError::Honoured(preempt.honoured()));
+    }
+    let switches = sched.stats().switches - before;
+    if switches != PREEMPT_EXPECTED_SWITCHES {
+        return Err(PreemptScenarioError::Switches(switches));
+    }
+    if sched.live() != 0 {
+        return Err(PreemptScenarioError::Leak(sched.live()));
     }
     Ok(())
 }
