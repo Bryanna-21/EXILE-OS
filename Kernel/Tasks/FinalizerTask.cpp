@@ -16,7 +16,11 @@ static constexpr StringView finalizer_task_name = "Finalizer Task"sv;
 
 static void finalizer_task(void*)
 {
-    Thread::current()->set_priority(THREAD_PRIORITY_LOW);
+    // NOTE: This used to be THREAD_PRIORITY_LOW, which had no effect because every priority above the minimum shared one
+    //       ready-queue bucket. Now that priorities are distinct, a LOW finalizer would starve behind CPU-bound normal
+    //       threads and exited threads would never be reclaimed (the scheduler has no aging), so keep the priority the
+    //       finalizer has effectively been running at.
+    Thread::current()->set_priority(THREAD_PRIORITY_NORMAL);
     while (!Process::current().is_dying()) {
         uninterruptible(g_finalizer_wait_queue->wait_until(g_finalizer_has_work, [](bool& has_work) -> bool {
             if (!has_work)

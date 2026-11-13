@@ -45,6 +45,7 @@ set(LIBTEST_BASED_SOURCES
     TestFileSystemDirentTypes.cpp
     TestInvalidUIDSet.cpp
     TestSFNUtilities.cpp
+    TestSchedulerPriority.cpp
     TestSharedInodeVMObject.cpp
     TestPageFaultRace.cpp
     TestPosixFallocate.cpp

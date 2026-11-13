@@ -16,6 +16,7 @@
 #include <Kernel/Tasks/PerformanceManager.h>
 #include <Kernel/Tasks/Process.h>
 #include <Kernel/Tasks/Scheduler.h>
+#include <Kernel/Tasks/SchedulerPriority.h>
 #include <Kernel/Tasks/WaitQueue.h>
 #include <Kernel/Time/TimeManagement.h>
 #include <Kernel/kstdio.h>
@@ -53,14 +54,14 @@ static RecursiveSpinlockProtected<TotalTimeScheduled, LockRank::None> g_total_ti
 
 static void dump_thread_list(bool = false);
 
+static_assert(ready_queue_bucket_count == ThreadReadyQueues::count);
+
 static inline u32 thread_priority_to_priority_index(u32 thread_priority)
 {
     // Converts the priority in the range of THREAD_PRIORITY_MIN...THREAD_PRIORITY_MAX
     // to a index into g_ready_queues where 0 is the highest priority bucket
     VERIFY(thread_priority >= THREAD_PRIORITY_MIN && thread_priority <= THREAD_PRIORITY_MAX);
-    constexpr u32 thread_priority_count = THREAD_PRIORITY_MAX - THREAD_PRIORITY_MIN + 1;
-    static_assert(thread_priority_count > 0);
-    auto priority_bucket = ((thread_priority_count - (thread_priority - THREAD_PRIORITY_MIN)) / thread_priority_count) * (ThreadReadyQueues::count - 1);
+    auto priority_bucket = thread_priority_to_ready_queue_index(thread_priority);
     VERIFY(priority_bucket < ThreadReadyQueues::count);
     return priority_bucket;
 }
