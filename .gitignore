@@ -51,11 +51,3 @@ Tests/LibWeb/WPT/MANIFEST.json
 
 # Local compiler and build experiments
 .tmp/
-
-# AI Config Exclusions
-CLAUDE.md
-.claude/
-
-# AI Config Exclusions
-CLAUDE.md
-.claude/
