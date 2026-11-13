@@ -17,6 +17,7 @@ else {
 }
 
 echo "Failed: $fail_count" > ./test-results.log
+echo "TEST-SUITE-RESULT: failed=$fail_count"
 
 if test $DO_SHUTDOWN_AFTER_TESTS {
     sync

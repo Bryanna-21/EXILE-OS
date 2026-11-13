@@ -1,0 +1,93 @@
+# Builds the real Serenity-derived kernel + userland, boots it in QEMU in self-test mode and
+# verifies runtime preemption evidence in the serial/debug log.
+#
+# STATUS: UNVERIFIED until this workflow completes successfully on GitHub Actions.
+# A passing verifier-unit-test job alone is not kernel runtime evidence.
+name: kernel-preemption-boot
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verifier-unit-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test serial-log verifier
+        run: python3 -I -B Meta/Exile/tests/test_verify_preemption_serial.py
+
+  boot:
+    runs-on: ubuntu-24.04
+    needs: verifier-unit-tests
+    timeout-minutes: 300
+    env:
+      EXILE_CPUS: "1"
+      MAKEJOBS: "2"
+      EXILE_RUN: ci
+      EXILE_BUILD_DIR: ${{ github.workspace }}/Build/x86_64
+      EXILE_KERNEL_CMDLINE: "graphics_subsystem_mode=off system_mode=self-test serial_debug panic=shutdown"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install host build and QEMU dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build ccache e2fsprogs genext2fs \
+            libgmp-dev libmpc-dev libmpfr-dev qemu-system-x86 python3
+
+      - name: Build, boot, and verify preemption
+        run: |
+          set -euo pipefail
+          mkdir -p out "$EXILE_BUILD_DIR"
+
+          # Prevent stale logs from a previous build/run from being mistaken for this boot.
+          rm -f "$EXILE_BUILD_DIR/debug.log"
+
+          # Keep the real build/boot exit status. The timeout is below the job timeout so
+          # diagnostic collection and artifact upload still have time to run.
+          set +e
+          timeout --signal=TERM --kill-after=30s 270m \
+            Meta/exile.sh run x86_64 GNU > out/serial.log 2>&1
+          run_status=$?
+          set -e
+
+          printf '%s\n' "$run_status" > out/run-exit-code.txt
+
+          if [ -f "$EXILE_BUILD_DIR/debug.log" ]; then
+            cp "$EXILE_BUILD_DIR/debug.log" out/debug.log
+          else
+            echo "Expected QEMU debug log was not produced." | tee out/debug-log-missing.txt
+          fi
+
+          cat out/serial.log out/debug.log 2>/dev/null > out/combined.log || true
+
+          # Run the verifier even if the build/boot command failed, so the logs still
+          # receive a useful diagnosis. The original run failure remains authoritative.
+          set +e
+          python3 -I Meta/Exile/verify-preemption-serial.py out/combined.log 2>&1 | tee out/verdict.txt
+          verifier_status=${PIPESTATUS[0]}
+          set -e
+
+          if [ "$run_status" -ne 0 ]; then
+            echo "Build/boot failed with exit code $run_status."
+            exit "$run_status"
+          fi
+
+          if [ "$verifier_status" -ne 0 ]; then
+            echo "Preemption serial verification failed with exit code $verifier_status."
+            exit "$verifier_status"
+          fi
+
+          echo "Build, QEMU self-test, and serial verification passed."
+
+      - name: Upload build and boot diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-preemption-boot
+          path: out/
+          if-no-files-found: warn
