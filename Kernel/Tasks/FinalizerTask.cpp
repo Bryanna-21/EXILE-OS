@@ -16,7 +16,8 @@ static constexpr StringView finalizer_task_name = "Finalizer Task"sv;
 
 static void finalizer_task(void*)
 {
-    Thread::current()->set_priority(THREAD_PRIORITY_LOW);
+    // Keep thread finalization schedulable under sustained normal-priority workloads.
+    Thread::current()->set_priority(THREAD_PRIORITY_NORMAL);
     while (!Process::current().is_dying()) {
         uninterruptible(g_finalizer_wait_queue->wait_until(g_finalizer_has_work, [](bool& has_work) -> bool {
             if (!has_work)

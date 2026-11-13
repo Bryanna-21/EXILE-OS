@@ -50,6 +50,7 @@ set(LIBTEST_BASED_SOURCES
     TestPosixFallocate.cpp
     TestPosixSpawn.cpp
     TestPreemption.cpp
+    TestSchedulerPriority.cpp
     TestPrivateInodeVMObject.cpp
     TestPtrace.cpp
     TestKernelAlarm.cpp

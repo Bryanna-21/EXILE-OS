@@ -53,14 +53,49 @@ static RecursiveSpinlockProtected<TotalTimeScheduled, LockRank::None> g_total_ti
 
 static void dump_thread_list(bool = false);
 
+static constexpr u32 priority_bucket_for_thread_priority(u32 thread_priority)
+{
+    constexpr u32 thread_priority_range = THREAD_PRIORITY_MAX - THREAD_PRIORITY_MIN;
+    return ((THREAD_PRIORITY_MAX - thread_priority) * (ThreadReadyQueues::count - 1)) / thread_priority_range;
+}
+
+static_assert(ThreadReadyQueues::count == 32);
+static_assert(priority_bucket_for_thread_priority(99) == 0);
+static_assert(priority_bucket_for_thread_priority(50) == 15);
+static_assert(priority_bucket_for_thread_priority(30) == 21);
+static_assert(priority_bucket_for_thread_priority(10) == 28);
+static_assert(priority_bucket_for_thread_priority(1) == 31);
+static_assert(priority_bucket_for_thread_priority(99) < priority_bucket_for_thread_priority(50));
+static_assert(priority_bucket_for_thread_priority(50) < priority_bucket_for_thread_priority(30));
+static_assert(priority_bucket_for_thread_priority(30) < priority_bucket_for_thread_priority(10));
+static_assert(priority_bucket_for_thread_priority(10) < priority_bucket_for_thread_priority(1));
+
+static constexpr bool priority_mapping_is_monotonic()
+{
+    for (u32 priority = THREAD_PRIORITY_MIN; priority < THREAD_PRIORITY_MAX; ++priority) {
+        if (priority_bucket_for_thread_priority(priority + 1) > priority_bucket_for_thread_priority(priority))
+            return false;
+    }
+    return true;
+}
+
+static constexpr bool priority_mapping_covers_all_queues()
+{
+    u32 used_buckets = 0;
+    for (u32 priority = THREAD_PRIORITY_MIN; priority <= THREAD_PRIORITY_MAX; ++priority)
+        used_buckets |= 1u << priority_bucket_for_thread_priority(priority);
+    return used_buckets == 0xffffffffu;
+}
+
+static_assert(priority_mapping_is_monotonic());
+static_assert(priority_mapping_covers_all_queues());
+
 static inline u32 thread_priority_to_priority_index(u32 thread_priority)
 {
-    // Converts the priority in the range of THREAD_PRIORITY_MIN...THREAD_PRIORITY_MAX
-    // to a index into g_ready_queues where 0 is the highest priority bucket
+    // Converts THREAD_PRIORITY_MIN...THREAD_PRIORITY_MAX to a ready-queue index.
+    // Bucket 0 is the highest priority; larger bucket indices are lower priority.
     VERIFY(thread_priority >= THREAD_PRIORITY_MIN && thread_priority <= THREAD_PRIORITY_MAX);
-    constexpr u32 thread_priority_count = THREAD_PRIORITY_MAX - THREAD_PRIORITY_MIN + 1;
-    static_assert(thread_priority_count > 0);
-    auto priority_bucket = ((thread_priority_count - (thread_priority - THREAD_PRIORITY_MIN)) / thread_priority_count) * (ThreadReadyQueues::count - 1);
+    auto priority_bucket = priority_bucket_for_thread_priority(thread_priority);
     VERIFY(priority_bucket < ThreadReadyQueues::count);
     return priority_bucket;
 }
