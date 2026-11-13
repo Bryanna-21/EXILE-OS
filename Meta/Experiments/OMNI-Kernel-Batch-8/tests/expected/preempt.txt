@@ -1,0 +1,24 @@
+# Expected serial transcript, variant "preempt" (built with --test-exit). Exit status must be 33.
+# "~" lines are regular expressions; other lines are literal. Matching is exact and in order,
+# except that lines beginning "OMNI8 INFO:" are ignored (they carry machine-dependent numbers).
+OMNI8 BOOT: start
+OMNI8 VARIANT: preempt
+OMNI8 BOOT: multiboot ok
+~OMNI8 MEM: map parsed regions=[0-9]+ usable_ranges=[0-9]+
+OMNI8 GDT: loaded
+OMNI8 TSS: loaded
+OMNI8 IDT: loaded
+OMNI8 PAGING: wx tables active
+OMNI8 FRAMES: alloc/free ok
+OMNI8 TRAP: breakpoint ok
+OMNI8 TRAP: undefined-opcode ok
+OMNI8 TRAP: divide-error ok
+OMNI8 TRAP: write-to-text pagefault ok
+OMNI8 TRAP: exec-from-nx pagefault ok
+OMNI8 TRAP: unmapped-read pagefault ok
+OMNI8 TRAP: null-read pagefault ok
+OMNI8 TRAP: positive controls ok
+OMNI8 SCHED: order ok switches=12
+OMNI8 TIMER: ticks ok
+OMNI8 PREEMPT: tick-driven yields ok
+OMNI8 TEST PASS

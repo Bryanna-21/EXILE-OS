@@ -1,0 +1,64 @@
+name: Exile kernel boot (Batch 8 image)
+
+# Builds the bare-metal x86-64 image from Meta/Experiments/OMNI-Kernel-Batch-8, runs its hosted tests and static
+# image checks, then boots every variant under QEMU and compares the serial transcript with the expected one.
+# A boot is reported only if QEMU actually ran the image: scripts/qemu_test.py exits 3 (NOT RUN) otherwise, and
+# this job treats that as a failure.
+
+on:
+  push:
+    paths: ['Meta/Experiments/OMNI-Kernel-Batch-*/**', 'Kernel/Boot/Exile/**', '.github/workflows/exile-kernel-boot.yml']
+  pull_request:
+    paths: ['Meta/Experiments/OMNI-Kernel-Batch-*/**', 'Kernel/Boot/Exile/**', '.github/workflows/exile-kernel-boot.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  boot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      BATCH: Meta/Experiments/OMNI-Kernel-Batch-8
+      CARGO_TARGET_DIR: ${{ github.workspace }}/../omni8-target
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install QEMU, GRUB and ISO tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends qemu-system-x86 grub-pc-bin grub-common xorriso mtools \
+            nasm lld binutils gcc python3
+
+      - name: Install pinned Rust toolchain
+        run: |
+          rustup toolchain install 1.91.1 --profile minimal -c rustfmt -c clippy -t x86_64-unknown-none
+          rustup default 1.91.1
+          rustc -V
+          qemu-system-x86_64 --version | head -n1
+          grub-mkrescue --version | head -n1
+
+      - name: Static checks, hosted tests, image build and image checks
+        working-directory: ${{ env.BATCH }}
+        shell: bash
+        run: scripts/verify.sh 2>&1 | tee "$RUNNER_TEMP/verify.log"
+
+      - name: Boot every variant under QEMU (serial transcript compared)
+        working-directory: ${{ env.BATCH }}
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/boot"
+          python3 scripts/qemu_test.py --out "$RUNNER_TEMP/boot" --timeout 120 2>&1 | tee "$RUNNER_TEMP/qemu.log"
+          # qemu_test.py exits 0 only if every case was booted and matched; 1 = failed, 3 = NOT RUN (also a failure here).
+
+      - name: Archive logs, serial transcripts and images
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: exile-kernel-boot
+          path: |
+            ${{ runner.temp }}/verify.log
+            ${{ runner.temp }}/qemu.log
+            ${{ runner.temp }}/boot
+          if-no-files-found: warn

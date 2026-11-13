@@ -39,5 +39,5 @@ Keep build output outside the repository (`CARGO_TARGET_DIR`, `--out`).
 ## Honest status
 
 Not booted. No instruction of the kernel has run on a CPU or emulator. The image is built with a host-target fallback,
-not rustc 1.91.1 with `x86_64-unknown-none`. No preemption, no SMP, no ARM64, no integration with ExileKernel or
+not rustc 1.91.1 with `x86_64-unknown-none`. No asynchronous preemption (the `preempt` variant adds tick-driven preemption requests honoured at safe points; hosted-tested, not booted), no SMP, no ARM64, no integration with ExileKernel or
 `Kernel/`. See `docs/SECURITY.md` for limits.

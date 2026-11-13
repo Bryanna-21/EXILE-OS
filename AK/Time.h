@@ -156,7 +156,9 @@ constexpr Tuple<T, u8, u8> days_since_epoch_to_date(T days)
     return { year, month, day };
 }
 
-constexpr i64 seconds_since_epoch_to_year(i64 seconds)
+// NOTE: Not constexpr: it returns through Tuple<>, which is not a literal type, so Clang rejects a constexpr
+//       declaration with -Winvalid-constexpr. All callers evaluate it at runtime.
+inline i64 seconds_since_epoch_to_year(i64 seconds)
 {
     constexpr auto seconds_per_day = 60 * 60 * 24;
     i64 day_offset_to_epoch = seconds >= 0 ? seconds / seconds_per_day : floor_div(seconds, seconds_per_day);

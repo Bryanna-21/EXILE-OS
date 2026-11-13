@@ -55,7 +55,7 @@ required=(
   arch/x86_64/boot.S arch/x86_64/isr.S arch/x86_64/probe.S
   tests/desc_tests.rs tests/idt_tests.rs tests/paging_tests.rs tests/frames_tests.rs
   tests/multiboot_tests.rs tests/timer_usermode_tests.rs tests/selftest_tests.rs
-  tests/expected/base.txt tests/expected/ring3.txt tests/expected/ring3-fault.txt
+  tests/expected/base.txt tests/expected/ring3.txt tests/expected/preempt.txt tests/expected/ring3-fault.txt
   tests/expected/trap-fault.txt tests/expected/magic-fault.txt tests/expected/cpu-fault.txt
   scripts/build.sh scripts/check_image.py scripts/check_asm.py scripts/gen_isr.py
   scripts/qemu_test.py scripts/verify.sh
@@ -116,14 +116,14 @@ for profile in debug release; do
 done
 
 # ---- 6. image builds and static checks ---------------------------------------
-for v in base ring3 ring3-fault trap-fault magic-fault cpu-fault; do
+for v in base ring3 preempt ring3-fault trap-fault magic-fault cpu-fault; do
   if scripts/build.sh --variant "$v" --test-exit --out "$TMP/img-$v" >"$TMP/build-$v.log" 2>&1; then
     ok "kernel image builds: variant $v (host-target fallback)"
   else
     bad "kernel image build: variant $v (output follows)"; tail -n 40 "$TMP/build-$v.log"
   fi
 done
-for v in base ring3; do
+for v in base ring3 preempt; do
   if [ -f "$TMP/img-$v/kernel.elf" ]; then
     if python3 -I scripts/check_image.py "$TMP/img-$v/kernel.elf" --elf32 "$TMP/img-$v/kernel32.elf" >"$TMP/image-$v.log" 2>&1
     then ok "image checks ($v): $(tail -n1 "$TMP/image-$v.log")"
