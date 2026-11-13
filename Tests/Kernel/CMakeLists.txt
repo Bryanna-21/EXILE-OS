@@ -49,6 +49,7 @@ set(LIBTEST_BASED_SOURCES
     TestPageFaultRace.cpp
     TestPosixFallocate.cpp
     TestPosixSpawn.cpp
+    TestPreemption.cpp
     TestPrivateInodeVMObject.cpp
     TestPtrace.cpp
     TestKernelAlarm.cpp
