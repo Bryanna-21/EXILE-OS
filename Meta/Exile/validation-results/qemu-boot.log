@@ -1,0 +1,2 @@
+QEMU not found (qemu-system-x86_64). Install QEMU 6.2 or newer (apt install qemu-system-x86) or run Toolchain/BuildQemu.sh.
+RESULT BLOCKED step=qemu reason=missing qemu-system-x86_64

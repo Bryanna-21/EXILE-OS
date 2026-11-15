@@ -59,19 +59,37 @@ TEST_CASE(higher_priority_threads_get_the_cpu)
 
     // The main thread must outrank the spinners so it can stop them.
     struct sched_param main_parameters { .sched_priority = sched_get_priority_max(0) };
-    EXPECT_EQ(pthread_setschedparam(pthread_self(), 0, &main_parameters), 0);
+    int const main_priority_result = pthread_setschedparam(pthread_self(), 0, &main_parameters);
+    if (main_priority_result != 0) {
+        EXPECT_EQ(main_priority_result, 0);
+        return;
+    }
 
     s_stop.store(false);
     Vector<NonnullOwnPtr<Spinner>> high_spinners;
     for (long i = 0; i < online_cpus; ++i) {
         auto spinner = make<Spinner>();
         spinner->priority = high_priority;
-        VERIFY(pthread_create(&spinner->thread, nullptr, spin, spinner.ptr()) == 0);
+        int const rc = pthread_create(&spinner->thread, nullptr, spin, spinner.ptr());
+        if (rc != 0) {
+            s_stop.store(true, AK::MemoryOrder::memory_order_relaxed);
+            for (auto& started : high_spinners)
+                pthread_join(started->thread, nullptr);
+            EXPECT_EQ(rc, 0);
+            return;
+        }
         high_spinners.append(move(spinner));
     }
     auto low_spinner = make<Spinner>();
     low_spinner->priority = low_priority;
-    VERIFY(pthread_create(&low_spinner->thread, nullptr, spin, low_spinner.ptr()) == 0);
+    int const low_rc = pthread_create(&low_spinner->thread, nullptr, spin, low_spinner.ptr());
+    if (low_rc != 0) {
+        s_stop.store(true, AK::MemoryOrder::memory_order_relaxed);
+        for (auto& started : high_spinners)
+            pthread_join(started->thread, nullptr);
+        EXPECT_EQ(low_rc, 0);
+        return;
+    }
 
     struct timespec const duration { .tv_sec = 1, .tv_nsec = 0 };
     nanosleep(&duration, nullptr);
@@ -89,8 +107,11 @@ TEST_CASE(higher_priority_threads_get_the_cpu)
     dbgln("SCHED-PRIO-TEST: cpus={} high_priority={} low_priority={} high_min_count={} low_count={}", online_cpus, high_priority, low_priority, high_minimum, low_count);
 
     // Every CPU was kept busy by a higher-priority thread, so the lower-priority thread may only run in small gaps.
-    EXPECT(high_minimum > 0);
-    EXPECT(low_count * 10 <= high_minimum);
+    bool const high_ran = high_minimum > 0;
+    bool const low_limited = low_count * 10 <= high_minimum;
+    EXPECT(high_ran);
+    EXPECT(low_limited);
 
-    dbgln("SCHED-PRIO-TEST: complete");
+    // The verdict line is printed whether the checks passed or not, so logs can be judged without trusting a "complete" marker.
+    dbgln("SCHED-PRIO-TEST: result={}", high_ran && low_limited ? "pass" : "fail");
 }

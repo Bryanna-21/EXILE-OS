@@ -1,0 +1,5 @@
+cross compiler not found: <build-worktree>/Toolchain/Local/x86_64/bin/x86_64-serenity-g++
+Build it once (downloads and compiles binutils/GCC; needs network and 1-3 hours):
+    cd Toolchain && ARCH=x86_64 ./BuildGNU.sh   # or: Meta/exile.sh rebuild-toolchain x86_64 GNU
+or use the pinned container: docker build -t exile-toolchain -f Toolchain/Dockerfile .
+RESULT BLOCKED step=cross-toolchain reason=missing <build-worktree>/Toolchain/Local/x86_64/bin/x86_64-serenity-g++
