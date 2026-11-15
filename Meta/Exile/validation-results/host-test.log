@@ -1,0 +1,10 @@
+PASS: priority 99 -> bucket 0
+PASS: priority 50 -> bucket 15
+PASS: priority 30 -> bucket 21
+PASS: priority 10 -> bucket 28
+PASS: priority 1 -> bucket 31
+PASS: all 32 buckets are used
+PASS: mapping is non-increasing in priority
+PASS: negative control: old formula collapses 99 priorities into 2 buckets
+PASS: negative control: old formula gave 10/30/50 the same bucket
+RESULT PASS

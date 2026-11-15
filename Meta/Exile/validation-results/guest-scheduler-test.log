@@ -1,0 +1,16 @@
+QEMU not found (qemu-system-x86_64). Install QEMU 6.2 or newer (apt install qemu-system-x86) or run Toolchain/BuildQemu.sh.
+RESULT BLOCKED step=qemu reason=missing qemu-system-x86_64
+QEMU not found (qemu-system-x86_64). Install QEMU 6.2 or newer (apt install qemu-system-x86) or run Toolchain/BuildQemu.sh.
+RESULT BLOCKED step=qemu reason=missing qemu-system-x86_64
+
+#   stage                                    state     detail
+1   priority -> bucket mapping [host]        PASS      99/50/30/10/1 -> 0/15/21/28/31 (5 endpoint checks)
+2   HIGH < NORMAL < LOW bucket ordering [host] PASS      HIGH(50)->15 < NORMAL(30)->21 < LOW(10)->28, mapping non-increasing
+3   all 32 buckets used [host]               PASS      32 distinct buckets over priorities 1..99
+4   high priority runs under contention [guest] BLOCKED   step=qemu reason=missing qemu-system-x86_64
+5   low priority limited under contention [guest] BLOCKED   step=qemu reason=missing qemu-system-x86_64
+6   finalizer reaps under contention [guest] BLOCKED   step=qemu reason=missing qemu-system-x86_64
+7   2-CPU smp=on repeat [guest]              BLOCKED   step=qemu reason=missing qemu-system-x86_64
+
+details: <validation-results>/vs/scheduler-validation-results.tsv
+RESULT BLOCKED step=validate reason=PASS=3 FAIL=0 BLOCKED=4 NOT_RUN=0

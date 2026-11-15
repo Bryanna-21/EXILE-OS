@@ -1,0 +1,65 @@
+== syntax
+  PASS  bash -n build-kernel.sh
+  PASS  build-kernel.sh is executable
+  PASS  bash -n build-image.sh
+  PASS  build-image.sh is executable
+  PASS  bash -n run-qemu.sh
+  PASS  run-qemu.sh is executable
+  PASS  bash -n validate-scheduler-priority.sh
+  PASS  validate-scheduler-priority.sh is executable
+== build-kernel.sh (stubbed cmake/ninja)
+  PASS  check-only passes with tools and toolchain
+  PASS  unknown option is a usage error
+  PASS  unsupported arch is a usage error
+  PASS  non-numeric --jobs is a usage error
+  PASS  successful build
+  PASS  summary records the kernel checksum
+  PASS  ninja failure => exit 4, no success line
+  PASS  failed build never prints PASS
+  PASS  ninja ok but no kernel binary => exit 4
+  PASS  no Scheduler object => exit 4
+  PASS  --reproducible build passes
+  PASS  --reproducible exports SOURCE_DATE_EPOCH and TZ=UTC to the build
+  PASS  missing cross compiler => BLOCKED exit 3
+  PASS  missing ninja => exit 2
+== build-image.sh (synthetic images)
+  PASS  raw ext2 image validates
+  PASS  all-zero image is rejected
+  PASS  tiny image is rejected
+  PASS  missing image is rejected
+  PASS  MBR disk with ext2 partition validates
+  PASS  missing MBR signature is rejected
+  PASS  kernel inside image equals the built kernel
+  PASS  kernel inside image differing from the built kernel is rejected
+  PASS  unknown bootloader is a usage error
+  PASS  no build prerequisites => BLOCKED exit 3
+== run-qemu.sh (stub QEMU and stub launcher)
+  PASS  expected output seen => PASS
+  PASS  boot mode selects the ci machine
+  PASS  profile scheduler boots in self-test mode
+  PASS  debug log captured
+  PASS  panic marker => FAIL exit 6
+  PASS  timeout => FAIL exit 6
+  PASS  QEMU exits early => exit 4
+  PASS  no --expect in boot mode => usage error
+  PASS  --smp with one CPU => usage error
+  PASS  --smp boot passes with 2 CPUs
+  PASS  --smp adds smp=on to the kernel command line
+  PASS  debug mode boots
+  PASS  debug mode puts the QEMU diagnostics shim on PATH
+  PASS  QEMU older than 6.2 => BLOCKED exit 2
+  PASS  no QEMU => BLOCKED exit 2
+  PASS  kernel missing => BLOCKED exit 3
+== validate-scheduler-priority.sh (real host test, SYNTHETIC guest logs)
+  PASS  host-only: stages 4-7 are NOT RUN
+  PASS  good guest log: stages 1-6 PASS, 7 NOT RUN
+  PASS  equal CPU share (priorities not effective) => FAIL
+  PASS  finalizer reaped < started => FAIL
+  PASS  panic in log => FAIL
+  PASS  no verdict lines => FAIL, never PASS
+  PASS  SMP log taken with 1 CPU is rejected
+  PASS  valid 2-CPU log: stage 7 PASS
+  PASS  no QEMU here => guest stages BLOCKED, exit 3
+  PASS  missing log file is a usage error
+
+SUMMARY: 58 passed, 0 failed, 0 skipped
