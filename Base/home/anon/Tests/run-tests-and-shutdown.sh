@@ -11,7 +11,7 @@ if [ "$(uname -m)" = "aarch64" -o "$(uname -m)" = "riscv64" ] && [ "$1" != "--fo
 else {
     mkdir -p "$HOME/profiles"
     export LLVM_PROFILE_FILE="$HOME/profiles/%p-profile.profraw"
-    run-tests --show-progress=false --unlink-coredumps
+    run-tests --show-progress=false --verbose --unlink-coredumps
     fail_count=$?
     unset LLVM_PROFILE_FILE
 }
