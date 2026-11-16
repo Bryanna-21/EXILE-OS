@@ -40,4 +40,4 @@ if count != 301:
     sys.exit(1)
 
 sys.exit(1 if bad else 0)
-\'
+'

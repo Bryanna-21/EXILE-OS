@@ -34,7 +34,7 @@ mk_root() { # dir
     ( cd "$r" && git init -q . && git -c user.email=t@t -c user.name=t commit -q --allow-empty -m init )
     printf '#!/bin/sh\nexit 0\n' > "$r/Toolchain/Local/x86_64/bin/x86_64-serenity-g++"; chmod +x "$r/Toolchain/Local/x86_64/bin/x86_64-serenity-g++"
     # A minimal ELF64 x86-64 executable header. /bin/true is PE on Windows/MSYS2.
-    ELF_FIXTURE="$(cygpath -w "$r/elf-kernel")" || return 1
+    ELF_FIXTURE="$r/elf-kernel"; if command -v cygpath >/dev/null 2>&1; then ELF_FIXTURE="$(cygpath -w "$ELF_FIXTURE")" || return 1; fi
     python3 -c 'import struct,sys; ident=bytes([127])+b"ELF"+bytes([2,1,1,0])+bytes(8); header=struct.pack("<16sHHIQQQIHHHHHH",ident,2,62,1,0,0,0,0,64,56,0,64,0,0); open(sys.argv[1],"wb").write(header)' "$ELF_FIXTURE" || return 1
     [ -s "$r/elf-kernel" ] || { echo "ERROR: ELF fixture was not created" >&2; return 1; }
     local real_cmake; real_cmake="$(command -v cmake)"
@@ -82,7 +82,7 @@ expect_rc "missing ninja => exit 2" 2 "$rc" "$TMP/o" 'missing: ninja'
 # ---------------------------------------------------------------------------------------------------- build-image.sh
 echo "== build-image.sh (synthetic images)"
 IMG="$TMP/img"; mkdir -p "$IMG"
-run_bi() { bash "$S/build-image.sh" "$@" >"$TMP/o" 2>&1; echo $?; }
+run_bi() { "$BASH" "$S/build-image.sh" "$@" >"$TMP/o" 2>&1; echo $?; }
 if command -v mke2fs >/dev/null 2>&1; then
     truncate -s 20M "$IMG/raw.img"; mke2fs -q -t ext2 -F "$IMG/raw.img" >/dev/null 2>&1
     rc=$(run_bi --bootloader qemu --validate-only "$IMG/raw.img");  expect_rc "raw ext2 image validates" 0 "$rc" "$TMP/o" '^RESULT PASS step=validate'
@@ -119,14 +119,43 @@ PY
 else skp "image validation tests" "mke2fs not installed"; fi
 rc=$(run_bi --bootloader nonsense); expect_rc "unknown bootloader is a usage error" 1 "$rc" "$TMP/o" '^RESULT USAGE'
 # Prove missing host tools are BLOCKED (2), then isolate missing build artifacts (3).
+# Use command wrappers rather than symlinks: this works on Windows/MSYS2 without symlink privileges
+# and hides any real mke2fs regardless of the host PATH.
 IMG_STUBS="$TMP/image-stubs"; mkdir -p "$IMG_STUBS"
+
+# build-image.sh uses dirname to locate the repository root.
+cat > "$IMG_STUBS/dirname" <<'STUB'
+#!/bin/sh
+case "$1" in
+    */*) printf '%s\n' "${1%/*}" ;;
+    *) printf '.\n' ;;
+esac
+STUB
+
+# These tools are only checked with command -v before the expected BLOCKED result.
 for t in ninja python3 sha256sum; do
-    ln -sf "$(command -v "$t")" "$IMG_STUBS/$t"
+    printf '#!/bin/sh\nexit 0\n' > "$IMG_STUBS/$t"
 done
-rc=$(PATH="$IMG_STUBS:$PATH" run_bi)
+
+# Make the privilege check deterministic without requiring sudo or elevated permissions.
+cat > "$IMG_STUBS/id" <<'STUB'
+#!/bin/sh
+if [ "${1:-}" = "-u" ]; then
+    echo 0
+else
+    echo "uid=0(root) gid=0(root)"
+fi
+STUB
+
+chmod +x "$IMG_STUBS"/*
+
+rc=$(PATH="$IMG_STUBS" run_bi)
 expect_rc "missing mke2fs => host-tools BLOCKED exit 2" 2 "$rc" "$TMP/o" 'missing: .*mke2fs'
-printf '#!/bin/sh\\nexit 0\\n' > "$IMG_STUBS/mke2fs"; chmod +x "$IMG_STUBS/mke2fs"
-rc=$(PATH="$IMG_STUBS:$PATH" run_bi)
+
+printf '#!/bin/sh\nexit 0\n' > "$IMG_STUBS/mke2fs"
+chmod +x "$IMG_STUBS/mke2fs"
+
+rc=$(PATH="$IMG_STUBS" run_bi)
 expect_rc "missing build prerequisites => BLOCKED exit 3" 3 "$rc" "$TMP/o" 'is not configured'
 
 # ---------------------------------------------------------------------------------------------------- run-qemu.sh
@@ -196,6 +225,18 @@ if command -v g++ >/dev/null 2>&1 || command -v clang++ >/dev/null 2>&1; then
     rc=$(run_v);                                    expect_rc "no QEMU here => guest stages BLOCKED, exit 3" 3 "$rc" "$TMP/o" 'BLOCKED=4'
     rc=$(run_v --guest-log /nonexistent);           expect_rc "missing log file is a usage error" 1 "$rc" "$TMP/o" '^RESULT USAGE'
 else skp "validate-scheduler-priority.sh tests" "no host C++ compiler"; fi
+
+# ---------------------------------------------------------------- check-boot-milestones.sh
+echo "check-boot-milestones.sh"
+M="$S/check-boot-milestones.sh"; ML="$TMP/ml"; mkdir -p "$ML"; : > "$ML/empty.log"
+printf 'MM: Multiboot mmap: address=0x0\nCPU[0]: Supported features: x\nMM: Physical page entries: a\nScheduler[0]: idle loop running\nRead system_mode: s\nActivating 3 services in dependency order...\n' > "$ML/ok.log"
+bash "$M" "$ML/empty.log" >"$TMP/o" 2>&1; rc=$?; expect_rc "empty log => BLOCKED, never PASS" 3 "$rc" "$TMP/o" '^RESULT BLOCKED'
+bash "$M" "$ML/ok.log" >"$TMP/o" 2>&1; rc=$?;    expect_rc "all milestones present => PASS" 0 "$rc" "$TMP/o" '^RESULT PASS'
+sed '/Scheduler/d' "$ML/ok.log" > "$ML/nosched.log"
+bash "$M" "$ML/nosched.log" >"$TMP/o" 2>&1; rc=$?; expect_rc "missing scheduler init => FAIL" 1 "$rc" "$TMP/o" '^FAIL  scheduler idle-loop startup$'
+(cat "$ML/ok.log"; echo 'KERNEL PANIC: x') > "$ML/panic.log"
+bash "$M" "$ML/panic.log" >"$TMP/o" 2>&1; rc=$?;  expect_rc "panic line => FAIL even if milestones present" 1 "$rc" "$TMP/o" '^FAIL  panic/assertion marker detected$'
+bash "$M" >"$TMP/o" 2>&1; rc=$?;                  expect_rc "no args => usage" 1 "$rc" "$TMP/o" '^RESULT USAGE'
 
 echo
 echo "SUMMARY: $pass passed, $fail failed, $skip skipped"
