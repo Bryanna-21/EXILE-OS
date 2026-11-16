@@ -8,15 +8,15 @@ This is a proposed, source-based audit. A successful patch-application check doe
 
 ## Optional Exile Store patch
 
-The optional patch is `patches/0001-exilestore-native-lifetime-status-installpath.patch`.
+The optional patch is `Meta/Patches/0001-exilestore-native-lifetime-status-installpath.patch`.
 
 It passes `git apply --check --whitespace=error` against the reviewed checkout. It has not been natively compiled or runtime-tested. Do not apply it without reviewing the diff and running the appropriate build and tests.
 
 To inspect it:
 
 ```sh
-git apply --stat patches/0001-exilestore-native-lifetime-status-installpath.patch
-git apply --check --whitespace=error patches/0001-exilestore-native-lifetime-status-installpath.patch
+git apply --stat Meta/Patches/0001-exilestore-native-lifetime-status-installpath.patch
+git apply --check --whitespace=error Meta/Patches/0001-exilestore-native-lifetime-status-installpath.patch
 ```
 
 The patch is provided separately and is not applied by this audit submission.

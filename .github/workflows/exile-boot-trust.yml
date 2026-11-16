@@ -1,0 +1,105 @@
+name: Exile Boot Trust
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/exile-boot-trust.yml'
+      - 'Meta/CMake/**'
+      - 'Meta/Exile/**'
+      - 'Tests/ExileBoot/**'
+      - 'Meta/Tools/ExileBootManifest.cpp'
+      - 'AK/**'
+      - 'Kernel/Boot/Exile/**'
+      - 'Userland/Libraries/LibCore/**'
+      - 'Userland/Libraries/LibCrypto/**'
+      - 'Userland/Libraries/LibTest/**'
+  pull_request:
+    paths:
+      - '.github/workflows/exile-boot-trust.yml'
+      - 'Meta/CMake/**'
+      - 'Meta/Exile/**'
+      - 'Tests/ExileBoot/**'
+      - 'Meta/Tools/ExileBootManifest.cpp'
+      - 'AK/**'
+      - 'Kernel/Boot/Exile/**'
+      - 'Userland/Libraries/LibCore/**'
+      - 'Userland/Libraries/LibCrypto/**'
+      - 'Userland/Libraries/LibTest/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: exile-boot-trust-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  host-trust:
+    name: Host trust checks (Ubuntu 24.04)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install host test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang \
+            cmake \
+            python3 \
+            qemu-system-x86 \
+            ovmf
+
+      - name: Run boot trust checks
+        shell: bash
+        run: |
+          set -uo pipefail
+
+          OUT="$RUNNER_TEMP/exile-boot-trust"
+          mkdir -p "$OUT"
+
+          set +e
+          CXX=clang++ bash Meta/Exile/scripts/run-boot-trust-host-checks.sh \
+            --out "$OUT" 2>&1 | tee "$OUT/runner.log"
+          runner_rc=${PIPESTATUS[0]}
+          set -e
+
+          echo "Runner exit code: $runner_rc"
+
+          if [ -f "$OUT/summary.txt" ]; then
+            echo "========== HOST TRUST SUMMARY =========="
+            cat "$OUT/summary.txt"
+          else
+            echo "::error::The runner did not produce summary.txt"
+            exit 1
+          fi
+
+          if [ "$runner_rc" -eq 0 ]; then
+            echo "Validating complete PASS summary..."
+            python3 Meta/Exile/scripts/validate-boot-trust-summary.py \
+              "$OUT/summary.txt" PASS
+            exit $?
+          fi
+
+          if [ "$runner_rc" -eq 3 ]; then
+            echo "Validating host PASS stages and explicit M2 BLOCKED..."
+            python3 Meta/Exile/scripts/validate-boot-trust-summary.py \
+              "$OUT/summary.txt" BLOCKED
+            exit $?
+          fi
+
+          echo "::error::Boot trust runner failed with exit code $runner_rc"
+          exit 1
+
+      - name: Upload boot trust evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: exile-boot-trust-${{ github.run_id }}
+          path: ${{ runner.temp }}/exile-boot-trust/
+          if-no-files-found: warn
+          retention-days: 30

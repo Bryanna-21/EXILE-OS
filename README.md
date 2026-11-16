@@ -81,7 +81,7 @@ Userland/              Userspace code
   Userland/Utilities/     Command-line utilities
   Userland/Games/         Games
   Userland/Demos/         Demo applications
-patches/               Patches applied to third-party code
+Meta/Patches/               Patches applied to third-party code
 ```
 
 ---
@@ -235,7 +235,7 @@ Exile-authored components are added under compatible terms. The Exile Universal 
 
 ### Third-party components
 
-The port system (`Ports/`) includes third-party software under their respective licenses. Individual port directories contain license information. The `patches/` directory contains modifications to third-party code.
+The port system (`Ports/`) includes third-party software under their respective licenses. Individual port directories contain license information. The `Meta/Patches/` directory contains modifications to third-party code.
 
 ### Provenance notice
 
