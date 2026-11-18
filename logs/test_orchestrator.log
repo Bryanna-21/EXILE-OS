@@ -1,0 +1,83 @@
+test_empty_serial (__main__.ClassifyBoot.test_empty_serial) ... ok
+test_every_variant_pass_with_its_real_transcript (__main__.ClassifyBoot.test_every_variant_pass_with_its_real_transcript) ... ok
+test_extra_trailing_line_fails (__main__.ClassifyBoot.test_extra_trailing_line_fails) ... ok
+test_fault_variant_with_pass_transcript_fails (__main__.ClassifyBoot.test_fault_variant_with_pass_transcript_fails) ... ok
+test_info_lines_ignored (__main__.ClassifyBoot.test_info_lines_ignored) ... ok
+test_panic_in_passing_variant (__main__.ClassifyBoot.test_panic_in_passing_variant) ... ok
+test_single_startup_reset_is_not_a_fault (__main__.ClassifyBoot.test_single_startup_reset_is_not_a_fault) ... ok
+test_status_zero_is_unexpected (__main__.ClassifyBoot.test_status_zero_is_unexpected) ... ok
+test_timeout (__main__.ClassifyBoot.test_timeout) ... ok
+test_timeout_even_with_complete_transcript (__main__.ClassifyBoot.test_timeout_even_with_complete_transcript) ... ok
+test_triple_fault_even_when_exit_looks_ok (__main__.ClassifyBoot.test_triple_fault_even_when_exit_looks_ok) ... ok
+test_triple_fault_reset (__main__.ClassifyBoot.test_triple_fault_reset) ... ok
+test_truncated_milestones (__main__.ClassifyBoot.test_truncated_milestones) ... ok
+test_wrong_status_fails (__main__.ClassifyBoot.test_wrong_status_fails) ... ok
+test_bad_checksum (__main__.ElfMultiboot.test_bad_checksum) ... ok
+test_bad_magic (__main__.ElfMultiboot.test_bad_magic) ... ok
+test_elf32 (__main__.ElfMultiboot.test_elf32) ... ok
+test_entry_in_non_exec_segment (__main__.ElfMultiboot.test_entry_in_non_exec_segment) ... ok
+test_entry_outside (__main__.ElfMultiboot.test_entry_outside) ... ok
+test_good (__main__.ElfMultiboot.test_good) ... ok
+test_header_past_8192 (__main__.ElfMultiboot.test_header_past_8192) ... ok
+test_missing_multiboot (__main__.ElfMultiboot.test_missing_multiboot) ... ok
+test_real_artifacts_if_built (__main__.ElfMultiboot.test_real_artifacts_if_built) ... ok
+test_truncated (__main__.ElfMultiboot.test_truncated) ... ok
+test_unaligned_header_not_found (__main__.ElfMultiboot.test_unaligned_header_not_found) ... ok
+test_wx_segment (__main__.ElfMultiboot.test_wx_segment) ... ok
+test_default_mode_blocks_without_pinned_toolchain_and_builds_nothing (__main__.EndToEnd.test_default_mode_blocks_without_pinned_toolchain_and_builds_nothing) ... ok
+test_diagnostic_host_build_is_labelled_and_can_never_pass (__main__.EndToEnd.test_diagnostic_host_build_is_labelled_and_can_never_pass) ... ok
+test_fake_boot_pass_is_not_runtime_validated_overall (__main__.EndToEnd.test_fake_boot_pass_is_not_runtime_validated_overall) ... /home/claude/EXILE-OS-wt-orch/Meta/Exile/validation/tests/test_exile_validate.py:269: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpva9bjozm/tx.txt' mode='w' encoding='utf-8'>
+  open(tx, "w").write(transcript("base"))
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_fake_boot_wrong_status_fails_and_overall_fail (__main__.EndToEnd.test_fake_boot_wrong_status_fails_and_overall_fail) ... ok
+test_lying_compiler_shim_fails_the_orchestrator_stage (__main__.EndToEnd.test_lying_compiler_shim_fails_the_orchestrator_stage) ... ok
+test_manifest_hashes_verify (__main__.EndToEnd.test_manifest_hashes_verify) ... /home/claude/EXILE-OS-wt-orch/Meta/Exile/validation/tests/test_exile_validate.py:326: ResourceWarning: unclosed file <_io.BufferedReader name='/tmp/exile-val-test-ekva8xpc/out/artifacts/base/build-info.txt'>
+  h = hashlib.sha256(open(os.path.join(out, rel), "rb").read()).hexdigest()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/home/claude/EXILE-OS-wt-orch/Meta/Exile/validation/tests/test_exile_validate.py:326: ResourceWarning: unclosed file <_io.BufferedReader name='/tmp/exile-val-test-ekva8xpc/out/artifacts/base/kernel.elf'>
+  h = hashlib.sha256(open(os.path.join(out, rel), "rb").read()).hexdigest()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/home/claude/EXILE-OS-wt-orch/Meta/Exile/validation/tests/test_exile_validate.py:326: ResourceWarning: unclosed file <_io.BufferedReader name='/tmp/exile-val-test-ekva8xpc/out/artifacts/base/kernel32.elf'>
+  h = hashlib.sha256(open(os.path.join(out, rel), "rb").read()).hexdigest()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/home/claude/EXILE-OS-wt-orch/Meta/Exile/validation/tests/test_exile_validate.py:326: ResourceWarning: unclosed file <_io.BufferedReader name='/tmp/exile-val-test-ekva8xpc/out/logs/build.base.log'>
+  h = hashlib.sha256(open(os.path.join(out, rel), "rb").read()).hexdigest()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/home/claude/EXILE-OS-wt-orch/Meta/Exile/validation/tests/test_exile_validate.py:326: ResourceWarning: unclosed file <_io.BufferedReader name='/tmp/exile-val-test-ekva8xpc/out/logs/image.base.check_asm.log'>
+  h = hashlib.sha256(open(os.path.join(out, rel), "rb").read()).hexdigest()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/home/claude/EXILE-OS-wt-orch/Meta/Exile/validation/tests/test_exile_validate.py:326: ResourceWarning: unclosed file <_io.BufferedReader name='/tmp/exile-val-test-ekva8xpc/out/logs/image.base.check_image.log'>
+  h = hashlib.sha256(open(os.path.join(out, rel), "rb").read()).hexdigest()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/home/claude/EXILE-OS-wt-orch/Meta/Exile/validation/tests/test_exile_validate.py:326: ResourceWarning: unclosed file <_io.BufferedReader name='/tmp/exile-val-test-ekva8xpc/out/logs/selftest.qemu-matcher.log'>
+  h = hashlib.sha256(open(os.path.join(out, rel), "rb").read()).hexdigest()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/home/claude/EXILE-OS-wt-orch/Meta/Exile/validation/tests/test_exile_validate.py:326: ResourceWarning: unclosed file <_io.BufferedReader name='/tmp/exile-val-test-ekva8xpc/out/reports/validation-report.json'>
+  h = hashlib.sha256(open(os.path.join(out, rel), "rb").read()).hexdigest()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/home/claude/EXILE-OS-wt-orch/Meta/Exile/validation/tests/test_exile_validate.py:326: ResourceWarning: unclosed file <_io.BufferedReader name='/tmp/exile-val-test-ekva8xpc/out/reports/validation-report.md'>
+  h = hashlib.sha256(open(os.path.join(out, rel), "rb").read()).hexdigest()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/home/claude/EXILE-OS-wt-orch/Meta/Exile/validation/tests/test_exile_validate.py:324: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/exile-val-test-ekva8xpc/out/MANIFEST.sha256' mode='r' encoding='utf-8'>
+  for line in open(os.path.join(out, "MANIFEST.sha256")):
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/home/claude/EXILE-OS-wt-orch/Meta/Exile/validation/tests/test_exile_validate.py:328: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/exile-val-test-ekva8xpc/out/MANIFEST.sha256' mode='r' encoding='utf-8'>
+  self.assertTrue(any(rel.endswith("validation-report.json") for rel in
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_missing_tools_never_pass (__main__.EndToEnd.test_missing_tools_never_pass) ... ok
+test_old_qemu_blocks (__main__.EndToEnd.test_old_qemu_blocks) ... ok
+test_repo_state_untouched (__main__.EndToEnd.test_repo_state_untouched) ... ok
+test_stage_selection_includes_bare_metal (__main__.EndToEnd.test_stage_selection_includes_bare_metal) ... ok
+test_unknown_selector_is_usage_error (__main__.EndToEnd.test_unknown_selector_is_usage_error) ... ok
+test_parse_version (__main__.Misc.test_parse_version) ... ok
+test_pin_reader (__main__.Misc.test_pin_reader) ... ok
+test_run_qemu_exit_status (__main__.Misc.test_run_qemu_exit_status) ... ok
+test_run_qemu_timeout_kills_group (__main__.Misc.test_run_qemu_timeout_kills_group) ... ok
+test_stage_ids_unique_and_complete (__main__.Misc.test_stage_ids_unique_and_complete) ... ok
+
+----------------------------------------------------------------------
+Ran 42 tests in 10.679s
+
+OK

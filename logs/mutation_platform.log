@@ -1,0 +1,12 @@
+src/boot/slots.rs | let target = if newest_is_0 { 1 } else { | KILLED
+src/boot/slots.rs | self.tries[s.idx()] -= 1; | KILLED
+src/boot/info.rs | if !c != stored | KILLED
+src/hal/acpi.rs | if checksum(&b[..len]) != 0 {         re | KILLED
+src/hal/pci.rs |     cfg.write32(d.bus, d.dev, d.func, 4, | KILLED
+src/hal/pci.rs | if st.visited[bus as usize] { | KILLED
+src/hal/lapic.rs | 1 => 0b1011, | KILLED
+src/hal/devices.rs | Some(end) if end <= block_count | KILLED
+src/hal/fb.rs | if x >= self.info.width || y >= self.inf | KILLED
+src/sync.rs | if self.depth > 0 && rank <= self.held[s | KILLED
+src/hal/registry.rs | if e.state != State::Bound { | KILLED
+src/hal/memmap.rs | last.kind == cur.kind | KILLED

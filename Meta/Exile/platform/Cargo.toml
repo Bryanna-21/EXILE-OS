@@ -1,0 +1,13 @@
+[package]
+name = "exile_platform"
+version = "0.1.0"
+edition = "2024"
+description = "EXILE platform foundations: HAL discovery, synchronization, boot handoff and A/B slot logic. Host-tested; not yet linked into any kernel image."
+license = "BSD-2-Clause"
+publish = false
+
+[dependencies]
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+missing_docs = "warn"

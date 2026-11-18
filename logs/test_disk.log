@@ -1,0 +1,18 @@
+test_build_validates_and_layout (__main__.T.test_build_validates_and_layout) ... ok
+test_cli_exit_codes (__main__.T.test_cli_exit_codes) ... ok
+test_deterministic_with_seed (__main__.T.test_deterministic_with_seed) ... ok
+test_every_header_and_array_corruption_is_detected (__main__.T.test_every_header_and_array_corruption_is_detected) ... ok
+test_external_tool_cross_check_if_available (__main__.T.test_external_tool_cross_check_if_available) ... skipped 'sfdisk not installed: independent cross-check NOT RUN'
+test_overlap_detected_even_with_valid_crcs (__main__.T.test_overlap_detected_even_with_valid_crcs) ... ok
+test_refuses_devices_and_non_regular (__main__.T.test_refuses_devices_and_non_regular) ... REFUSED: refusing device path: /dev/null
+ok
+test_too_small_refused_and_file_not_created (__main__.T.test_too_small_refused_and_file_not_created) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 3.558s
+
+OK (skipped=1)
+{
+ "valid": true,
+ "problems": []
+}
