@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install Zig
         run: |
           sudo snap install zig --classic --beta || true
@@ -28,6 +28,6 @@ jobs:
     needs: hosted
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: sudo apt-get update && sudo apt-get install -y qemu-system-x86 grub-pc-bin grub-common xorriso mtools
       - run: python3 Meta/Experiments/OMNI-Kernel-Batch-11/scripts/qemu_x86_q35.py

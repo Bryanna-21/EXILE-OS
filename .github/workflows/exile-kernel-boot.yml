@@ -23,7 +23,7 @@ jobs:
       BATCH: Meta/Experiments/OMNI-Kernel-Batch-8
       CARGO_TARGET_DIR: ${{ github.workspace }}/../omni8-target
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install QEMU, GRUB and ISO tools
         run: |
