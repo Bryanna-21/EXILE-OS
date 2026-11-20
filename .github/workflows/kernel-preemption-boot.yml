@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Test serial-log verifier
         run: python3 -I -B Meta/Exile/tests/test_verify_preemption_serial.py
 
@@ -31,7 +31,7 @@ jobs:
       EXILE_BUILD_DIR: ${{ github.workspace }}/Build/x86_64
       EXILE_KERNEL_CMDLINE: "graphics_subsystem_mode=off system_mode=self-test serial_debug panic=shutdown"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install host build and QEMU dependencies
         run: |
