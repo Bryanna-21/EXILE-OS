@@ -1,6 +1,14 @@
 #![no_std]
 #![no_main]
 mod memory;
+mod thread;
+mod runqueue;
+mod sched;
+mod spin;
+mod kstack;
+#[path = "arch/x86_64/context.rs"]
+mod context;
+mod kthread;
 use core::arch::asm;
 use core::panic::PanicInfo;
 use memory::{Region, parse_map};
