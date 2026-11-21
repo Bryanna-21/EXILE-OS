@@ -1,5 +1,8 @@
 #![no_std]
 #![no_main]
+mod cpu;
+mod gdt;
+mod idt;
 mod memory;
 use core::arch::asm;
 use core::panic::PanicInfo;
