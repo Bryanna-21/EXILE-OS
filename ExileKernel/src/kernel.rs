@@ -1,5 +1,13 @@
 #![no_std]
 #![no_main]
+// Mission C: CPU identification, descriptor encoders, exception frame, stacks and trap setup.
+// Nothing below runs in the default image. `--cfg euk_traps` (build.py --traps) additionally
+// loads the GDT/TSS/IDT and self-tests exception delivery; that path is exercised only by the
+// emulator cases in scripts/boot_test.py.
+mod cpu;
+mod frame;
+mod gdt;
+mod idt;
 mod memory;
 mod thread;
 mod runqueue;
@@ -9,6 +17,8 @@ mod kstack;
 #[path = "arch/x86_64/context.rs"]
 mod context;
 mod kthread;
+mod stacks;
+mod traps;
 use core::arch::asm;
 use core::panic::PanicInfo;
 use memory::{Region, parse_map};
@@ -56,6 +66,64 @@ fn fail(reason: &str) -> ! {
     serial("\n");
     finish(false)
 }
+/// Called by `exceptions.S` with the saved register frame; the frame is 16-byte aligned and
+/// stays valid until the stub returns. Runs with interrupts disabled on whatever stack the gate
+/// selected (an IST stack for #DF/NMI/#MC). Must not allocate: there is no heap.
+#[cfg(euk_traps)]
+#[unsafe(no_mangle)]
+extern "C" fn euk_trap_dispatch(frame: &mut frame::TrapFrame) {
+    if !traps::enter_trap() {
+        // A fault while reporting a fault: print nothing that could fault again.
+        fail("nested trap");
+    }
+    let cr2 = if frame.vector == 14 {
+        // SAFETY: ring 0; CR2 read has no side effects.
+        unsafe { traps::read_cr2() }
+    } else {
+        0
+    };
+    // SAFETY: enter_trap() succeeded above, so this handler owns the buffer until it resumes
+    // (leave_trap) or halts.
+    let report = unsafe { traps::trap_report() };
+    let action = traps::handle(frame, cr2, report);
+    serial(report.as_str());
+    match action {
+        traps::Action::Resume => traps::leave_trap(),
+        traps::Action::Fatal => finish(false),
+    }
+}
+
+/// Loads GDT/TSS/IDT and proves that exceptions are delivered. Variants are selected by
+/// `--cfg fault_trap_*` for the negative emulator cases.
+#[cfg(euk_traps)]
+fn trap_selftest() {
+    // SAFETY: ring 0, interrupts disabled since _start, bootstrap map active and covering the
+    // first GiB; called exactly once.
+    if unsafe { traps::init_bsp(MAP_LIMIT as u64) }.is_err() {
+        fail("trap setup");
+    }
+    serial("EUK: GDT/TSS/IDT loaded\n");
+    #[cfg(fault_trap_ud)]
+    // SAFETY: deliberately raises #UD; the handler reports and halts.
+    unsafe {
+        asm!("ud2", options(noreturn));
+    }
+    #[cfg(fault_trap_df)]
+    // SAFETY: deliberately breaks the stack so delivering #BP faults (#PF) and delivering that
+    // faults again (#DF), which must be taken on the IST1 stack; the handler reports and halts.
+    unsafe {
+        asm!("mov rsp, 0x80000000", "int3", options(noreturn));
+    }
+    #[cfg(not(any(fault_trap_ud, fault_trap_df)))]
+    {
+        // SAFETY: #BP is resumable; the handler returns and execution continues here.
+        unsafe {
+            asm!("int3");
+        }
+        serial("EUK: breakpoint returned\n");
+    }
+}
+
 /// All unsafe loader accesses stay inside the mapped GiB with bounded lengths.
 /// Loader authenticity and physical RAM validity are bootloader trust assumptions.
 unsafe fn read32(address: usize) -> u32 {
@@ -112,6 +180,8 @@ pub extern "C" fn kernel_main(magic: u32, info: u32) -> ! {
     {
         fail("usable memory missing");
     }
+    #[cfg(euk_traps)]
+    trap_selftest();
     serial("EUK: bounded memory map parsed\nEUK BOOT_OK\n");
     finish(true)
 }
