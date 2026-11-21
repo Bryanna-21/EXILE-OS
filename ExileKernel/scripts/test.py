@@ -1,28 +1,38 @@
 #!/usr/bin/env python3
-"""Host tests v4 (Mission A). Compiles each self-contained module with
-rustc --test: memory.rs (original 18), bootinfo.rs, memmap_norm.rs,
-early_alloc.rs. Non-destructive: outputs go under build/, harness-owned."""
+"""Host-side tests for EUK Missions A1 and C1."""
+
 import os
 import pathlib
 import subprocess
 
 root = pathlib.Path(__file__).resolve().parents[1]
-build_dir = root / 'build'
-build_dir.mkdir(exist_ok=True)
+build_dir = pathlib.Path(os.environ.get("EUK_TEST_BUILD", root / "build"))
+build_dir.mkdir(parents=True, exist_ok=True)
 
-rustc = os.environ.get('EUK_HOST_RUSTC', 'rustc')
+rustc = os.environ.get("EUK_HOST_RUSTC", "rustc")
 
+modules = (
+    "memory",
+    "bootinfo",
+    "memmap_norm",
+    "early_alloc",
+    "cpu",
+    "gdt",
+    "idt",
+)
 
-def run(cmd, **kw):
-    print('+', ' '.join(str(c) for c in cmd), flush=True)
-    subprocess.run([str(c) for c in cmd], check=True, **kw)
+for module in modules:
+    source = root / "src" / f"{module}.rs"
+    binary = build_dir / f"{module}-tests"
 
+    if not source.is_file():
+        raise SystemExit(f"Missing test module: {source}")
 
-for mod in ('memory', 'bootinfo', 'memmap_norm', 'early_alloc'):
-    src = root / 'src' / ('%s.rs' % mod)
-    out = build_dir / ('%s-tests' % mod)
-    print('== host tests: %s.rs' % mod)
-    run([rustc, '--edition=2024', '--test', src, '-o', out])
-    run([out])
+    print(f"== Host tests: {module}.rs", flush=True)
+    subprocess.run(
+        [rustc, "--edition=2024", "--test", str(source), "-o", str(binary)],
+        check=True,
+    )
+    subprocess.run([str(binary)], check=True)
 
-print('ALL HOST TESTS PASSED')
+print("ALL A1 + C1 HOST TESTS PASSED", flush=True)
