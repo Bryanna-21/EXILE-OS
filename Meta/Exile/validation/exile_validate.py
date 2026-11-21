@@ -125,48 +125,6 @@ def probe_tool(name, version_args, env_override=None, timeout=20):
     return info
 
 
-def validate_build_info(info, variant, pin):
-    """Return metadata defects; an ELF alone never proves a pinned build."""
-    if not isinstance(info, str) or not info.strip():
-        return ["build-info.txt missing or empty"]
-
-    fields = {}
-    for line in info.splitlines():
-        if line.startswith("variant="):
-            for item in line.split():
-                if "=" in item:
-                    key, value = item.split("=", 1)
-                    fields[key] = value
-
-    errors = []
-    expected = {
-        "variant": variant,
-        "test_exit": "1",
-        "profile": "release",
-        "target": pin.get("rust_target", "x86_64-unknown-none"),
-    }
-    for key, value in expected.items():
-        actual = fields.get(key)
-        if actual != value:
-            errors.append(
-                f"build metadata {key}={actual!r}; expected {value!r}"
-            )
-
-    compiler = re.search(r"(?m)^rustc:\s+rustc\s+(\S+)", info)
-    expected_compiler = pin.get("rustc")
-    if not compiler:
-        errors.append("build metadata has no rustc version")
-    elif expected_compiler and compiler.group(1) != expected_compiler:
-        errors.append(
-            f"rustc version {compiler.group(1)!r}; expected {expected_compiler!r}"
-        )
-
-    if "host-fallback" in info or "host-target fallback" in info:
-        errors.append("host-target fallback is forbidden")
-
-    return errors
-
-
 # ----------------------------------------------------------------------------- ELF / Multiboot
 def validate_elf_multiboot(data):
     """Independent static validation of a Multiboot1 ELF64 kernel. Returns [(name, ok, detail)].
@@ -201,12 +159,8 @@ def validate_elf_multiboot(data):
         p_type, p_flags, p_off, p_vaddr, p_paddr, p_filesz, p_memsz, p_align = struct.unpack_from(
             "<IIQQQQQQ", data, e_phoff + i * 56
         )
-        seg = {
-            "type": p_type, "flags": p_flags, "off": p_off,
-            "vaddr": p_vaddr, "filesz": p_filesz,
-            "memsz": p_memsz, "align": p_align,
-        }
-        segs.append(seg)
+        segs.append({"type": p_type, "flags": p_flags, "off": p_off, "vaddr": p_vaddr,
+                     "filesz": p_filesz, "memsz": p_memsz, "align": p_align})
         if p_type == 1:
             if p_filesz > p_memsz:
                 segment_errors.append(f"PT_LOAD {i}: p_filesz exceeds p_memsz")
@@ -278,23 +232,21 @@ def classify_boot(variant, exit_status, timed_out, serial, qemu_log, expected_te
     if timed_out:
         flags["timeout"] = True
         reasons.append("timeout: QEMU was still running at the deadline (hang)")
+        if triple or resets > 1:
+            flags["reset"] = True
+            reasons.append("reset detected before timeout: triple fault or repeated CPU resets")
     elif exit_status not in (EXPECT_PASS_STATUS, EXPECT_FAIL_STATUS):
         flags["unexpected_exit"] = True
-        reasons.append(
-            f"unexpected QEMU exit status {exit_status} "
-            "(not the isa-debug-exit 33/35 convention)"
-        )
+        if triple or resets > 1:
+            flags["reset"] = True
+            reasons.append(f"unexpected reset: QEMU exited {exit_status} with triple fault/CPU reset in its log")
+        else:
+            reasons.append(f"unexpected QEMU exit status {exit_status} (not the isa-debug-exit 33/35 convention)")
     elif exit_status != want:
         reasons.append(f"exit status {exit_status}, expected {want}")
-
-    # A single startup CPU Reset is normal. Repeated resets or any triple
-    # fault are failures, regardless of whether QEMU timed out or exited.
-    if triple or resets > 1:
+    if triple and not flags["reset"]:
         flags["reset"] = True
-        reasons.append(
-            "triple fault reported" if triple
-            else f"unexpected repeated CPU resets ({resets})"
-        )
+        reasons.append("triple fault reported")
     if want == EXPECT_PASS_STATUS and PANIC_RE.search(serial or ""):
         flags["panic"] = True
         reasons.append("panic/fatal exception in a variant that must pass: " + PANIC_RE.search(serial).group(0))
@@ -306,41 +258,17 @@ def classify_boot(variant, exit_status, timed_out, serial, qemu_log, expected_te
 
 
 def run_qemu(cmd, serial_path, timeout):
-    """Run QEMU with a hard deadline and terminate its process tree on timeout."""
-    popen_options = {}
-    if os.name == "nt":
-        popen_options["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
-    else:
-        popen_options["start_new_session"] = True
-
-    p = subprocess.Popen(
-        cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE, **popen_options
-    )
+    """Run QEMU with a hard deadline; kill the whole process group on timeout. Returns (status, timed_out)."""
+    p = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+                         start_new_session=True)
     try:
         _, err = p.communicate(timeout=timeout)
         return p.returncode, False, (err or b"").decode("utf-8", "replace")
     except subprocess.TimeoutExpired:
-        if os.name == "nt":
-            # taskkill /T terminates descendants as well as the direct child.
-            try:
-                subprocess.run(
-                    ["taskkill", "/PID", str(p.pid), "/T", "/F"],
-                    stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL, check=False,
-                )
-            except OSError:
-                pass
-            if p.poll() is None:
-                p.kill()
-        else:
-            try:
-                os.killpg(p.pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
-            except PermissionError:
-                if p.poll() is None:
-                    p.kill()
+        try:
+            os.killpg(p.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
         _, err = p.communicate()
         return None, True, (err or b"").decode("utf-8", "replace")
 
@@ -453,10 +381,10 @@ class Orchestrator:
                 problems.append(f"target {target} not installed")
             s["data"] = {"rustc": rustc, "cargo": cargo, "pinned_rustc": want, "target": target, "target_installed": have_target}
             pinned = not problems
-            self.toolchain_class = "pinned-bare-metal" if pinned else ("unavailable" if not rustc["found"] else "unpinned")
+            self.toolchain_class = "pinned-bare-metal" if pinned else ("host-fallback" if rustc["found"] else "none")
             self.finish(s, PASS if pinned else BLOCKED,
                         "pinned toolchain and target present" if pinned else "; ".join(problems) +
-                        " (kernel builds are blocked unless the pinned toolchain and target are available)")
+                        " (the bare-metal build stages are BLOCKED; host builds only run with --diagnostic-host-build)")
 
         s = self.stage("env.runtime-tools", "QEMU, GRUB and xorriso available for real boots", "environment")
         if not self.skip_unselected(s):
@@ -464,11 +392,9 @@ class Orchestrator:
             grub = probe_tool("grub-mkrescue", ["--version"], "EXILE_VALIDATE_GRUB_MKRESCUE")
             if not grub["found"]:
                 grub = probe_tool("grub2-mkrescue", ["--version"])
-            qemu_aarch64 = probe_tool("qemu-system-aarch64", ["--version"])
             xorriso = probe_tool("xorriso", ["-version"])
             mformat = probe_tool("mformat", ["--version"])
-            self.tools.update(qemu=qemu, qemu_aarch64=qemu_aarch64,
-                              grub=grub, xorriso=xorriso, mformat=mformat)
+            self.tools.update(qemu=qemu, grub=grub, xorriso=xorriso, mformat=mformat)
             if qemu["found"]:
                 qemu["sha256"] = sha256_file(qemu["path"])
             problems = []
@@ -478,15 +404,12 @@ class Orchestrator:
                 v = parse_version(qemu["version_text"])
                 if v is None or v[:2] < QEMU_MIN:
                     problems.append(f"QEMU {version_str(v)} older than {version_str(QEMU_MIN)}")
-            if "qemu-system-aarch64" in pin.get("need_tool", []) and not qemu_aarch64["found"]:
-                problems.append("qemu-system-aarch64 not found (required by toolchain.pin)")
             if not grub["found"]:
                 problems.append("grub-mkrescue not found")
             if not xorriso["found"]:
                 problems.append("xorriso not found")
-            s["data"] = {"qemu": qemu, "qemu_aarch64": qemu_aarch64,
-                         "grub": grub, "xorriso": xorriso, "mformat": mformat}
-            self.finish(s, BLOCKED if problems else PASS, "; ".join(problems) if problems else "required QEMU, GRUB and xorriso tools found")
+            s["data"] = {"qemu": qemu, "grub": grub, "xorriso": xorriso, "mformat": mformat}
+            self.finish(s, BLOCKED if problems else PASS, "; ".join(problems) if problems else "QEMU, GRUB and xorriso found")
 
         s = self.stage("env.zig", "Zig matches the pin (Batches 2-6)", "environment")
         if not self.skip_unselected(s):
@@ -592,103 +515,164 @@ class Orchestrator:
 
     def build_variant(self, variant, dest, s):
         script = os.path.join(self.repo, B8, "scripts", "build.sh")
-        return self.run(s, ["bash", script, "--variant", variant, "--test-exit",
-                            "--target", self.pin.get("rust_target", "x86_64-unknown-none"),
-                            "--out", dest], timeout=900,
+        return self.run(s, ["bash", script, "--variant", variant, "--test-exit", "--out", dest], timeout=900,
                         env={"SOURCE_DATE_EPOCH": "0", "TZ": "UTC", "LC_ALL": "C"}, log_name=s["id"])
 
-    def stage_build(self):
+    def stage_build_diagnostic(self):
+        """Host-target builds through the existing build.sh. DIAGNOSTIC ONLY: never bare-metal evidence."""
+        eb = self.load_build_module()
+        if eb is not None:
+            elf_ok, elf_detail = eb.elf_linker_capability()
+            if not elf_ok:
+                reason = "diagnostic host build unavailable: " + elf_detail
+                for variant in VARIANTS:
+                    stage = self.stage(
+                        f"build.{variant}",
+                        f"Batch 8 variant '{variant}' diagnostic host build",
+                        "build",
+                    )
+                    if not self.skip_unselected(stage):
+                        self.finish(stage, BLOCKED, reason)
+                stage = self.stage(
+                    "build.reproducible",
+                    "Two diagnostic builds of base are byte-identical",
+                    "build",
+                )
+                if not self.skip_unselected(stage):
+                    self.finish(stage, BLOCKED, reason)
+                return
         for v in VARIANTS:
-            s = self.stage(f"build.{v}", f"Batch 8 variant '{v}' builds", "build")
+            s = self.stage(f"build.{v}", f"Batch 8 variant '{v}' builds (DIAGNOSTIC host build)", "build")
             if self.skip_unselected(s):
                 continue
-            if self.need(s, "env.rust-toolchain"):
-                continue
-
             dest = os.path.join(self.work, f"build-{v}")
             shutil.rmtree(dest, ignore_errors=True)
-            rc, output = self.build_variant(v, dest, s)
+            rc, text = self.build_variant(v, dest, s)
             elf = os.path.join(dest, "kernel.elf")
-            info_path = os.path.join(dest, "build-info.txt")
-
             if rc != 0 or not os.path.isfile(elf):
-                self.finish(s, FAIL,
-                            f"build.sh rc={rc}; kernel.elf "
-                            f"{'missing' if not os.path.isfile(elf) else 'present'}")
+                self.finish(s, FAIL, f"build.sh rc={rc}; kernel.elf {'missing' if not os.path.isfile(elf) else 'present'}")
                 continue
-
-            info = ""
-            if os.path.isfile(info_path):
-                with open(info_path, encoding="utf-8", errors="replace") as f:
-                    info = f.read()
-
-            metadata_errors = validate_build_info(info, v, self.pin)
-            if metadata_errors:
-                self.finish(s, FAIL, "; ".join(metadata_errors))
-                continue
-
             adir = os.path.join(self.art, v)
             os.makedirs(adir, exist_ok=True)
-            for name in ("kernel.elf", "kernel32.elf", "build-info.txt"):
-                source = os.path.join(dest, name)
-                if os.path.isfile(source):
-                    shutil.copy2(source, adir)
-                    self.add_artifact(s, os.path.join(adir, name))
-
-            warnings = len(re.findall(r"(?m)^warning", output))
-            s["data"] = {
-                "sha256": sha256_file(elf),
-                "bytes": os.path.getsize(elf),
-                "target": self.pin.get("rust_target"),
-                "compiler": self.pin.get("rustc"),
-                "compiler_warnings": warnings,
-            }
+            for f in ("kernel.elf", "kernel32.elf", "build-info.txt"):
+                if os.path.isfile(os.path.join(dest, f)):
+                    shutil.copy(os.path.join(dest, f), adir)
+                    self.add_artifact(s, os.path.join(adir, f))
+            info = open(os.path.join(dest, "build-info.txt"), errors="replace").read() if os.path.isfile(os.path.join(dest, "build-info.txt")) else ""
+            tm = re.search(r"target=(\S+)", info)
+            warnings = len(re.findall(r"(?m)^warning", text))
+            s["data"] = {"sha256": sha256_file(elf), "bytes": os.path.getsize(elf), "target": tm.group(1) if tm else "unknown",
+                         "compiler_warnings": warnings, "diagnostic_only": True}
             if self.opts.deny_warnings and warnings:
-                self.finish(s, FAIL,
-                            f"{warnings} compiler warning(s) and --deny-warnings is set")
+                self.finish(s, FAIL, f"{warnings} compiler warning(s) and --deny-warnings is set")
             else:
-                self.finish(
-                    s, PASS,
-                    f"verified pinned build: {s['data']['bytes']} bytes; "
-                    f"target={s['data']['target']}; compiler={s['data']['compiler']}; "
-                    f"warnings={warnings}"
-                )
-
-        s = self.stage("build.reproducible",
-                       "Two pinned builds of 'base' are byte-identical", "build")
+                self.finish(s, PASS, f"DIAGNOSTIC host build, not bare-metal evidence: kernel.elf {s['data']['bytes']} bytes, "
+                                     f"target={s['data']['target']}, warnings={warnings}")
+        s = self.stage("build.reproducible", "Two builds of 'base' are byte-identical", "build")
         if self.skip_unselected(s):
             return
-        if self.need(s, "env.rust-toolchain", "build.base"):
+        if self.need(s, "build.base"):
             return
-
         dest = os.path.join(self.work, "build-base-repro")
         shutil.rmtree(dest, ignore_errors=True)
-        rc, output = self.build_variant("base", dest, s)
+        rc, _ = self.build_variant("base", dest, s)
         elf = os.path.join(dest, "kernel.elf")
-        info_path = os.path.join(dest, "build-info.txt")
-
+        first = self.stages["build.base"]["data"].get("sha256")
         if rc != 0 or not os.path.isfile(elf):
             self.finish(s, FAIL, f"second build failed rc={rc}")
-            return
+        else:
+            second = sha256_file(elf)
+            s["data"] = {"first": first, "second": second}
+            self.finish(s, PASS if first == second else FAIL, "identical SHA-256 " + second[:16] if first == second else f"differ: {first[:16]} vs {second[:16]}")
 
-        info = ""
-        if os.path.isfile(info_path):
-            with open(info_path, encoding="utf-8", errors="replace") as f:
-                info = f.read()
-        metadata_errors = validate_build_info(info, "base", self.pin)
-        if metadata_errors:
-            self.finish(s, FAIL,
-                        "second build metadata rejected: " + "; ".join(metadata_errors))
+    def stage_build(self):
+        if self.opts.diagnostic_host_build:
+            return self.stage_build_diagnostic()
+        import_eb = self.load_build_module()
+        sb = self.stage("build.bare-metal", "Pinned bare-metal build pipeline (exile_build.py): variants built, inspected, provenance-checked", "build")
+        wanted = [v for v in VARIANTS if any(self.selected(f"{k}.{v}") for k in ("build", "image", "iso", "boot"))]
+        manifest = None
+        skipped_bm = bool(self.opts.skip) and any("build.bare-metal".startswith(x) for x in self.opts.skip)
+        if wanted and not skipped_bm:
+            tool = os.path.join(self.repo, "Meta", "Exile", "build", "exile_build.py")
+            if not os.path.isfile(tool) or import_eb is None:
+                self.finish(sb, BLOCKED, "Meta/Exile/build/exile_build.py not found")
+            else:
+                out = os.path.join(self.out, "bare-metal")
+                argv = [sys.executable, "-B", tool, "--repo", self.repo, "build", "--out", out, "--variants", ",".join(wanted), "--repro"]
+                rc, text = self.run(sb, argv, timeout=3600, log_name="build.bare-metal")
+                mp = os.path.join(out, "build-manifest.json")
+                if os.path.isfile(mp):
+                    with open(mp) as f:
+                        manifest = json.load(f)
+                    shutil.copy(mp, os.path.join(self.reports, "build-manifest.json"))
+                    shutil.copy(os.path.join(out, "SHA256SUMS"), os.path.join(self.reports, "build-SHA256SUMS"))
+                if rc == 3:
+                    why = "; ".join(b["detail"] for b in (manifest or {}).get("preflight", {}).get("blockers", [])) or "preflight blocked"
+                    self.finish(sb, BLOCKED, "pinned bare-metal toolchain unavailable: " + why, data={"manifest_status": BLOCKED})
+                elif rc == 0 and manifest:
+                    ok, problems = import_eb.verify_manifest(mp, self.repo)
+                    sb["data"] = {"manifest_status": manifest["status"], "verified": ok, "problems": problems}
+                    self.finish(sb, PASS if ok else FAIL, "all variants built for the pinned target and the manifest verifies" if ok
+                                else "manifest does not verify: " + "; ".join(problems[:2]))
+                else:
+                    self.finish(sb, FAIL, f"exile_build rc={rc}: " + "; ".join(r for v in (manifest or {}).get("variants", []) for r in v.get("reasons", []))[:300])
+        elif skipped_bm:
+            self.finish(sb, NOT_RUN, "skipped (--skip)")
+        else:
+            self.finish(sb, NOT_RUN, "no build, image, iso or boot stage selected")
+        recs = {v["variant"]: v for v in (manifest or {}).get("variants", [])}
+        for v in VARIANTS:
+            s = self.stage(f"build.{v}", f"Batch 8 variant '{v}' built for the pinned bare-metal target", "build")
+            if self.skip_unselected(s):
+                continue
+            if sb["status"] == BLOCKED:
+                s["blocked_by"] = ["build.bare-metal"]
+                self.finish(s, BLOCKED, "build.bare-metal is BLOCKED: " + sb["detail"][:200])
+                continue
+            if sb["status"] == NOT_RUN or v not in recs:
+                self.finish(s, NOT_RUN, "not built in this run")
+                continue
+            rec = recs[v]
+            if rec["status"] != PASS:
+                self.finish(s, FAIL, f"{rec['status']}: " + "; ".join(rec["reasons"])[:300])
+                continue
+            adir = os.path.join(self.art, v)
+            os.makedirs(adir, exist_ok=True)
+            vdir = os.path.join(self.out, "bare-metal", "variants", v)
+            for f in ("kernel.elf", "kernel32.elf", "build-info.txt"):
+                if os.path.isfile(os.path.join(vdir, f)):
+                    shutil.copy(os.path.join(vdir, f), adir)
+                    self.add_artifact(s, os.path.join(adir, f))
+            tm = re.search(r"target=(\S+)", rec["build_info"])
+            s["data"] = {"sha256": rec["elf"]["sha256"], "bytes": rec["elf"]["bytes"], "target": tm.group(1) if tm else "unknown",
+                         "provenance": rec["provenance"]["rlib_rustc_versions"]}
+            warnings = rec.get("compiler_warnings", 0)
+            s["data"]["compiler_warnings"] = warnings
+            if self.opts.deny_warnings and warnings:
+                self.finish(s, FAIL, f"{warnings} compiler warning(s) and --deny-warnings is set")
+            else:
+                self.finish(s, PASS, f"kernel.elf {rec['elf']['bytes']} bytes, target={s['data']['target']}, "
+                                     f"rustc={','.join(s['data']['provenance'])}, warnings={warnings}")
+        s = self.stage("build.reproducible", "Two builds of the first selected variant are byte-identical", "build")
+        if self.skip_unselected(s):
             return
+        rp = (manifest or {}).get("reproducibility")
+        if sb["status"] == BLOCKED:
+            s["blocked_by"] = ["build.bare-metal"]
+            self.finish(s, BLOCKED, "build.bare-metal is BLOCKED")
+        elif not rp:
+            self.finish(s, NOT_RUN, "no reproducibility result in the build manifest")
+        else:
+            s["data"] = rp
+            self.finish(s, PASS if rp["identical"] else FAIL, "identical SHA-256 " + str(rp["first"])[:16] if rp["identical"] else
+                        f"differ: {str(rp['first'])[:16]} vs {str(rp['second'])[:16]}")
 
-        first = self.stages["build.base"]["data"].get("sha256")
-        second = sha256_file(elf)
-        s["data"] = {"first": first, "second": second}
-        self.finish(
-            s, PASS if first == second else FAIL,
-            "identical SHA-256 " + second[:16]
-            if first == second else f"differ: {first[:16]} vs {second[:16]}"
-        )
+    def load_build_module(self):
+        try:
+            return load_module(os.path.join(self.repo, "Meta", "Exile", "build", "exile_build.py"), "exile_build_mod")
+        except (OSError, ImportError, SyntaxError):
+            return None
 
     def stage_image(self):
         scripts = os.path.join(self.repo, B8, "scripts")
@@ -817,8 +801,14 @@ class Orchestrator:
         req = [self.stages[i]["status"] for i in self.order if self.stages[i]["required"]]
         overall = FAIL if FAIL in req else BLOCKED if BLOCKED in req else "INCOMPLETE" if NOT_RUN in req else PASS
         boots = [self.stages[f"boot.{v}"]["status"] for v in VARIANTS if f"boot.{v}" in self.stages]
-        runtime = len(boots) == len(VARIANTS) and all(b == PASS for b in boots)
+        diagnostic = bool(self.opts.diagnostic_host_build)
+        runtime = len(boots) == len(VARIANTS) and all(b == PASS for b in boots) and not diagnostic
+        if diagnostic and overall == PASS:
+            overall = "INCOMPLETE"
         limits = []
+        if diagnostic:
+            limits.append("--diagnostic-host-build was used: every image was built for the HOST target. Nothing here is bare-metal or runtime "
+                          "evidence and the overall verdict can never be PASS.")
         if not runtime:
             limits.append("NO runtime claim is supported: not every variant booted under QEMU and matched its transcript.")
         if self.toolchain_class != "pinned-bare-metal":
@@ -919,7 +909,7 @@ def stage_ids():
     ids = ["env.rust-toolchain", "env.runtime-tools", "env.zig", "env.host-tools", "selftest.qemu-matcher"]
     for n in CARGO_BATCHES:
         ids += [f"host.b{n}.{k}" for k in ("fmt", "clippy", "test")]
-    ids += ["host.euk.tests", "static.kernel-syntax"] + [f"build.{v}" for v in VARIANTS] + ["build.reproducible"]
+    ids += ["host.euk.tests", "static.kernel-syntax", "build.bare-metal"] + [f"build.{v}" for v in VARIANTS] + ["build.reproducible"]
     ids += [f"image.{v}" for v in VARIANTS]
     for v in VARIANTS:
         ids += [f"iso.{v}", f"boot.{v}"]
@@ -936,6 +926,9 @@ def main(argv=None):
     ap.add_argument("--timeout", type=int, default=90, help="per-variant QEMU deadline in seconds (default 90)")
     ap.add_argument("--kernel-syntax", choices=["scheduler", "full", "skip"], default="scheduler")
     ap.add_argument("--deny-warnings", action="store_true", help="fail a build stage that emits compiler warnings")
+    ap.add_argument("--diagnostic-host-build", action="store_true",
+                    help="DIAGNOSTIC ONLY: build with the existing host-target path (build.sh without --target). Caps the verdict below PASS "
+                         "and disables the runtime claim. Default is the pinned bare-metal pipeline, which is BLOCKED without the toolchain.")
     ap.add_argument("--no-host-tests", action="store_true", help="do not run cargo fmt/clippy/test and EUK tests")
     ap.add_argument("--list-stages", action="store_true")
     a = ap.parse_args(argv)

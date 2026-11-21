@@ -1,0 +1,37 @@
+test_blocked_build_makes_no_artifacts_and_unverifiable_manifest (__main__.BuildRefusesWithoutPin.test_blocked_build_makes_no_artifacts_and_unverifiable_manifest) ... ok
+test_no_host_fallback_switch_exists (__main__.BuildRefusesWithoutPin.test_no_host_fallback_switch_exists) ... ok
+test_unknown_variant_is_usage_error (__main__.BuildRefusesWithoutPin.test_unknown_variant_is_usage_error) ... ok
+test_entry_outside_text (__main__.ElfRules.test_entry_outside_text) ... ok
+test_executable_data_section (__main__.ElfRules.test_executable_data_section) ... ok
+test_missing_section_is_detected (__main__.ElfRules.test_missing_section_is_detected) ... ok
+test_not_an_elf (__main__.ElfRules.test_not_an_elf) ... ok
+test_unmodified_is_valid (__main__.ElfRules.test_unmodified_is_valid) ... ok
+test_writable_text_section (__main__.ElfRules.test_writable_text_section) ... ok
+test_wrong_machine (__main__.ElfRules.test_wrong_machine) ... ok
+test_a_shim_that_lies_about_its_version_is_still_rejected (__main__.HostBuildsAreRejected.test_a_shim_that_lies_about_its_version_is_still_rejected) ... ok
+test_elf_without_build_info_is_unattributed_and_rejected (__main__.HostBuildsAreRejected.test_elf_without_build_info_is_unattributed_and_rejected) ... ok
+test_valid_elf_but_rejected (__main__.HostBuildsAreRejected.test_valid_elf_but_rejected) ... ok
+test_existing_scripts_are_untouched (__main__.Hygiene.test_existing_scripts_are_untouched) ... ok
+test_source_identity_is_stable (__main__.Hygiene.test_source_identity_is_stable) ... ok
+test_inspect_iso_accepts_matching_kernel (__main__.IsoStage.test_inspect_iso_accepts_matching_kernel) ... ok
+test_inspect_iso_rejects_a_different_kernel_inside (__main__.IsoStage.test_inspect_iso_rejects_a_different_kernel_inside) ... ok
+test_inspect_iso_rejects_missing_grub_cfg (__main__.IsoStage.test_inspect_iso_rejects_missing_grub_cfg) ... ok
+test_iso_stage_blocked_when_build_not_accepted (__main__.IsoStage.test_iso_stage_blocked_when_build_not_accepted) ... ok
+test_iso_stage_blocked_without_grub_tools (__main__.IsoStage.test_iso_stage_blocked_without_grub_tools) ... ok
+test_parse_find (__main__.IsoStage.test_parse_find) ... ok
+test_consistent_pinned_evidence_is_acceptable (__main__.Judge.test_consistent_pinned_evidence_is_acceptable) ... ok
+test_each_defect_is_caught_independently (__main__.Judge.test_each_defect_is_caught_independently) ... ok
+test_host_fallback_flag_is_detected (__main__.ManifestVerification.test_host_fallback_flag_is_detected) ... ok
+test_missing_variant_is_detected (__main__.ManifestVerification.test_missing_variant_is_detected) ... ok
+test_tampered_artifact_is_detected (__main__.ManifestVerification.test_tampered_artifact_is_detected) ... ok
+test_cli_preflight_exit_code_is_3_when_blocked (__main__.Preflight.test_cli_preflight_exit_code_is_3_when_blocked) ... ok
+test_pin_is_read (__main__.Preflight.test_pin_is_read) ... ok
+test_pinned_rustc_with_target_passes_preflight (__main__.Preflight.test_pinned_rustc_with_target_passes_preflight) ... ok
+test_pinned_rustc_without_target_blocks (__main__.Preflight.test_pinned_rustc_without_target_blocks) ... ok
+test_wrong_rustc_blocks (__main__.Preflight.test_wrong_rustc_blocks) ... ok
+test_zig_only_blocks_when_asked (__main__.Preflight.test_zig_only_blocks_when_asked) ... ok
+
+----------------------------------------------------------------------
+Ran 32 tests in 6.578s
+
+OK

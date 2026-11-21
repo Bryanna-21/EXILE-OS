@@ -1,0 +1,79 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.03s
+     Running unittests src/lib.rs (/tmp/claude-0/-home-claude/a682fefd-618f-510f-8cd0-1386c8c45774/scratchpad/plat-target/debug/deps/exile_platform-1dea1364ee3a5253)
+
+running 67 tests
+test boot::info::tests::crc32_check_vector ... ok
+test boot::info::tests::malicious_ranges_with_valid_crc_are_rejected ... ok
+test boot::info::tests::newer_minor_is_accepted ... ok
+test boot::info::tests::every_single_bit_flip_is_detected ... ok
+test boot::info::tests::round_trip ... ok
+test boot::info::tests::version_and_size_rules ... ok
+test boot::slots::tests::both_copies_destroyed_is_reported_not_guessed ... ok
+test boot::slots::tests::cannot_update_from_unconfirmed_slot_or_rollback_to_bad ... ok
+test boot::slots::tests::encode_decode_round_trip_and_corruption ... ok
+test boot::slots::tests::factory_boots_a ... ok
+test boot::slots::tests::nothing_bootable_returns_none ... ok
+test boot::slots::tests::generations_alternate_copies_and_newest_wins ... ok
+test boot::slots::tests::power_loss_at_every_byte_never_loses_a_valid_record ... ok
+test boot::slots::tests::unconfirmed_trial_falls_back_after_max_tries ... ok
+test boot::slots::tests::update_trial_then_confirm ... ok
+test hal::acpi::tests::madt_counts_only_enabled_cpus ... ok
+test hal::acpi::tests::madt_override_and_capacity_and_zero_length_entry ... ok
+test hal::acpi::tests::mcfg_and_ecam_addressing ... ok
+test hal::acpi::tests::rsdp_rejects_corruption ... ok
+test hal::acpi::tests::rsdp_v2_valid ... ok
+test hal::acpi::tests::sdt_checksum_and_length_enforced ... ok
+test hal::acpi::tests::xsdt_and_rsdt_entries ... ok
+test hal::cpu::tests::decodes_a_modern_cpu ... ok
+test hal::cpu::tests::decodes_the_processor_running_the_tests ... ok
+test hal::cpu::tests::empty_cpu_has_no_features ... ok
+test hal::cpu::tests::extended_family_and_model_rules ... ok
+test hal::cpu::tests::leaves_above_the_reported_maximum_are_not_trusted ... ok
+test hal::cpu::tests::missing_features_are_reported_not_guessed ... ok
+test hal::devices::tests::ahci_decoding_and_signatures ... ok
+test hal::devices::tests::io_range_checks_are_overflow_safe ... ok
+test hal::devices::tests::nvme_cap_decoding ... ok
+test hal::devices::tests::ramdisk_round_trip_and_bounds ... ok
+test hal::devices::tests::xhci_decoding ... ok
+test hal::fb::tests::pixel_layout_and_pitch_padding ... ok
+test hal::fb::tests::rgb_format_and_clipped_fill ... ok
+test hal::fb::tests::validation_rules ... ok
+test hal::lapic::tests::busy_icr_times_out_instead_of_hanging ... ok
+test hal::lapic::tests::divisor_encoding_matches_sdm_table ... ok
+test hal::lapic::tests::id_version_enable ... ok
+test hal::lapic::tests::ipi_encodings_and_destination_written_first ... ok
+test hal::lapic::tests::timer_modes_and_ordering ... ok
+test hal::memmap::tests::adjacent_is_allowed_and_zero_length_skipped ... ok
+test hal::memmap::tests::coalesce_keeps_different_kinds_apart ... ok
+test hal::memmap::tests::multiboot_entry_with_extra_bytes_uses_stride ... ok
+test hal::memmap::tests::multiboot_rejects_bad_input ... ok
+test hal::memmap::tests::multiboot_typical_map ... ok
+test hal::memmap::tests::overlap_is_rejected_after_sorting ... ok
+test hal::memmap::tests::push_rejects_zero_and_overflow ... ok
+test hal::memmap::tests::uefi_map_with_larger_descriptor_stride ... ok
+test hal::memmap::tests::uefi_rejects_bad_input ... ok
+test hal::memmap::tests::usable_is_shrunk_inward_to_pages ... ok
+test hal::pci::tests::bar_probe_sizes_and_restores_state ... ok
+test hal::pci::tests::bridge_loop_and_capacity_are_bounded ... ok
+test hal::pci::tests::capability_walk_is_bounded ... ok
+test hal::pci::tests::classify_known_classes ... ok
+test hal::pci::tests::decode_is_disabled_during_probe ... ok
+test hal::pci::tests::enumerates_through_bridge_and_multifunction ... ok
+test hal::registry::tests::capacity_and_bad_index ... ok
+test hal::registry::tests::failures_mark_failed_and_are_terminal ... ok
+test hal::registry::tests::full_lifecycle_in_order ... ok
+test hal::registry::tests::illegal_transitions_rejected_without_calling_driver ... ok
+test hal::registry::tests::wrong_driver_kind_is_refused_and_device_stays_discovered ... ok
+test sync::tests::basic_lock_unlock_and_try ... ok
+test sync::tests::contended_counter_is_exact ... ok
+test sync::tests::non_atomic_compound_update_stays_consistent ... ok
+test sync::tests::rank_depth_limit ... ok
+test sync::tests::rank_order_enforced ... ok
+
+test result: ok. 67 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+   Doc-tests exile_platform
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

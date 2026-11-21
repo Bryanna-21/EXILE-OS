@@ -1,0 +1,14 @@
+PASS    pin.readable: Meta/Experiments/OMNI-Kernel-Batch-10/toolchain.pin: rustc=1.91.1 target=x86_64-unknown-none
+BLOCKED rustc.pinned: required rustc 1.91.1; candidates: PATH: /root/.cargo/bin/rustc -> 1.97.0
+BLOCKED rust.target-installed: cannot check target x86_64-unknown-none without rustc 1.91.1
+PASS    tool.gcc: gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+PASS    tool.ld: GNU ld (GNU Binutils for Ubuntu) 2.42
+PASS    tool.objcopy: GNU objcopy (GNU Binutils for Ubuntu) 2.42
+BLOCKED zig.pinned: zig not found; pinned 0.15.2
+PASS    source.build.sh: Meta/Experiments/OMNI-Kernel-Batch-8/scripts/build.sh
+PASS    source.linker.ld: Meta/Experiments/OMNI-Kernel-Batch-8/link/linker.ld
+PASS    source.grub.cfg: Meta/Experiments/OMNI-Kernel-Batch-8/boot/grub.cfg
+PASS    source.lib.rs: Meta/Experiments/OMNI-Kernel-Batch-7/kernel/lib.rs
+
+PREFLIGHT BLOCKED
+preflight rc=3
