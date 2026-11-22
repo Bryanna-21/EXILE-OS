@@ -2,7 +2,7 @@ ENTRY(_start)
 PHDRS { text PT_LOAD FLAGS(5); rodata PT_LOAD FLAGS(4); data PT_LOAD FLAGS(6); }
 SECTIONS {
     . = 1M;
-    .text : { KEEP(*(.multiboot)) *(.text.boot) *(.text .text.*) } :text
+    .text : { __text_start = .; KEEP(*(.multiboot)) *(.text.boot) *(.text .text.*) __text_end = .; } :text
     . = ALIGN(4096);
     .rodata : { *(.rodata .rodata.*) } :rodata
     . = ALIGN(4096);

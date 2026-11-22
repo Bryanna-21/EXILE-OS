@@ -1,15 +1,23 @@
-# Exile Universal Kernel (EUK) — Notice
+# EUK notices
 
-The original EUK milestone source and documentation in this directory are
-released under the Apache License, Version 2.0. This milestone was prepared
-with AI assistance for the Exile OS project and its public release has been
-authorized by the project owner.
+The original EUK contribution in this package is released under the
+Apache License, Version 2.0. See [LICENSE](LICENSE).
 
-EUK is an experimental, isolated x86-64 kernel milestone. This license does
-not relicense the existing Exile OS kernel, Serenity-derived code, or other
-files outside this directory.
+The project owner authorized public release of the original EUK contribution
+under Apache-2.0. This does not relicense existing Exile OS or Serenity-derived
+code, third-party software, external specifications, toolchains, or
+independently licensed components.
 
-The source-only milestone does not intentionally include third-party source
-files or tool binaries. See THIRD_PARTY.md for the tooling and dependency
-inventory. That inventory is not a substitute for checking applicable
-obligations before distributing compiled binaries or boot images.
+Project provenance and its limitations are documented in
+[docs/PROVENANCE.md](docs/PROVENANCE.md). This notice is not an independent
+legal review, ownership determination, or guarantee that every component in
+a generated binary or boot image is cleared for redistribution.
+
+Third-party tools and technical references are identified in
+[THIRD_PARTY.md](THIRD_PARTY.md). Check applicable upstream licenses,
+copyright notices, attribution requirements, and distribution obligations
+for the exact versions and components used before redistributing binaries,
+boot images, or toolchain artifacts.
+
+No endorsement by the Rust project, GNU, GRUB, QEMU, xorriso, Intel, AMD,
+or any other third party is implied.

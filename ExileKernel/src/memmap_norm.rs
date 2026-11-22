@@ -189,4 +189,3 @@ pub fn map_kind(num: u32) -> Kind {
         _ => Kind::Reserved,               // unknown -> fail closed
     }
 }
-

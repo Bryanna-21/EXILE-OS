@@ -308,4 +308,3 @@ mod tests {
         assert_eq!(validate_regions(&[]), Err(BootInfoError::EmptyMemmap));
     }
 }
-

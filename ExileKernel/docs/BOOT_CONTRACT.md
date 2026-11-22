@@ -98,4 +98,3 @@ A2: early_alloc.rs (1)
 A3: exceptions.rs, kernel.rs, entry.S, linker.ld (4)
 A4: boot.S, vectors.S, linker.ld, main.rs, build_aarch64.py (5)
 A5: none yet (design only).
-
