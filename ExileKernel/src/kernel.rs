@@ -1,6 +1,36 @@
 #![no_std]
 #![no_main]
+mod cpu;
+mod gdt;
+mod idt;
 mod memory;
+// Mission D3. Declared so the kernel image contains and links the real
+// scheduler, stack manager and context-switch assembly; they only RUN under the
+// `euk_d3_demo` cfg (see d3_demo.rs). The normal boot path is unchanged.
+#[allow(dead_code)]
+#[path = "arch/x86_64/context.rs"]
+mod context;
+#[cfg(euk_d3_demo)]
+mod d3_demo;
+#[allow(dead_code)]
+mod dispatch;
+#[cfg(euk_host_mem)]
+mod hostmem;
+#[allow(dead_code)]
+mod kstack;
+#[allow(dead_code)]
+mod kthread;
+#[allow(dead_code)]
+mod runqueue;
+#[allow(dead_code)]
+mod sched;
+#[allow(dead_code)]
+mod spin;
+#[allow(dead_code)]
+#[path = "arch/x86_64/switch.rs"]
+mod switch;
+#[allow(dead_code)]
+mod thread;
 use core::arch::asm;
 use core::panic::PanicInfo;
 use memory::{Region, parse_map};
@@ -104,8 +134,17 @@ pub extern "C" fn kernel_main(magic: u32, info: u32) -> ! {
     {
         fail("usable memory missing");
     }
-    serial("EUK: bounded memory map parsed\nEUK BOOT_OK\n");
+    serial("EUK: bounded memory map parsed\n");
+    after_boot()
+}
+#[cfg(not(euk_d3_demo))]
+fn after_boot() -> ! {
+    serial("EUK BOOT_OK\n");
     finish(true)
+}
+#[cfg(euk_d3_demo)]
+fn after_boot() -> ! {
+    d3_demo::run()
 }
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
