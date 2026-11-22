@@ -4,6 +4,9 @@ mod cpu;
 mod gdt;
 mod idt;
 mod memory;
+mod frame;
+mod stacks;
+mod traps;
 // Mission D3. Declared so the kernel image contains and links the real
 // scheduler, stack manager and context-switch assembly; they only RUN under the
 // `euk_d3_demo` cfg (see d3_demo.rs). The normal boot path is unchanged.
@@ -78,6 +81,54 @@ fn fail(reason: &str) -> ! {
     serial("\n");
     finish(false)
 }
+
+#[cfg(euk_traps)]
+#[unsafe(no_mangle)]
+extern "C" fn euk_trap_dispatch(frame: &mut frame::TrapFrame) {
+    if !traps::enter_trap() {
+        fail("nested trap");
+    }
+
+    let cr2 = if frame.vector == 14 {
+        unsafe { traps::read_cr2() }
+    } else {
+        0
+    };
+
+    let report = unsafe { traps::trap_report() };
+    let action = traps::handle(frame, cr2, report);
+    serial(report.as_str());
+
+    match action {
+        traps::Action::Resume => traps::leave_trap(),
+        traps::Action::Fatal => finish(false),
+    }
+}
+
+#[cfg(euk_traps)]
+fn trap_selftest() {
+    if unsafe { traps::init_bsp(MAP_LIMIT as u64) }.is_err() {
+        fail("trap setup");
+    }
+
+    serial("EUK: GDT/TSS/IDT loaded\n");
+
+    #[cfg(fault_trap_ud)]
+    unsafe {
+        asm!("ud2", options(noreturn));
+    }
+
+    #[cfg(fault_trap_df)]
+    unsafe {
+        asm!("mov rsp, 0x80000000", "int3", options(noreturn));
+    }
+
+    #[cfg(not(any(fault_trap_ud, fault_trap_df)))]
+    {
+        unsafe { asm!("int3"); }
+        serial("EUK: breakpoint returned\n");
+    }
+}
 /// All unsafe loader accesses stay inside the mapped GiB with bounded lengths.
 /// Loader authenticity and physical RAM validity are bootloader trust assumptions.
 unsafe fn read32(address: usize) -> u32 {
@@ -134,6 +185,8 @@ pub extern "C" fn kernel_main(magic: u32, info: u32) -> ! {
     {
         fail("usable memory missing");
     }
+    #[cfg(euk_traps)]
+    trap_selftest();
     serial("EUK: bounded memory map parsed\n");
     after_boot()
 }
