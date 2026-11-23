@@ -1,0 +1,409 @@
+WARNING: unpinned rustc: rustc 1.97.0 (2d8144b78 2026-07-07) - not the verified reproducible toolchain
+WARNING: EUK_TARGET=host - built against the host target libraries, not x86_64-unknown-none
++ gcc -m64 -c -ffreestanding -fno-pie -DTEST_EXIT /home/claude/euk-d4-work/ExileKernel-d4/src/arch/x86_64/entry.S -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/normal/entry.o
++ rustc --edition=2024 --crate-type staticlib -C panic=abort -C opt-level=2 -C relocation-model=static -C no-redzone=yes -C debuginfo=0 --remap-path-prefix /home/claude/euk-d4-work/ExileKernel-d4=EUK --cfg test_exit --cfg euk_host_mem /home/claude/euk-d4-work/ExileKernel-d4/src/kernel.rs -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/normal/kernel.a
+warning: unused import: `real::*`
+   --> EUK/src/dispatch.rs:228:9
+    |
+228 | pub use real::*;
+    |         ^^^^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: 1 warning emitted
+
++ ld -nostdlib --gc-sections --build-id=none -z max-page-size=0x1000 -T /home/claude/euk-d4-work/ExileKernel-d4/src/arch/x86_64/linker.ld /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/normal/entry.o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/normal/kernel.a -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/normal/euk.elf
++ python3 /home/claude/euk-d4-work/ExileKernel-d4/scripts/check.py /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/normal/euk.elf
+ELF64 / Multiboot / entry / static linkage checks PASS
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+Drive current: -outdev 'stdio:/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/normal/euk.iso'
+Media current: stdio file, overwriteable
+Media status : is blank
+Media summary: 0 sessions, 0 data blocks, 0 data, 28.6g free
+Added to ISO image: directory '/'='/tmp/grub.qSi6Ik'
+xorriso : UPDATE :     295 files added in 1 seconds
+Added to ISO image: directory '/'='/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/normal/iso-root'
+xorriso : UPDATE :     299 files added in 1 seconds
+xorriso : NOTE : Copying to System Area: 512 bytes from file '/usr/lib/grub/i386-pc/boot_hybrid.img'
+ISO image produced: 2804 sectors
+Written to medium : 2804 sectors at LBA 0
+Writing to 'stdio:/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/normal/euk.iso' completed successfully.
+
++ qemu-system-x86_64 -machine pc -accel tcg -cpu qemu64 -m 128M -cdrom /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/normal/euk.iso -boot d -display none -serial stdio -monitor none -no-reboot -device isa-debug-exit,iobase=0xf4,iosize=0x04
+PASS normal/pc: exit=33; EUK: x86-64 long mode
+EUK: bounded memory map parsed
+EUK BOOT_OK
++ qemu-system-x86_64 -machine q35 -accel tcg -cpu qemu64 -m 128M -cdrom /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/normal/euk.iso -boot d -display none -serial stdio -monitor none -no-reboot -device isa-debug-exit,iobase=0xf4,iosize=0x04
+PASS normal/q35: exit=33; EUK: x86-64 long mode
+EUK: bounded memory map parsed
+EUK BOOT_OK
+WARNING: unpinned rustc: rustc 1.97.0 (2d8144b78 2026-07-07) - not the verified reproducible toolchain
+WARNING: EUK_TARGET=host - built against the host target libraries, not x86_64-unknown-none
++ gcc -m64 -c -ffreestanding -fno-pie -DTEST_EXIT -DFAULT_MAGIC /home/claude/euk-d4-work/ExileKernel-d4/src/arch/x86_64/entry.S -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/magic/entry.o
++ rustc --edition=2024 --crate-type staticlib -C panic=abort -C opt-level=2 -C relocation-model=static -C no-redzone=yes -C debuginfo=0 --remap-path-prefix /home/claude/euk-d4-work/ExileKernel-d4=EUK --cfg test_exit --cfg euk_host_mem /home/claude/euk-d4-work/ExileKernel-d4/src/kernel.rs -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/magic/kernel.a
+warning: unused import: `real::*`
+   --> EUK/src/dispatch.rs:228:9
+    |
+228 | pub use real::*;
+    |         ^^^^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: 1 warning emitted
+
++ ld -nostdlib --gc-sections --build-id=none -z max-page-size=0x1000 -T /home/claude/euk-d4-work/ExileKernel-d4/src/arch/x86_64/linker.ld /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/magic/entry.o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/magic/kernel.a -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/magic/euk.elf
++ python3 /home/claude/euk-d4-work/ExileKernel-d4/scripts/check.py /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/magic/euk.elf
+ELF64 / Multiboot / entry / static linkage checks PASS
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+Drive current: -outdev 'stdio:/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/magic/euk.iso'
+Media current: stdio file, overwriteable
+Media status : is blank
+Media summary: 0 sessions, 0 data blocks, 0 data, 28.5g free
+Added to ISO image: directory '/'='/tmp/grub.YtYRI3'
+xorriso : UPDATE :     295 files added in 1 seconds
+Added to ISO image: directory '/'='/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/magic/iso-root'
+xorriso : UPDATE :     299 files added in 1 seconds
+xorriso : NOTE : Copying to System Area: 512 bytes from file '/usr/lib/grub/i386-pc/boot_hybrid.img'
+ISO image produced: 2804 sectors
+Written to medium : 2804 sectors at LBA 0
+Writing to 'stdio:/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/magic/euk.iso' completed successfully.
+
++ qemu-system-x86_64 -machine q35 -accel tcg -cpu qemu64 -m 128M -cdrom /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/magic/euk.iso -boot d -display none -serial stdio -monitor none -no-reboot -device isa-debug-exit,iobase=0xf4,iosize=0x04
+PASS magic/q35: exit=35; EUK FAIL: boot magic
+WARNING: unpinned rustc: rustc 1.97.0 (2d8144b78 2026-07-07) - not the verified reproducible toolchain
+WARNING: EUK_TARGET=host - built against the host target libraries, not x86_64-unknown-none
++ gcc -m64 -c -ffreestanding -fno-pie -DTEST_EXIT -DFAULT_CPU /home/claude/euk-d4-work/ExileKernel-d4/src/arch/x86_64/entry.S -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/cpu/entry.o
++ rustc --edition=2024 --crate-type staticlib -C panic=abort -C opt-level=2 -C relocation-model=static -C no-redzone=yes -C debuginfo=0 --remap-path-prefix /home/claude/euk-d4-work/ExileKernel-d4=EUK --cfg test_exit --cfg euk_host_mem /home/claude/euk-d4-work/ExileKernel-d4/src/kernel.rs -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/cpu/kernel.a
+warning: unused import: `real::*`
+   --> EUK/src/dispatch.rs:228:9
+    |
+228 | pub use real::*;
+    |         ^^^^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: 1 warning emitted
+
++ ld -nostdlib --gc-sections --build-id=none -z max-page-size=0x1000 -T /home/claude/euk-d4-work/ExileKernel-d4/src/arch/x86_64/linker.ld /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/cpu/entry.o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/cpu/kernel.a -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/cpu/euk.elf
++ python3 /home/claude/euk-d4-work/ExileKernel-d4/scripts/check.py /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/cpu/euk.elf
+ELF64 / Multiboot / entry / static linkage checks PASS
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+Drive current: -outdev 'stdio:/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/cpu/euk.iso'
+Media current: stdio file, overwriteable
+Media status : is blank
+Media summary: 0 sessions, 0 data blocks, 0 data, 28.5g free
+Added to ISO image: directory '/'='/tmp/grub.8nhu1A'
+xorriso : UPDATE :     295 files added in 1 seconds
+Added to ISO image: directory '/'='/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/cpu/iso-root'
+xorriso : UPDATE :     299 files added in 1 seconds
+xorriso : NOTE : Copying to System Area: 512 bytes from file '/usr/lib/grub/i386-pc/boot_hybrid.img'
+ISO image produced: 2804 sectors
+Written to medium : 2804 sectors at LBA 0
+Writing to 'stdio:/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/cpu/euk.iso' completed successfully.
+
++ qemu-system-x86_64 -machine q35 -accel tcg -cpu qemu64 -m 128M -cdrom /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/cpu/euk.iso -boot d -display none -serial stdio -monitor none -no-reboot -device isa-debug-exit,iobase=0xf4,iosize=0x04
+PASS cpu/q35: exit=35; EUK FAIL: CPU features
+WARNING: unpinned rustc: rustc 1.97.0 (2d8144b78 2026-07-07) - not the verified reproducible toolchain
+WARNING: EUK_TARGET=host - built against the host target libraries, not x86_64-unknown-none
++ gcc -m64 -c -ffreestanding -fno-pie -DTEST_EXIT /home/claude/euk-d4-work/ExileKernel-d4/src/arch/x86_64/entry.S -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/map_missing/entry.o
++ rustc --edition=2024 --crate-type staticlib -C panic=abort -C opt-level=2 -C relocation-model=static -C no-redzone=yes -C debuginfo=0 --remap-path-prefix /home/claude/euk-d4-work/ExileKernel-d4=EUK --cfg test_exit --cfg euk_host_mem --cfg fault_map_missing /home/claude/euk-d4-work/ExileKernel-d4/src/kernel.rs -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/map_missing/kernel.a
+warning: unused import: `real::*`
+   --> EUK/src/dispatch.rs:228:9
+    |
+228 | pub use real::*;
+    |         ^^^^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: 1 warning emitted
+
++ ld -nostdlib --gc-sections --build-id=none -z max-page-size=0x1000 -T /home/claude/euk-d4-work/ExileKernel-d4/src/arch/x86_64/linker.ld /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/map_missing/entry.o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/map_missing/kernel.a -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/map_missing/euk.elf
++ python3 /home/claude/euk-d4-work/ExileKernel-d4/scripts/check.py /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/map_missing/euk.elf
+ELF64 / Multiboot / entry / static linkage checks PASS
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+Drive current: -outdev 'stdio:/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/map_missing/euk.iso'
+Media current: stdio file, overwriteable
+Media status : is blank
+Media summary: 0 sessions, 0 data blocks, 0 data, 28.5g free
+Added to ISO image: directory '/'='/tmp/grub.ZPOzdx'
+xorriso : UPDATE :     295 files added in 1 seconds
+Added to ISO image: directory '/'='/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/map_missing/iso-root'
+xorriso : UPDATE :     299 files added in 1 seconds
+xorriso : NOTE : Copying to System Area: 512 bytes from file '/usr/lib/grub/i386-pc/boot_hybrid.img'
+ISO image produced: 2506 sectors
+Written to medium : 2506 sectors at LBA 0
+Writing to 'stdio:/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/map_missing/euk.iso' completed successfully.
+
++ qemu-system-x86_64 -machine q35 -accel tcg -cpu qemu64 -m 128M -cdrom /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/map_missing/euk.iso -boot d -display none -serial stdio -monitor none -no-reboot -device isa-debug-exit,iobase=0xf4,iosize=0x04
+PASS map_missing/q35: exit=35; EUK: x86-64 long mode
+EUK FAIL: memory map missing
+WARNING: unpinned rustc: rustc 1.97.0 (2d8144b78 2026-07-07) - not the verified reproducible toolchain
+WARNING: EUK_TARGET=host - built against the host target libraries, not x86_64-unknown-none
++ gcc -m64 -c -ffreestanding -fno-pie -DTEST_EXIT /home/claude/euk-d4-work/ExileKernel-d4/src/arch/x86_64/entry.S -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/map_truncated/entry.o
++ rustc --edition=2024 --crate-type staticlib -C panic=abort -C opt-level=2 -C relocation-model=static -C no-redzone=yes -C debuginfo=0 --remap-path-prefix /home/claude/euk-d4-work/ExileKernel-d4=EUK --cfg test_exit --cfg euk_host_mem --cfg fault_map_truncated /home/claude/euk-d4-work/ExileKernel-d4/src/kernel.rs -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/map_truncated/kernel.a
+warning: unused import: `real::*`
+   --> EUK/src/dispatch.rs:228:9
+    |
+228 | pub use real::*;
+    |         ^^^^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: 1 warning emitted
+
++ ld -nostdlib --gc-sections --build-id=none -z max-page-size=0x1000 -T /home/claude/euk-d4-work/ExileKernel-d4/src/arch/x86_64/linker.ld /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/map_truncated/entry.o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/map_truncated/kernel.a -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/map_truncated/euk.elf
++ python3 /home/claude/euk-d4-work/ExileKernel-d4/scripts/check.py /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/map_truncated/euk.elf
+ELF64 / Multiboot / entry / static linkage checks PASS
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+Drive current: -outdev 'stdio:/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/map_truncated/euk.iso'
+Media current: stdio file, overwriteable
+Media status : is blank
+Media summary: 0 sessions, 0 data blocks, 0 data, 28.5g free
+Added to ISO image: directory '/'='/tmp/grub.RUW95M'
+xorriso : UPDATE :     295 files added in 1 seconds
+Added to ISO image: directory '/'='/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/map_truncated/iso-root'
+xorriso : UPDATE :     299 files added in 1 seconds
+xorriso : NOTE : Copying to System Area: 512 bytes from file '/usr/lib/grub/i386-pc/boot_hybrid.img'
+ISO image produced: 2804 sectors
+Written to medium : 2804 sectors at LBA 0
+Writing to 'stdio:/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/map_truncated/euk.iso' completed successfully.
+
++ qemu-system-x86_64 -machine q35 -accel tcg -cpu qemu64 -m 128M -cdrom /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/map_truncated/euk.iso -boot d -display none -serial stdio -monitor none -no-reboot -device isa-debug-exit,iobase=0xf4,iosize=0x04
+PASS map_truncated/q35: exit=35; EUK: x86-64 long mode
+EUK FAIL: memory map invalid
+WARNING: unpinned rustc: rustc 1.97.0 (2d8144b78 2026-07-07) - not the verified reproducible toolchain
+WARNING: EUK_TARGET=host - built against the host target libraries, not x86_64-unknown-none
++ gcc -m64 -c -ffreestanding -fno-pie -DTEST_EXIT /home/claude/euk-d4-work/ExileKernel-d4/src/arch/x86_64/entry.S -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/handoff/entry.o
++ rustc --edition=2024 --crate-type staticlib -C panic=abort -C opt-level=2 -C relocation-model=static -C no-redzone=yes -C debuginfo=0 --remap-path-prefix /home/claude/euk-d4-work/ExileKernel-d4=EUK --cfg test_exit --cfg euk_host_mem --cfg fault_handoff /home/claude/euk-d4-work/ExileKernel-d4/src/kernel.rs -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/handoff/kernel.a
+warning: unused import: `real::*`
+   --> EUK/src/dispatch.rs:228:9
+    |
+228 | pub use real::*;
+    |         ^^^^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: 1 warning emitted
+
++ ld -nostdlib --gc-sections --build-id=none -z max-page-size=0x1000 -T /home/claude/euk-d4-work/ExileKernel-d4/src/arch/x86_64/linker.ld /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/handoff/entry.o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/handoff/kernel.a -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/handoff/euk.elf
++ python3 /home/claude/euk-d4-work/ExileKernel-d4/scripts/check.py /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/handoff/euk.elf
+ELF64 / Multiboot / entry / static linkage checks PASS
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+Drive current: -outdev 'stdio:/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/handoff/euk.iso'
+Media current: stdio file, overwriteable
+Media status : is blank
+Media summary: 0 sessions, 0 data blocks, 0 data, 28.5g free
+Added to ISO image: directory '/'='/tmp/grub.aneUVY'
+xorriso : UPDATE :     295 files added in 1 seconds
+Added to ISO image: directory '/'='/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/handoff/iso-root'
+xorriso : UPDATE :     299 files added in 1 seconds
+xorriso : NOTE : Copying to System Area: 512 bytes from file '/usr/lib/grub/i386-pc/boot_hybrid.img'
+ISO image produced: 2506 sectors
+Written to medium : 2506 sectors at LBA 0
+Writing to 'stdio:/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/handoff/euk.iso' completed successfully.
+
++ qemu-system-x86_64 -machine q35 -accel tcg -cpu qemu64 -m 128M -cdrom /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/handoff/euk.iso -boot d -display none -serial stdio -monitor none -no-reboot -device isa-debug-exit,iobase=0xf4,iosize=0x04
+PASS handoff/q35: exit=35; EUK: x86-64 long mode
+EUK FAIL: handoff bounds
+WARNING: unpinned rustc: rustc 1.97.0 (2d8144b78 2026-07-07) - not the verified reproducible toolchain
+WARNING: EUK_TARGET=host - built against the host target libraries, not x86_64-unknown-none
++ gcc -m64 -c -ffreestanding -fno-pie -DTEST_EXIT /home/claude/euk-d4-work/ExileKernel-d4/src/arch/x86_64/entry.S -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/map_length/entry.o
++ rustc --edition=2024 --crate-type staticlib -C panic=abort -C opt-level=2 -C relocation-model=static -C no-redzone=yes -C debuginfo=0 --remap-path-prefix /home/claude/euk-d4-work/ExileKernel-d4=EUK --cfg test_exit --cfg euk_host_mem --cfg fault_map_length /home/claude/euk-d4-work/ExileKernel-d4/src/kernel.rs -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/map_length/kernel.a
+warning: unused import: `real::*`
+   --> EUK/src/dispatch.rs:228:9
+    |
+228 | pub use real::*;
+    |         ^^^^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: 1 warning emitted
+
++ ld -nostdlib --gc-sections --build-id=none -z max-page-size=0x1000 -T /home/claude/euk-d4-work/ExileKernel-d4/src/arch/x86_64/linker.ld /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/map_length/entry.o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/map_length/kernel.a -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/map_length/euk.elf
++ python3 /home/claude/euk-d4-work/ExileKernel-d4/scripts/check.py /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/map_length/euk.elf
+ELF64 / Multiboot / entry / static linkage checks PASS
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+Drive current: -outdev 'stdio:/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/map_length/euk.iso'
+Media current: stdio file, overwriteable
+Media status : is blank
+Media summary: 0 sessions, 0 data blocks, 0 data, 28.5g free
+Added to ISO image: directory '/'='/tmp/grub.yGNEeZ'
+xorriso : UPDATE :     295 files added in 1 seconds
+Added to ISO image: directory '/'='/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/map_length/iso-root'
+xorriso : UPDATE :     299 files added in 1 seconds
+xorriso : NOTE : Copying to System Area: 512 bytes from file '/usr/lib/grub/i386-pc/boot_hybrid.img'
+ISO image produced: 2506 sectors
+Written to medium : 2506 sectors at LBA 0
+Writing to 'stdio:/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/map_length/euk.iso' completed successfully.
+
++ qemu-system-x86_64 -machine q35 -accel tcg -cpu qemu64 -m 128M -cdrom /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/map_length/euk.iso -boot d -display none -serial stdio -monitor none -no-reboot -device isa-debug-exit,iobase=0xf4,iosize=0x04
+PASS map_length/q35: exit=35; EUK: x86-64 long mode
+EUK FAIL: memory map bounds
+WARNING: unpinned rustc: rustc 1.97.0 (2d8144b78 2026-07-07) - not the verified reproducible toolchain
+WARNING: EUK_TARGET=host - built against the host target libraries, not x86_64-unknown-none
++ gcc -m64 -c -ffreestanding -fno-pie -DTEST_EXIT -DFAULT_TABLE_DIRTY /home/claude/euk-d4-work/ExileKernel-d4/src/arch/x86_64/entry.S -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/table_dirty/entry.o
++ rustc --edition=2024 --crate-type staticlib -C panic=abort -C opt-level=2 -C relocation-model=static -C no-redzone=yes -C debuginfo=0 --remap-path-prefix /home/claude/euk-d4-work/ExileKernel-d4=EUK --cfg test_exit --cfg euk_host_mem /home/claude/euk-d4-work/ExileKernel-d4/src/kernel.rs -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/table_dirty/kernel.a
+warning: unused import: `real::*`
+   --> EUK/src/dispatch.rs:228:9
+    |
+228 | pub use real::*;
+    |         ^^^^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: 1 warning emitted
+
++ ld -nostdlib --gc-sections --build-id=none -z max-page-size=0x1000 -T /home/claude/euk-d4-work/ExileKernel-d4/src/arch/x86_64/linker.ld /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/table_dirty/entry.o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/table_dirty/kernel.a -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/table_dirty/euk.elf
++ python3 /home/claude/euk-d4-work/ExileKernel-d4/scripts/check.py /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/table_dirty/euk.elf
+ELF64 / Multiboot / entry / static linkage checks PASS
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+Drive current: -outdev 'stdio:/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/table_dirty/euk.iso'
+Media current: stdio file, overwriteable
+Media status : is blank
+Media summary: 0 sessions, 0 data blocks, 0 data, 28.5g free
+Added to ISO image: directory '/'='/tmp/grub.VTv4Sq'
+xorriso : UPDATE :     295 files added in 1 seconds
+Added to ISO image: directory '/'='/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/table_dirty/iso-root'
+xorriso : UPDATE :     299 files added in 1 seconds
+xorriso : NOTE : Copying to System Area: 512 bytes from file '/usr/lib/grub/i386-pc/boot_hybrid.img'
+ISO image produced: 2804 sectors
+Written to medium : 2804 sectors at LBA 0
+Writing to 'stdio:/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/table_dirty/euk.iso' completed successfully.
+
++ qemu-system-x86_64 -machine q35 -accel tcg -cpu qemu64 -m 128M -cdrom /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/table_dirty/euk.iso -boot d -display none -serial stdio -monitor none -no-reboot -device isa-debug-exit,iobase=0xf4,iosize=0x04
+PASS table_dirty/q35: exit=33; EUK: x86-64 long mode
+EUK: bounded memory map parsed
+EUK BOOT_OK
+WARNING: unpinned rustc: rustc 1.97.0 (2d8144b78 2026-07-07) - not the verified reproducible toolchain
+WARNING: EUK_TARGET=host - built against the host target libraries, not x86_64-unknown-none
++ gcc -m64 -c -ffreestanding -fno-pie -DTEST_EXIT /home/claude/euk-d4-work/ExileKernel-d4/src/arch/x86_64/entry.S -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d3_demo/entry.o
++ rustc --edition=2024 --crate-type staticlib -C panic=abort -C opt-level=2 -C relocation-model=static -C no-redzone=yes -C debuginfo=0 --remap-path-prefix /home/claude/euk-d4-work/ExileKernel-d4=EUK --cfg test_exit --cfg euk_d3_demo --cfg euk_host_mem /home/claude/euk-d4-work/ExileKernel-d4/src/kernel.rs -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d3_demo/kernel.a
++ ld -nostdlib --gc-sections --build-id=none -z max-page-size=0x1000 -T /home/claude/euk-d4-work/ExileKernel-d4/src/arch/x86_64/linker.ld /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d3_demo/entry.o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d3_demo/kernel.a -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d3_demo/euk.elf
++ python3 /home/claude/euk-d4-work/ExileKernel-d4/scripts/check.py /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d3_demo/euk.elf
+ELF64 / Multiboot / entry / static linkage checks PASS
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+Drive current: -outdev 'stdio:/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d3_demo/euk.iso'
+Media current: stdio file, overwriteable
+Media status : is blank
+Media summary: 0 sessions, 0 data blocks, 0 data, 28.5g free
+Added to ISO image: directory '/'='/tmp/grub.ZbQ5UT'
+xorriso : UPDATE :     295 files added in 1 seconds
+Added to ISO image: directory '/'='/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d3_demo/iso-root'
+xorriso : UPDATE :     299 files added in 1 seconds
+xorriso : NOTE : Copying to System Area: 512 bytes from file '/usr/lib/grub/i386-pc/boot_hybrid.img'
+ISO image produced: 2818 sectors
+Written to medium : 2818 sectors at LBA 0
+Writing to 'stdio:/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d3_demo/euk.iso' completed successfully.
+
++ qemu-system-x86_64 -machine pc -accel tcg -cpu qemu64 -m 128M -cdrom /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d3_demo/euk.iso -boot d -display none -serial stdio -monitor none -no-reboot -device isa-debug-exit,iobase=0xf4,iosize=0x04
+PASS d3_demo/pc: exit=33; 16 ordered serial checkpoints
++ qemu-system-x86_64 -machine q35 -accel tcg -cpu qemu64 -m 128M -cdrom /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d3_demo/euk.iso -boot d -display none -serial stdio -monitor none -no-reboot -device isa-debug-exit,iobase=0xf4,iosize=0x04
+PASS d3_demo/q35: exit=33; 16 ordered serial checkpoints
+WARNING: unpinned rustc: rustc 1.97.0 (2d8144b78 2026-07-07) - not the verified reproducible toolchain
+WARNING: EUK_TARGET=host - built against the host target libraries, not x86_64-unknown-none
++ gcc -m64 -c -ffreestanding -fno-pie -DTEST_EXIT /home/claude/euk-d4-work/ExileKernel-d4/src/arch/x86_64/entry.S -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_demo/entry.o
++ rustc --edition=2024 --crate-type staticlib -C panic=abort -C opt-level=2 -C relocation-model=static -C no-redzone=yes -C debuginfo=0 --remap-path-prefix /home/claude/euk-d4-work/ExileKernel-d4=EUK --cfg test_exit --cfg euk_d4_demo --cfg euk_host_mem /home/claude/euk-d4-work/ExileKernel-d4/src/kernel.rs -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_demo/kernel.a
++ ld -nostdlib --gc-sections --build-id=none -z max-page-size=0x1000 -T /home/claude/euk-d4-work/ExileKernel-d4/src/arch/x86_64/linker.ld /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_demo/entry.o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_demo/kernel.a -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_demo/euk.elf
++ python3 /home/claude/euk-d4-work/ExileKernel-d4/scripts/check.py /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_demo/euk.elf
+ELF64 / Multiboot / entry / static linkage checks PASS
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+Drive current: -outdev 'stdio:/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_demo/euk.iso'
+Media current: stdio file, overwriteable
+Media status : is blank
+Media summary: 0 sessions, 0 data blocks, 0 data, 28.4g free
+Added to ISO image: directory '/'='/tmp/grub.FNcUCF'
+xorriso : UPDATE :     295 files added in 1 seconds
+Added to ISO image: directory '/'='/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_demo/iso-root'
+xorriso : UPDATE :     299 files added in 1 seconds
+xorriso : NOTE : Copying to System Area: 512 bytes from file '/usr/lib/grub/i386-pc/boot_hybrid.img'
+ISO image produced: 2823 sectors
+Written to medium : 2823 sectors at LBA 0
+Writing to 'stdio:/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_demo/euk.iso' completed successfully.
+
++ qemu-system-x86_64 -machine pc -accel tcg -cpu qemu64 -m 128M -cdrom /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_demo/euk.iso -boot d -display none -serial stdio -monitor none -no-reboot -device isa-debug-exit,iobase=0xf4,iosize=0x04
+PASS d4_demo/pc: exit=33; 12 ordered serial checkpoints
++ qemu-system-x86_64 -machine q35 -accel tcg -cpu qemu64 -m 128M -cdrom /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_demo/euk.iso -boot d -display none -serial stdio -monitor none -no-reboot -device isa-debug-exit,iobase=0xf4,iosize=0x04
+PASS d4_demo/q35: exit=33; 12 ordered serial checkpoints
+WARNING: unpinned rustc: rustc 1.97.0 (2d8144b78 2026-07-07) - not the verified reproducible toolchain
+WARNING: EUK_TARGET=host - built against the host target libraries, not x86_64-unknown-none
++ gcc -m64 -c -ffreestanding -fno-pie -DTEST_EXIT /home/claude/euk-d4-work/ExileKernel-d4/src/arch/x86_64/entry.S -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_fault_ud/entry.o
++ rustc --edition=2024 --crate-type staticlib -C panic=abort -C opt-level=2 -C relocation-model=static -C no-redzone=yes -C debuginfo=0 --remap-path-prefix /home/claude/euk-d4-work/ExileKernel-d4=EUK --cfg test_exit --cfg euk_d4_demo --cfg euk_d4_fault_ud --cfg euk_host_mem /home/claude/euk-d4-work/ExileKernel-d4/src/kernel.rs -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_fault_ud/kernel.a
++ ld -nostdlib --gc-sections --build-id=none -z max-page-size=0x1000 -T /home/claude/euk-d4-work/ExileKernel-d4/src/arch/x86_64/linker.ld /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_fault_ud/entry.o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_fault_ud/kernel.a -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_fault_ud/euk.elf
++ python3 /home/claude/euk-d4-work/ExileKernel-d4/scripts/check.py /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_fault_ud/euk.elf
+ELF64 / Multiboot / entry / static linkage checks PASS
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+Drive current: -outdev 'stdio:/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_fault_ud/euk.iso'
+Media current: stdio file, overwriteable
+Media status : is blank
+Media summary: 0 sessions, 0 data blocks, 0 data, 28.4g free
+Added to ISO image: directory '/'='/tmp/grub.7lYIwz'
+xorriso : UPDATE :     295 files added in 1 seconds
+Added to ISO image: directory '/'='/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_fault_ud/iso-root'
+xorriso : UPDATE :     299 files added in 1 seconds
+xorriso : NOTE : Copying to System Area: 512 bytes from file '/usr/lib/grub/i386-pc/boot_hybrid.img'
+ISO image produced: 2823 sectors
+Written to medium : 2823 sectors at LBA 0
+Writing to 'stdio:/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_fault_ud/euk.iso' completed successfully.
+
++ qemu-system-x86_64 -machine q35 -accel tcg -cpu qemu64 -m 128M -cdrom /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_fault_ud/euk.iso -boot d -display none -serial stdio -monitor none -no-reboot -device isa-debug-exit,iobase=0xf4,iosize=0x04
+PASS d4_fault_ud/q35: exit=35; diagnostic "EUK FAIL: exception vector 6"
+WARNING: unpinned rustc: rustc 1.97.0 (2d8144b78 2026-07-07) - not the verified reproducible toolchain
+WARNING: EUK_TARGET=host - built against the host target libraries, not x86_64-unknown-none
++ gcc -m64 -c -ffreestanding -fno-pie -DTEST_EXIT /home/claude/euk-d4-work/ExileKernel-d4/src/arch/x86_64/entry.S -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_fault_gp/entry.o
++ rustc --edition=2024 --crate-type staticlib -C panic=abort -C opt-level=2 -C relocation-model=static -C no-redzone=yes -C debuginfo=0 --remap-path-prefix /home/claude/euk-d4-work/ExileKernel-d4=EUK --cfg test_exit --cfg euk_d4_demo --cfg euk_d4_fault_gp --cfg euk_host_mem /home/claude/euk-d4-work/ExileKernel-d4/src/kernel.rs -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_fault_gp/kernel.a
++ ld -nostdlib --gc-sections --build-id=none -z max-page-size=0x1000 -T /home/claude/euk-d4-work/ExileKernel-d4/src/arch/x86_64/linker.ld /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_fault_gp/entry.o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_fault_gp/kernel.a -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_fault_gp/euk.elf
++ python3 /home/claude/euk-d4-work/ExileKernel-d4/scripts/check.py /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_fault_gp/euk.elf
+ELF64 / Multiboot / entry / static linkage checks PASS
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+Drive current: -outdev 'stdio:/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_fault_gp/euk.iso'
+Media current: stdio file, overwriteable
+Media status : is blank
+Media summary: 0 sessions, 0 data blocks, 0 data, 28.4g free
+Added to ISO image: directory '/'='/tmp/grub.IDq4No'
+xorriso : UPDATE :     295 files added in 1 seconds
+Added to ISO image: directory '/'='/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_fault_gp/iso-root'
+xorriso : UPDATE :     299 files added in 1 seconds
+xorriso : NOTE : Copying to System Area: 512 bytes from file '/usr/lib/grub/i386-pc/boot_hybrid.img'
+ISO image produced: 2823 sectors
+Written to medium : 2823 sectors at LBA 0
+Writing to 'stdio:/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_fault_gp/euk.iso' completed successfully.
+
++ qemu-system-x86_64 -machine q35 -accel tcg -cpu qemu64 -m 128M -cdrom /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_fault_gp/euk.iso -boot d -display none -serial stdio -monitor none -no-reboot -device isa-debug-exit,iobase=0xf4,iosize=0x04
+PASS d4_fault_gp/q35: exit=35; diagnostic "EUK FAIL: exception vector 13 error=0x28"
+WARNING: unpinned rustc: rustc 1.97.0 (2d8144b78 2026-07-07) - not the verified reproducible toolchain
+WARNING: EUK_TARGET=host - built against the host target libraries, not x86_64-unknown-none
++ gcc -m64 -c -ffreestanding -fno-pie -DTEST_EXIT /home/claude/euk-d4-work/ExileKernel-d4/src/arch/x86_64/entry.S -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_nopreempt/entry.o
++ rustc --edition=2024 --crate-type staticlib -C panic=abort -C opt-level=2 -C relocation-model=static -C no-redzone=yes -C debuginfo=0 --remap-path-prefix /home/claude/euk-d4-work/ExileKernel-d4=EUK --cfg test_exit --cfg euk_d4_demo --cfg euk_d4_nopreempt --cfg euk_host_mem /home/claude/euk-d4-work/ExileKernel-d4/src/kernel.rs -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_nopreempt/kernel.a
++ ld -nostdlib --gc-sections --build-id=none -z max-page-size=0x1000 -T /home/claude/euk-d4-work/ExileKernel-d4/src/arch/x86_64/linker.ld /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_nopreempt/entry.o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_nopreempt/kernel.a -o /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_nopreempt/euk.elf
++ python3 /home/claude/euk-d4-work/ExileKernel-d4/scripts/check.py /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_nopreempt/euk.elf
+ELF64 / Multiboot / entry / static linkage checks PASS
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+Drive current: -outdev 'stdio:/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_nopreempt/euk.iso'
+Media current: stdio file, overwriteable
+Media status : is blank
+Media summary: 0 sessions, 0 data blocks, 0 data, 28.4g free
+Added to ISO image: directory '/'='/tmp/grub.lobYMD'
+xorriso : UPDATE :     295 files added in 1 seconds
+Added to ISO image: directory '/'='/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_nopreempt/iso-root'
+xorriso : UPDATE :     299 files added in 1 seconds
+xorriso : NOTE : Copying to System Area: 512 bytes from file '/usr/lib/grub/i386-pc/boot_hybrid.img'
+ISO image produced: 2821 sectors
+Written to medium : 2821 sectors at LBA 0
+Writing to 'stdio:/tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_nopreempt/euk.iso' completed successfully.
+
++ qemu-system-x86_64 -machine q35 -accel tcg -cpu qemu64 -m 128M -cdrom /tmp/claude-0/-home-claude/0da5a5d2-be8e-5f20-b498-96768d3133ea/scratchpad/d4/final_boot/d4_nopreempt/euk.iso -boot d -display none -serial stdio -monitor none -no-reboot -device isa-debug-exit,iobase=0xf4,iosize=0x04
+PASS d4_nopreempt/q35: exit=35; diagnostic "EUK FAIL: D4 watchdog: no progress"
+boot_test exit=0

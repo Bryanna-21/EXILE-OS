@@ -1,0 +1,9 @@
+rustc: rustc 1.97.0 (2d8144b78 2026-07-07)
+cargo-less host: Linux 6.18.44-fc-v726 x86_64
+qemu: QEMU emulator version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.18)
+grub-mkrescue: grub-mkrescue (GRUB) 2.12-1ubuntu7.3
+gcc: gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+ld: GNU ld (GNU Binutils for Ubuntu) 2.42
+python: Python 3.13.18
+pinned rustc required by repo: 1.91.1 (not available here; EUK_ALLOW_UNPINNED_RUSTC=1)
+source worktree HEAD: 9f6e21ef6ec2656e0a61da34090478daf9b58f26 (D3 changes are uncommitted on top)

@@ -1,0 +1,6 @@
+EUK: x86-64 long mode
+EUK: bounded memory map parsed
+EUK D4: demo start
+EUK D4: IDT loaded (48 vectors)
+EUK D4 breakpoint trap handled and resumed
+EUK FAIL: exception vector 6 error=0x0 rip=0x104a5c

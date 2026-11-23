@@ -1,0 +1,16 @@
+EUK: x86-64 long mode
+EUK: bounded memory map parsed
+EUK D4: demo start
+EUK D4: IDT loaded (48 vectors)
+EUK D4 breakpoint trap handled and resumed
+EUK D4: PIC remapped, PIT at 100 Hz (divisor 11932)
+EUK D4: idle and four workers created
+EUK D4 controller start
+EUK D4 hardware-tick sleep woke at or after its deadline
+EUK D4 two non-yielding threads both made progress (involuntary preemption)
+EUK D4 registers and SSE state intact across preemption
+EUK D4 interrupt-exit reschedules observed
+EUK D4 self-destroy refused while on cpu: 4
+EUK D4 info: ticks=31 irq_reschedules=15 context_switches=35 spin_a=46409353 spin_b=12500882
+EUK D4 stacks_in_use=1 created=5 destroyed=4
+EUK D4 DEMO_OK

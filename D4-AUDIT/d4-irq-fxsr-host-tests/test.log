@@ -1,0 +1,21 @@
+== Host tests: memory.rs
+error: linking with `link.exe` failed: exit code: 1
+  |
+  = note: "link.exe" "/NOLOGO" "C:/Users/USER/Downloads/euk-d4-audit/euk-d4/ExileKernel/build\\rustc58Uou5\\symbols.o" "<2 object files omitted>" "<sysroot>\\lib\\rustlib\\x86_64-pc-windows-msvc\\lib/{libtest-*,libgetopts-*,librustc_std_workspace_std-*,libstd-*,libpanic_unwind-*,libcfg_if-*,libwindows_link-*,librustc_demangle-*,libstd_detect-*,libhashbrown-*,librustc_std_workspace_alloc-*,libunwind-*,librustc_std_workspace_core-*,liballoc-*,libcore-*,libcompiler_builtins-*}.rlib" "kernel32.lib" "kernel32.lib" "kernel32.lib" "kernel32.lib" "ntdll.lib" "userenv.lib" "ws2_32.lib" "dbghelp.lib" "/defaultlib:msvcrt" "/NXCOMPAT" "/OUT:C:/Users/USER/Downloads/euk-d4-audit/euk-d4/ExileKernel/build/memory-tests" "/OPT:REF,NOICF" "/DEBUG" "/PDBALTPATH:%_PDB%" "/NATVIS:<sysroot>\\lib\\rustlib\\etc\\intrinsic.natvis" "/NATVIS:<sysroot>\\lib\\rustlib\\etc\\liballoc.natvis" "/NATVIS:<sysroot>\\lib\\rustlib\\etc\\libcore.natvis" "/NATVIS:<sysroot>\\lib\\rustlib\\etc\\libstd.natvis"
+  = note: some arguments are omitted. use `--verbose` to show all linker arguments
+  = note: link: extra operand 'C:/Users/USER/Downloads/euk-d4-audit/euk-d4/ExileKernel/build\\memory-tests.memory.865c62aa6eadea97-cgu.0.rcgu.o'
+          Try 'link --help' for more information.
+          
+
+note: `link.exe` returned an unexpected error
+
+note: in the Visual Studio installer, ensure the "C++ build tools" workload is selected
+
+error: aborting due to 1 previous error
+
+Traceback (most recent call last):
+  File "/c/Users/USER/Downloads/euk-d4-audit/euk-d4/ExileKernel/scripts/test.py", line 39, in <module>
+    subprocess.run(
+  File "/usr/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['rustc', '--edition=2024', '--test', '/c/Users/USER/Downloads/euk-d4-audit/euk-d4/ExileKernel/src/memory.rs', '-o', '/c/Users/USER/Downloads/euk-d4-audit/euk-d4/ExileKernel/build/memory-tests']' returned non-zero exit status 1.

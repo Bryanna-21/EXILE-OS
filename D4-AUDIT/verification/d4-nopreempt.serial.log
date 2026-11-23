@@ -1,0 +1,9 @@
+EUK: x86-64 long mode
+EUK: bounded memory map parsed
+EUK D4: demo start
+EUK D4: IDT loaded (48 vectors)
+EUK D4 breakpoint trap handled and resumed
+EUK D4: PIC remapped, PIT at 100 Hz (divisor 11932)
+EUK D4: idle and four workers created
+EUK D4 controller start
+EUK FAIL: D4 watchdog: no progress
