@@ -82,4 +82,44 @@ subprocess.run(
     check=True,
 )
 
-print("ALL A1 + C1 + D1-D3 HOST TESTS PASSED", flush=True)
+# Mission C3: interrupt layer, controllers, ACPI and timers. These modules reference each other
+# through `crate::`, so they are compiled under a generated root. Every hardware access goes
+# through a trait with a host fake (PortIo, Msr, Mmio, PhysReader); the real implementations are
+# compiled but never executed here. The `cfg(test)` build uses a per-thread fake interrupt flag.
+c3_modules = {
+    "frame": "src/frame.rs",
+    "cpu": "src/cpu.rs",
+    "irq": "src/irq.rs",
+    "pic": "src/pic.rs",
+    "acpi": "src/acpi/mod.rs",
+    "apic": "src/apic.rs",
+    "ioapic": "src/ioapic.rs",
+    "timer": "src/timer.rs",
+    "pit": "src/pit.rs",
+    "hpet": "src/hpet.rs",
+}
+c3_decls = "".join(
+    f'#[path = "{root / path}"]\npub mod {name};\n' for name, path in c3_modules.items()
+)
+
+print("== Host tests: C3 (irq, pic, acpi/madt, apic, ioapic, timer, pit, hpet)", flush=True)
+c3_root = build_dir / "c3_host_root.rs"
+c3_root.write_text(c3_decls)
+subprocess.run(
+    [rustc, "--edition=2024", "--test", str(c3_root), "-o", str(build_dir / "c3-tests")],
+    check=True,
+)
+subprocess.run([str(build_dir / "c3-tests")], check=True)
+
+print("== no_std compile check: C3 (warnings are errors)", flush=True)
+c3_nostd = build_dir / "c3_nostd_root.rs"
+c3_nostd.write_text("#![no_std]\n" + c3_decls)
+subprocess.run(
+    [
+        rustc, "--edition=2024", "--crate-type=lib", "--emit=metadata",
+        "-D", "warnings", str(c3_nostd), "-o", str(build_dir / "c3_nostd.rmeta"),
+    ],
+    check=True,
+)
+
+print("ALL A1 + C1 + C3 + D1-D3 HOST TESTS PASSED", flush=True)
