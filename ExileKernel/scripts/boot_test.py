@@ -5,7 +5,7 @@ p=argparse.ArgumentParser(); p.add_argument('--output',default=str(r/'build/boot
 base=pathlib.Path(a.output).resolve(); base.mkdir(parents=True,exist_ok=True)
 qemu=os.environ.get('EUK_QEMU','qemu-system-x86_64')
 grub=os.environ.get('EUK_GRUB','grub-mkrescue')
-for fault,expected,code in [(None,'EUK BOOT_OK',33),('magic','EUK FAIL: boot magic',35),('cpu','EUK FAIL: CPU features',35),('map_missing','EUK FAIL: memory map missing',35),('map_truncated','EUK FAIL: memory map invalid',35),('handoff','EUK FAIL: handoff bounds',35),('map_length','EUK FAIL: memory map bounds',35),('table_dirty','EUK BOOT_OK',33)]:
+for fault,expected,code in [(None,'EUK BOOT_OK',33),('magic','EUK FAIL: boot magic',35),('cpu','EUK FAIL: CPU features',35),('map_missing','EUK FAIL: memory map missing',35),('map_truncated','EUK FAIL: memory map invalid',35),('handoff','EUK FAIL: handoff bounds',35),('map_length','EUK FAIL: memory map bounds',35),('table_dirty','EUK BOOT_OK',33),('a2_nomem','EUK FAIL: early allocator init',35)]:
     case=base/(fault or 'normal'); case.mkdir(exist_ok=True)
     cmd=['python3',r/'scripts/build.py','--output',case,'--test-exit']
     if fault: cmd += ['--fault',fault]

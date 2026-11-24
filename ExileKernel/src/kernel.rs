@@ -1,6 +1,13 @@
 #![no_std]
 #![no_main]
+#[allow(dead_code)]
+mod bootinfo;
+mod early_alloc;
+mod memmap_norm;
 mod memory;
+mod phys_handoff;
+mod range;
+mod reserve;
 use core::arch::asm;
 use core::panic::PanicInfo;
 use memory::{Region, parse_map};
@@ -47,6 +54,50 @@ fn fail(reason: &str) -> ! {
     serial(reason);
     serial("\n");
     finish(false)
+}
+// Linker-provided bounds of the loaded kernel image (physical == virtual here).
+unsafe extern "C" {
+    static __kernel_start: u8;
+    static __kernel_end: u8;
+}
+const BOOTSTRAP_PREFIX: u64 = 16 * 1024 * 1024;
+const MULTIBOOT_INFO_BYTES: u64 = 116;
+type KernelAllocator = early_alloc::EarlyAllocator<64, 16, 64>;
+
+/// A2: builds the reservation set from validated boot data and initializes the
+/// early physical allocator. No heap is used. Returns a static reason on failure.
+#[inline(never)]
+fn init_physical_memory(
+    info: u64,
+    map_address: u64,
+    map_length: u64,
+    regions: &[Region],
+    alloc: &mut KernelAllocator,
+) -> Result<(), &'static str> {
+    use reserve::ReserveKind;
+    let mut intervals = [memmap_norm::Interval::EMPTY; 256];
+    let n = memmap_norm::normalize_regions(regions, &mut intervals)
+        .map_err(|_| "memory map normalize")?;
+    let mut res = reserve::ReservationSet::<16>::new();
+    let kernel_start = core::ptr::addr_of!(__kernel_start) as u64;
+    let kernel_end = core::ptr::addr_of!(__kernel_end) as u64;
+    let mut protect = |start: u64, end: u64, kind: ReserveKind| -> Result<(), &'static str> {
+        let r = range::PhysRange::new(start, end).map_err(|_| "reservation range")?;
+        res.add(r, kind).map_err(|_| "reservation capacity")
+    };
+    // Legacy low memory (BIOS data, EBDA, VGA, loader scratch) and the whole
+    // bootstrap prefix that the linker script guarantees the image fits in.
+    protect(0, BOOTSTRAP_PREFIX, ReserveKind::Bootstrap)?;
+    protect(kernel_start, kernel_end, ReserveKind::KernelImage)?;
+    protect(info, info + MULTIBOOT_INFO_BYTES, ReserveKind::BootInfo)?;
+    protect(map_address, map_address + map_length, ReserveKind::MemoryMap)?;
+    #[cfg(fault_a2_nomem)]
+    let ceiling = 0u64;
+    #[cfg(not(fault_a2_nomem))]
+    let ceiling = MAP_LIMIT as u64;
+    alloc
+        .init(memmap_norm::usable_ranges(&intervals[..n]), res, ceiling)
+        .map_err(|_| "early allocator init")
 }
 /// All unsafe loader accesses stay inside the mapped GiB with bounded lengths.
 /// Loader authenticity and physical RAM validity are bootloader trust assumptions.
@@ -104,7 +155,20 @@ pub extern "C" fn kernel_main(magic: u32, info: u32) -> ! {
     {
         fail("usable memory missing");
     }
-    serial("EUK: bounded memory map parsed\nEUK BOOT_OK\n");
+    serial("EUK: bounded memory map parsed\n");
+    let mut alloc = KernelAllocator::new();
+    if let Err(reason) = init_physical_memory(info as u64, address as u64, length as u64, &regions[..count], &mut alloc) {
+        fail(reason);
+    }
+    // Self-check: one page comes from above the bootstrap prefix and the audit holds.
+    match alloc.alloc_pages(1) {
+        Ok(page) if page.start() >= BOOTSTRAP_PREFIX && page.end() <= MAP_LIMIT as u64 => {}
+        _ => fail("early allocator self-check"),
+    }
+    if alloc.check_invariants().is_err() {
+        fail("early allocator audit");
+    }
+    serial("EUK: early allocator ready\nEUK BOOT_OK\n");
     finish(true)
 }
 #[panic_handler]
