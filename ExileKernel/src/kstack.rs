@@ -89,7 +89,7 @@ pub struct StackPool {
 
 impl StackPool {
     /// `base`/`total_bytes` must come from a validated usable physical range
-    /// (for example `EarlyAlloc::alloc`). `limit` is the exclusive end of memory
+    /// (for example a page range returned by `EarlyAllocator::alloc_pages`). `limit` is the exclusive end of memory
     /// the kernel can address (the identity-mapped window); the region is
     /// rejected if it does not fit below it.
     pub fn new(base: u64, total_bytes: u64, stack_bytes: u64, limit: u64) -> Result<Self, Error> {
