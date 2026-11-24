@@ -44,7 +44,7 @@ Applied before the early allocator sees memory: kernel image (<16 MiB on
 x86-64; 0x40080000..0x400C0000 on the AArch64 platform contract), loader map,
 BootInfo objects, page tables, boot stack, TSS/IST stacks, framebuffer, ACPI,
 MMIO. The early allocator is alloc-only (boot-lifetime ownership); handoff to
-the full frame allocator is `remaining_intervals()`.
+the full frame allocator receives validated free ranges through `phys_handoff::handoff`; the allocator exposes `free_ranges()` while active.
 
 ## 5. Virtual layouts
 - x86-64 (this milestone): 1 GiB supervisor identity map, RWX 2 MiB pages.
@@ -98,3 +98,37 @@ A2: early_alloc.rs (1)
 A3: exceptions.rs, kernel.rs, entry.S, linker.ld (4)
 A4: boot.S, vectors.S, linker.ld, main.rs, build_aarch64.py (5)
 A5: none yet (design only).
+
+
+## 11. Mission A2: early physical memory allocator
+
+Ledger correction: A2 is five files, not one.
+`early_alloc.rs` (new at this base), `memmap_norm.rs` (extended), `reserve.rs` (new),
+`range.rs` (new), `phys_handoff.rs` (new). Boot wiring touches `kernel.rs`,
+`arch/x86_64/linker.ld` (`__kernel_start`, `__kernel_end`), `scripts/build.py`
+(`a2_nomem` fault), `scripts/boot_test.py`, `scripts/test.py`.
+
+Boot order (x86-64): Multiboot magic and map bounds, strict `parse_map`, usable-memory
+check, then A2: normalize the map, reserve, `EarlyAllocator::init`, one-page self-check
+plus invariant audit. Any failure prints `EUK FAIL: <reason>` and exits non-zero.
+No heap exists at any point.
+
+Reserved before the allocator sees memory: physical [0, 16 MiB) (legacy low memory and
+the bootstrap prefix the linker script asserts the image fits in), the kernel image,
+the 116-byte Multiboot info structure, and the memory-map storage. Physical page 0
+and everything at or above the 1 GiB identity-map limit are never managed.
+
+Rules: only `Usable` normalized intervals are eligible; gaps between entries and every
+unknown kind are not usable; ACPI NVS maps to Unusable and kind 5 to Bad; partly-usable
+or partly-reserved pages are dropped; sizes round up to pages; `init` can never run twice;
+a failed `alloc` or `reserve_late` changes nothing.
+
+Ownership and lifecycle: Uninit -> Active -> Sealed. `phys_handoff::handoff` audits,
+re-validates every free range, offers the whole list to a `FrameSink` in ONE call, and
+seals only if it is accepted. Reserved and already-allocated pages are never offered.
+Mission B was not present in this repository: `FrameSink` is the smallest receiving
+interface, not a verified Mission B interface. An adapter is needed only if Mission B's
+real shape differs.
+
+Note: section 9 above predates A2 (test count, aarch64 script); the commands that
+matter for A2 are `python3 scripts/test.py` and `python3 scripts/boot_test.py`.

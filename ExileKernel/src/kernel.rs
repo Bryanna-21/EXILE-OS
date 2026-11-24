@@ -1,10 +1,20 @@
 #![no_std]
 #![no_main]
+mod bootinfo;
 mod cpu;
+mod frame;
 mod gdt;
 mod idt;
 mod memory;
-mod frame;
+
+// Mission A2: early physical-memory allocator and reservation contracts.
+#[allow(dead_code)]
+mod early_alloc;
+mod memmap_norm;
+#[allow(dead_code)]
+mod phys_handoff;
+mod range;
+mod reserve;
 mod stacks;
 mod traps;
 // Mission C3: interrupt controllers, ACPI discovery and timers. Declared so the image
@@ -101,6 +111,69 @@ fn fail(reason: &str) -> ! {
     finish(false)
 }
 
+// Linker-provided bounds of the loaded kernel image.
+unsafe extern "C" {
+    static __kernel_start: u8;
+    static __kernel_end: u8;
+}
+
+const BOOTSTRAP_PREFIX: u64 = 16 * 1024 * 1024;
+const MULTIBOOT_INFO_BYTES: u64 = 116;
+type KernelAllocator = early_alloc::EarlyAllocator<64, 16, 64>;
+
+#[inline(never)]
+fn init_physical_memory(
+    info: u64,
+    map_address: u64,
+    map_length: u64,
+    regions: &[Region],
+    alloc: &mut KernelAllocator,
+) -> Result<(), &'static str> {
+    use reserve::ReserveKind;
+
+    let info_end = info
+        .checked_add(MULTIBOOT_INFO_BYTES)
+        .filter(|end| *end <= MAP_LIMIT as u64)
+        .ok_or("boot info reservation bounds")?;
+    let map_end = map_address
+        .checked_add(map_length)
+        .filter(|end| *end <= MAP_LIMIT as u64)
+        .ok_or("memory map reservation bounds")?;
+
+    let mut intervals = [memmap_norm::Interval::EMPTY; 256];
+    let n = memmap_norm::normalize_regions(regions, &mut intervals)
+        .map_err(|_| "memory map normalize")?;
+
+    let mut reservations = reserve::ReservationSet::<16>::new();
+    let kernel_start = core::ptr::addr_of!(__kernel_start) as u64;
+    let kernel_end = core::ptr::addr_of!(__kernel_end) as u64;
+
+    let mut protect = |start: u64, end: u64, kind: ReserveKind| -> Result<(), &'static str> {
+        let range = range::PhysRange::new(start, end).map_err(|_| "reservation range")?;
+        reservations
+            .add(range, kind)
+            .map_err(|_| "reservation capacity")
+    };
+
+    protect(0, BOOTSTRAP_PREFIX, ReserveKind::Bootstrap)?;
+    protect(kernel_start, kernel_end, ReserveKind::KernelImage)?;
+    protect(info, info_end, ReserveKind::BootInfo)?;
+    protect(map_address, map_end, ReserveKind::MemoryMap)?;
+
+    #[cfg(fault_a2_nomem)]
+    let ceiling = 0u64;
+    #[cfg(not(fault_a2_nomem))]
+    let ceiling = MAP_LIMIT as u64;
+
+    alloc
+        .init(
+            memmap_norm::usable_ranges(&intervals[..n]),
+            reservations,
+            ceiling,
+        )
+        .map_err(|_| "early allocator init")
+}
+
 #[cfg(euk_traps)]
 #[unsafe(no_mangle)]
 extern "C" fn euk_trap_dispatch(frame: &mut frame::TrapFrame) {
@@ -109,7 +182,9 @@ extern "C" fn euk_trap_dispatch(frame: &mut frame::TrapFrame) {
     // path below. The interrupt gate cleared IF, so this runs uninterrupted.
     #[cfg(euk_irq)]
     if let Some(v) = frame.vector_u8() {
-        if irq::is_external_vector(v) && CONTROLLER_READY.load(core::sync::atomic::Ordering::Acquire) {
+        if irq::is_external_vector(v)
+            && CONTROLLER_READY.load(core::sync::atomic::Ordering::Acquire)
+        {
             dispatch_irq(v);
             return;
         }
@@ -138,7 +213,8 @@ extern "C" fn euk_trap_dispatch(frame: &mut frame::TrapFrame) {
 #[cfg(euk_irq)]
 static mut CONTROLLER: Option<pic::Pic<pic::HwPorts>> = None;
 #[cfg(euk_irq)]
-static CONTROLLER_READY: core::sync::atomic::AtomicBool = core::sync::atomic::AtomicBool::new(false);
+static CONTROLLER_READY: core::sync::atomic::AtomicBool =
+    core::sync::atomic::AtomicBool::new(false);
 
 /// Runs in interrupt context (IF = 0, one CPU).
 #[cfg(euk_irq)]
@@ -259,7 +335,9 @@ fn irq_selftest() {
         (timer::SourceKind::Hpet, Some(t)) => {
             // SAFETY: `hpet_reachable` proved the window lies inside the identity map.
             let mmio = unsafe { apic::VolatileMmio::new(t.base as usize, hpet::HPET_WINDOW_LEN) };
-            hpet::Hpet::new(mmio, t.min_tick).ok().map(hpet::HpetTimer::new)
+            hpet::Hpet::new(mmio, t.min_tick)
+                .ok()
+                .map(hpet::HpetTimer::new)
         }
         _ => None,
     };
@@ -285,7 +363,8 @@ fn irq_selftest() {
     // 4. Unhandled-interrupt containment: nobody owns the vector, so the dispatcher must
     //    acknowledge each tick and mask the line at the threshold.
     with_pic(|p| p.unmask_irq(0)).unwrap_or_else(|_| fail("unmask irq0"));
-    let storm = wait_with_interrupts(|| irq::IRQS.unhandled_count(vector) >= irq::UNHANDLED_MASK_THRESHOLD);
+    let storm =
+        wait_with_interrupts(|| irq::IRQS.unhandled_count(vector) >= irq::UNHANDLED_MASK_THRESHOLD);
     if !storm {
         fail("no timer irq delivered");
     }
@@ -342,7 +421,9 @@ fn trap_selftest() {
 
     #[cfg(not(any(fault_trap_ud, fault_trap_df)))]
     {
-        unsafe { asm!("int3"); }
+        unsafe {
+            asm!("int3");
+        }
         serial("EUK: breakpoint returned\n");
     }
 }
@@ -402,11 +483,34 @@ pub extern "C" fn kernel_main(magic: u32, info: u32) -> ! {
     {
         fail("usable memory missing");
     }
+    serial("EUK: bounded memory map parsed\n");
+
+    let mut alloc = KernelAllocator::new();
+    if let Err(reason) = init_physical_memory(
+        info as u64,
+        address as u64,
+        length as u64,
+        &regions[..count],
+        &mut alloc,
+    ) {
+        fail(reason);
+    }
+
+    // Verify one real page is allocated outside the protected bootstrap prefix.
+    match alloc.alloc_pages(1) {
+        Ok(page) if page.start() >= BOOTSTRAP_PREFIX && page.end() <= MAP_LIMIT as u64 => {}
+        _ => fail("early allocator self-check"),
+    }
+
+    if alloc.check_invariants().is_err() {
+        fail("early allocator audit");
+    }
+    serial("EUK: early allocator ready\n");
+
     #[cfg(euk_traps)]
     trap_selftest();
     #[cfg(euk_irq)]
     irq_selftest();
-    serial("EUK: bounded memory map parsed\n");
     after_boot()
 }
 #[cfg(not(euk_d3_demo))]

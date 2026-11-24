@@ -16,11 +16,11 @@ build_dir.mkdir(parents=True, exist_ok=True)
 
 rustc = os.environ.get("EUK_HOST_RUSTC", "rustc")
 
+# A2's allocator modules depend on one another through crate:: and must
+# be compiled together. Keep the independent C3/D3 modules below separate.
 modules = (
     "memory",
     "bootinfo",
-    "memmap_norm",
-    "early_alloc",
     "cpu",
     "gdt",
     "idt",
@@ -39,6 +39,36 @@ for module in modules:
         check=True,
     )
     subprocess.run([str(binary)], check=True)
+
+# Mission A2: these modules share crate-level dependencies and are tested
+# together, both as a host test crate and as a warnings-denied no_std library.
+a2_modules = (
+    "memory", "bootinfo", "range", "memmap_norm",
+    "reserve", "early_alloc", "phys_handoff",
+)
+a2_decls = "".join(
+    f'#[path = "{root / "src" / (module + ".rs")}"]\npub mod {module};\n'
+    for module in a2_modules
+)
+
+print("== Host tests: A2 (memory, ranges, reservations, allocator, handoff)", flush=True)
+a2_root = build_dir / "a2_host_root.rs"
+a2_root.write_text("#![allow(dead_code)]\n" + a2_decls)
+subprocess.run(
+    [rustc, "--edition=2024", "--test", "-D", "warnings",
+     str(a2_root), "-o", str(build_dir / "a2-tests")],
+    check=True,
+)
+subprocess.run([str(build_dir / "a2-tests")], check=True)
+
+print("== no_std compile check: A2 (warnings are errors)", flush=True)
+a2_nostd = build_dir / "a2_nostd_root.rs"
+a2_nostd.write_text("#![no_std]\n#![deny(warnings)]\n" + a2_decls)
+subprocess.run(
+    [rustc, "--edition=2024", "--crate-type=lib", "--emit=metadata",
+     str(a2_nostd), "-o", str(build_dir / "a2_nostd.rmeta")],
+    check=True,
+)
 
 # Mission D1-D3: these modules reference each other through `crate::`, so they
 # are compiled under a generated crate root that declares them the way the kernel

@@ -43,11 +43,11 @@ pub struct BootInfo {
     pub arch: u32,              // ARCH_X86_64 | ARCH_AARCH64
     pub flags: u32,             // FLAG_* bits; each flag must match its object
     pub memmap_paddr: u64,      // physical address of the MemRegion array
-    pub memmap_count: u64,       // number of entries in the array
-    pub kernel_phys_start: u64,  // page-aligned, inclusive
-    pub kernel_phys_end: u64,    // page-aligned, exclusive
-    pub kernel_entry: u64,       // kernel virtual entry address
-    pub framebuffer_paddr: u64,  // valid only with FLAG_FRAMEBUFFER
+    pub memmap_count: u64,      // number of entries in the array
+    pub kernel_phys_start: u64, // page-aligned, inclusive
+    pub kernel_phys_end: u64,   // page-aligned, exclusive
+    pub kernel_entry: u64,      // kernel virtual entry address
+    pub framebuffer_paddr: u64, // valid only with FLAG_FRAMEBUFFER
     pub framebuffer_size: u64,  // valid only with FLAG_FRAMEBUFFER
     pub rsdp_paddr: u64,        // valid only with FLAG_ACPI_RSDP
 }
@@ -157,11 +157,12 @@ pub fn validate_regions(regions: &[MemRegion]) -> Result<(), BootInfoError> {
         if r.size == 0 {
             return Err(BootInfoError::EmptyMemmap);
         }
-        r.start.checked_add(r.size).ok_or(BootInfoError::RangeOverflow)?;
+        r.start
+            .checked_add(r.size)
+            .ok_or(BootInfoError::RangeOverflow)?;
     }
     Ok(())
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -169,9 +170,24 @@ mod tests {
 
     fn regions() -> [MemRegion; 3] {
         [
-            MemRegion { start: 0, size: 4096, kind: 1, _pad: 0 },
-            MemRegion { start: 4096, size: 8192, kind: 2, _pad: 0 },
-            MemRegion { start: 0x10_0000, size: 0x1000_0000, kind: 1, _pad: 0 },
+            MemRegion {
+                start: 0,
+                size: 4096,
+                kind: 1,
+                _pad: 0,
+            },
+            MemRegion {
+                start: 4096,
+                size: 8192,
+                kind: 2,
+                _pad: 0,
+            },
+            MemRegion {
+                start: 0x10_0000,
+                size: 0x1000_0000,
+                kind: 1,
+                _pad: 0,
+            },
         ]
     }
 
@@ -298,11 +314,21 @@ mod tests {
     fn region_array_strict_validation() {
         assert!(validate_regions(&regions()).is_ok());
         assert_eq!(
-            validate_regions(&[MemRegion { start: 1, size: 0, kind: 1, _pad: 0 }]),
+            validate_regions(&[MemRegion {
+                start: 1,
+                size: 0,
+                kind: 1,
+                _pad: 0
+            }]),
             Err(BootInfoError::EmptyMemmap)
         );
         assert_eq!(
-            validate_regions(&[MemRegion { start: u64::MAX, size: 2, kind: 1, _pad: 0 }]),
+            validate_regions(&[MemRegion {
+                start: u64::MAX,
+                size: 2,
+                kind: 1,
+                _pad: 0
+            }]),
             Err(BootInfoError::RangeOverflow)
         );
         assert_eq!(validate_regions(&[]), Err(BootInfoError::EmptyMemmap));
