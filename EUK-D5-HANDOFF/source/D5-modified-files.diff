@@ -1,0 +1,532 @@
+diff --git a/ExileKernel/scripts/test.py b/ExileKernel/scripts/test.py
+index 1fa409ea..ed7e77ca 100644
+--- a/ExileKernel/scripts/test.py
++++ b/ExileKernel/scripts/test.py
+@@ -55,6 +55,19 @@ d3_modules = {
+     "switch": "src/arch/x86_64/switch.rs",
+     "kthread": "src/kthread.rs",
+     "dispatch": "src/dispatch.rs",
++    # Mission D5 (process & scheduling subsystem). The C3 modules that preempt/dispatch use
++    # are compiled here too (frame, irq, timer); the full C3 suite still runs separately below.
++    "frame": "src/frame.rs",
++    "gdt": "src/gdt.rs",
++    "irq": "src/irq.rs",
++    "timer": "src/timer.rs",
++    "preempt": "src/preempt.rs",
++    "sync": "src/sync.rs",
++    "address_space": "src/address_space.rs",
++    "elf": "src/elf.rs",
++    "tls": "src/tls.rs",
++    "usermode": "src/usermode.rs",
++    "process": "src/process.rs",
+ }
+ decls = "".join(
+     f'#[path = "{root / path}"]\npub mod {name};\n' for name, path in d3_modules.items()
+diff --git a/ExileKernel/src/dispatch.rs b/ExileKernel/src/dispatch.rs
+index 371620a6..da7b5d11 100644
+--- a/ExileKernel/src/dispatch.rs
++++ b/ExileKernel/src/dispatch.rs
+@@ -32,6 +32,7 @@
+ use crate::kstack::StackPool;
+ use crate::kthread::{Config, Error, KThreadStacks, StackMemory, ThreadParams};
+ use crate::sched::{BlockOutcome, Scheduler, SleepOutcome, WakeOutcome};
++use crate::irq::IrqGuard;
+ use crate::spin::SpinLock;
+ use crate::thread::{BlockReason, Handle, State, ThreadId};
+ 
+@@ -198,9 +199,14 @@ impl<const N: usize, M: StackMemory> KernelSlot<N, M> {
+         self.inner.lock().is_some()
+     }
+ 
+-    /// Runs `f` with the scheduler lock held. `f` must only do bookkeeping: it
++    /// Runs `f` with the scheduler lock held and interrupts disabled. `f` must only do bookkeeping: it
+     /// must never switch contexts or block. Panics if nothing is installed.
+     pub fn with<R>(&self, f: impl FnOnce(&mut Kernel<N, M>) -> R) -> R {
++        // Interrupts are masked BEFORE the lock is taken and restored AFTER it is released
++        // (locals drop in reverse order), so the interrupt-exit path can never find the
++        // scheduler lock held by the code it interrupted on this CPU.
++        // SAFETY: kernel code runs in ring 0; IrqGuard restores the previous IF state.
++        let _irq = unsafe { IrqGuard::new() };
+         let mut g = self.inner.lock();
+         match g.as_mut() {
+             Some(k) => f(k),
+@@ -215,7 +221,19 @@ pub use real::*;
+ #[cfg(target_arch = "x86_64")]
+ mod real {
+     use super::*;
++    use crate::preempt;
+     use crate::switch;
++    use core::sync::atomic::Ordering;
++
++    /// A thread may only give up the CPU voluntarily outside interrupt context and with
++    /// preemption enabled.
++    fn check_may_block() -> Result<(), Error> {
++        match preempt::check_may_block() {
++            Ok(()) => Ok(()),
++            Err(preempt::BlockError::InterruptContext) => Err(Error::InterruptContext),
++            Err(preempt::BlockError::PreemptDisabled) => Err(Error::PreemptDisabled),
++        }
++    }
+ 
+     /// Switches to the thread the scheduler selects, if different from the
+     /// current one. Returns when this context is resumed (immediately if no
+@@ -230,6 +248,10 @@ mod real {
+     pub unsafe fn reschedule<const N: usize, M: StackMemory>(
+         slot: &KernelSlot<N, M>,
+     ) -> Result<(), Error> {
++        // IF stays clear from planning until this context is resumed; the caller's state
++        // returns when `_irq` drops.
++        // SAFETY: ring 0.
++        let _irq = unsafe { IrqGuard::new() };
+         let plan = slot.with(|k| k.plan_switch())?;
+         if let Some(p) = plan {
+             // SAFETY: the plan's slot points into the pinned `Kernel` and the
+@@ -238,10 +260,37 @@ mod real {
+             unsafe { switch::switch_context(p.prev_sp_slot, p.next_sp) };
+             // Running on the resumed thread's stack: finish the bookkeeping.
+             slot.with(|k| k.complete_switch())?;
++            if let Some(me) = slot.with(|k| k.sched().current()) {
++                notify_switched_in(me);
++            }
+         }
+         Ok(())
+     }
+ 
++    /// Installs the function run whenever a thread has just been switched in (address space and
++    /// TLS loading, see `process::apply_switch_context`). It runs with interrupts disabled, after
++    /// `complete_switch`, and must not block or reschedule. The first-run hook of a NEW thread
++    /// must call [`notify_switched_in`] too, because a new thread does not return through
++    /// `reschedule`.
++    pub fn install_switch_in_hook(hook: fn(Handle)) {
++        SWITCH_IN_HOOK.store(hook as usize, Ordering::Release);
++    }
++
++    pub fn clear_switch_in_hook() {
++        SWITCH_IN_HOOK.store(0, Ordering::Release);
++    }
++
++    pub fn notify_switched_in(h: Handle) {
++        let p = SWITCH_IN_HOOK.load(Ordering::Acquire);
++        if p != 0 {
++            // SAFETY: only `install_switch_in_hook` stores a non-zero value: a valid `fn(Handle)`.
++            let f: fn(Handle) = unsafe { core::mem::transmute::<usize, fn(Handle)>(p) };
++            f(h);
++        }
++    }
++
++    static SWITCH_IN_HOOK: core::sync::atomic::AtomicUsize = core::sync::atomic::AtomicUsize::new(0);
++
+     /// Voluntary yield: the caller stays Ready and runs again later.
+     ///
+     /// # Safety
+@@ -249,6 +298,7 @@ mod real {
+     pub unsafe fn yield_now<const N: usize, M: StackMemory>(
+         slot: &KernelSlot<N, M>,
+     ) -> Result<(), Error> {
++        check_may_block()?;
+         // SAFETY: forwarded.
+         unsafe { reschedule(slot) }
+     }
+@@ -262,6 +312,12 @@ mod real {
+     pub unsafe fn preempt_point<const N: usize, M: StackMemory>(
+         slot: &KernelSlot<N, M>,
+     ) -> Result<bool, Error> {
++        if preempt::in_interrupt() {
++            return Err(Error::InterruptContext);
++        }
++        if !preempt::preemption_enabled() {
++            return Ok(false); // deferred until the depth returns to zero
++        }
+         if slot.with(|k| k.sched().need_resched()) {
+             // SAFETY: forwarded.
+             unsafe { reschedule(slot) }?;
+@@ -279,6 +335,10 @@ mod real {
+         slot: &KernelSlot<N, M>,
+         reason: BlockReason,
+     ) -> Result<BlockOutcome, Error> {
++        check_may_block()?;
++        // State change and switch form one interrupt-atomic sequence.
++        // SAFETY: ring 0.
++        let _irq = unsafe { IrqGuard::new() };
+         let out = slot.with(|k| k.sched_mut().block_current(reason))?;
+         if out == BlockOutcome::Blocked {
+             // SAFETY: forwarded.
+@@ -295,6 +355,9 @@ mod real {
+         slot: &KernelSlot<N, M>,
+         ticks: u64,
+     ) -> Result<SleepOutcome, Error> {
++        check_may_block()?;
++        // SAFETY: ring 0.
++        let _irq = unsafe { IrqGuard::new() };
+         let out = slot.with(|k| k.sched_mut().sleep_current(ticks))?;
+         // SAFETY: forwarded.
+         unsafe { reschedule(slot) }?;
+@@ -309,6 +372,9 @@ mod real {
+         slot: &KernelSlot<N, M>,
+         target: Handle,
+     ) -> Result<BlockOutcome, Error> {
++        check_may_block()?;
++        // SAFETY: ring 0.
++        let _irq = unsafe { IrqGuard::new() };
+         let out = slot.with(|k| k.sched_mut().join_wait(target))?;
+         if out == BlockOutcome::Blocked {
+             // SAFETY: forwarded.
+@@ -1220,4 +1286,214 @@ mod real_tests {
+         );
+         assert_clean(3);
+     }
++
++    // ---- Mission D5: timer-driven preemption and blocking synchronisation on real stacks ----
++
++    use crate::sync::{self, ObjId, SyncSlot};
++    use crate::preempt;
++
++    static SY: SyncSlot<8, 4> = SyncSlot::new();
++    static MTX: Mutex<Option<ObjId>> = Mutex::new(None);
++    static GO: AtomicBool = AtomicBool::new(false);
++    static SPINS: AtomicU64 = AtomicU64::new(0);
++
++    fn mtx() -> ObjId {
++        MTX.lock().unwrap().unwrap()
++    }
++
++    /// What the vector-32 path does: handler in interrupt context, then the exit step.
++    fn simulate_timer_interrupt() -> Result<crate::preempt::IrqExitAction, Error> {
++        preempt::irq_enter().unwrap();
++        preempt::tick_handler(0x20, 0);
++        preempt::irq_leave().unwrap();
++        // SAFETY: cooperative host scenario; K is a static; hooks installed.
++        unsafe { preempt::irq_exit(&K) }
++    }
++
++    fn reset_preempt_state() {
++        preempt::PREEMPT.reset();
++        preempt::HARDIRQ.reset();
++        let _ = preempt::take_pending_ticks();
++    }
++
++    extern "C" fn spinner_a(_: u64) -> i32 {
++        log("A-start");
++        // Never yields, blocks or sleeps: only the timer can take the CPU away.
++        while !GO.load(Ordering::SeqCst) {
++            SPINS.fetch_add(1, Ordering::SeqCst);
++            simulate_timer_interrupt().unwrap();
++            if SPINS.load(Ordering::SeqCst) > 100_000 {
++                TIMED_OUT.store(true, Ordering::SeqCst);
++                return -1;
++            }
++        }
++        log("A-done");
++        0
++    }
++    extern "C" fn setter_b(_: u64) -> i32 {
++        log("B-ran");
++        GO.store(true, Ordering::SeqCst);
++        0
++    }
++
++    #[test]
++    fn real_timer_tick_preempts_a_thread_that_never_yields() {
++        let _g = setup();
++        reset_preempt_state();
++        GO.store(false, Ordering::SeqCst);
++        SPINS.store(0, Ordering::SeqCst);
++        idle_with(idle);
++        spawn(spinner_a, 0, 4);
++        spawn(setter_b, 0, 4);
++        start();
++        assert_eq!(logged(), ["A-start", "B-ran", "A-done"]);
++        let spins = SPINS.load(Ordering::SeqCst);
++        assert!(
++            (crate::sched::SLICE_TICKS as u64..1000).contains(&spins),
++            "B ran after about one slice of ticks, not at once and not never: {spins}"
++        );
++        assert_clean(3);
++        assert_eq!(preempt::PREEMPT.depth(), 0);
++        assert_eq!(preempt::HARDIRQ.depth(), 0);
++    }
++
++    extern "C" fn critical_a(_: u64) -> i32 {
++        log("A-start");
++        preempt::preempt_disable().unwrap();
++        let mut actions = vec![];
++        for _ in 0..(3 * crate::sched::SLICE_TICKS) {
++            actions.push(simulate_timer_interrupt().unwrap());
++        }
++        // The request was recorded but nothing ran: B is still waiting.
++        log(format!(
++            "deferred={}",
++            actions
++                .iter()
++                .filter(|a| **a == preempt::IrqExitAction::Deferred)
++                .count()
++                > 0
++        ));
++        // Blocking is refused inside the critical section.
++        // SAFETY: cooperative scenario.
++        let y = unsafe { yield_now(&K) };
++        log(format!("yield_in_critical={y:?}"));
++        // Leaving the critical section runs the deferred switch.
++        // SAFETY: cooperative scenario.
++        let ran = unsafe { preempt::preempt_enable(&K) }.unwrap();
++        log(format!("enable_ran={ran}"));
++        log("A-done");
++        0
++    }
++
++    #[test]
++    fn real_preempt_disable_defers_the_switch_until_enable() {
++        let _g = setup();
++        reset_preempt_state();
++        idle_with(idle);
++        spawn(critical_a, 0, 4);
++        spawn(setter_b, 0, 4);
++        start();
++        assert_eq!(
++            logged(),
++            [
++                "A-start".to_string(),
++                "deferred=true".to_string(),
++                format!("yield_in_critical={:?}", Err::<(), _>(Error::PreemptDisabled)),
++                // The deferred switch runs inside preempt_enable, before it returns to A.
++                "B-ran".to_string(),
++                "enable_ran=true".to_string(),
++                "A-done".to_string(),
++            ]
++        );
++        assert_clean(3);
++        assert_eq!(preempt::PREEMPT.depth(), 0);
++    }
++
++    extern "C" fn low_owner(_: u64) -> i32 {
++        // SAFETY (all calls below): cooperative single-CPU scenario on a static kernel.
++        assert_eq!(unsafe { sync::mutex_lock(&K, &SY, mtx()) }, Ok(false));
++        let hi = spawn(high_waiter, 0, 6);
++        let mid = spawn(mid_runner, 0, 4);
++        HANDLES.lock().unwrap().extend([hi, mid]);
++        unsafe { yield_now(&K) }.unwrap(); // H runs, blocks on the mutex; L is boosted
++        log("L-crit");
++        sync::mutex_unlock(&K, &SY, mtx()).unwrap();
++        let lvl = K.with(|k| {
++            let me = k.sched().current().unwrap();
++            k.sched().thread(me).unwrap().effective_level()
++        });
++        log(format!("L-level-after-unlock={lvl}"));
++        unsafe { yield_now(&K) }.unwrap();
++        log("L-done");
++        0
++    }
++    extern "C" fn high_waiter(_: u64) -> i32 {
++        log("H-try");
++        assert_eq!(unsafe { sync::mutex_lock(&K, &SY, mtx()) }, Ok(false));
++        log("H-got");
++        sync::mutex_unlock(&K, &SY, mtx()).unwrap();
++        0
++    }
++    extern "C" fn mid_runner(_: u64) -> i32 {
++        log("M");
++        0
++    }
++
++    #[test]
++    fn real_priority_inheritance_runs_the_owner_before_a_middle_thread() {
++        let _g = setup();
++        reset_preempt_state();
++        *MTX.lock().unwrap() = Some(SY.with(|d| d.create_mutex(0)).unwrap());
++        idle_with(idle);
++        spawn(low_owner, 0, 2);
++        start();
++        assert_eq!(
++            logged(),
++            [
++                "H-try",
++                "L-crit",
++                "L-level-after-unlock=2",
++                "H-got",
++                "M",
++                "L-done"
++            ],
++            "without inheritance M would run before L-crit"
++        );
++        assert_clean(4);
++        SY.with(|d| {
++            assert_eq!(d.stats().handoffs, 1);
++            assert!(d.stats().inheritance_raises >= 1);
++            d.destroy(mtx()).unwrap();
++        });
++    }
++
++    extern "C" fn sem_consumer(_: u64) -> i32 {
++        log("C-wait");
++        unsafe { sync::sem_wait(&K, &SY, mtx()) }.unwrap();
++        log("C-got");
++        0
++    }
++    extern "C" fn sem_producer(_: u64) -> i32 {
++        log("P-post");
++        sync::sem_post(&K, &SY, mtx()).unwrap();
++        log("P-done");
++        0
++    }
++
++    #[test]
++    fn real_semaphore_blocks_a_consumer_until_posted() {
++        let _g = setup();
++        reset_preempt_state();
++        *MTX.lock().unwrap() = Some(SY.with(|d| d.create_semaphore(0, 4)).unwrap());
++        idle_with(idle);
++        spawn(sem_consumer, 0, 4);
++        spawn(sem_producer, 0, 4);
++        start();
++        assert_eq!(logged(), ["C-wait", "P-post", "P-done", "C-got"]);
++        assert_clean(3);
++        SY.with(|d| {
++            assert_eq!(d.sem_count(mtx()), Ok(0), "the unit was handed over, not banked");
++            d.destroy(mtx()).unwrap();
++        });
++    }
+ }
+diff --git a/ExileKernel/src/kernel.rs b/ExileKernel/src/kernel.rs
+index 08cf0432..fe5162de 100644
+--- a/ExileKernel/src/kernel.rs
++++ b/ExileKernel/src/kernel.rs
+@@ -26,6 +26,23 @@ mod pic;
+ mod pit;
+ #[allow(dead_code)]
+ mod timer;
++// Mission D5: process and scheduling subsystem. Declared so the image compiles and links the
++// modules; nothing here RUNS in the default boot path (no process is created, preemption is not
++// enabled), so the normal `EUK BOOT_OK` path is unchanged.
++#[allow(dead_code)]
++mod address_space;
++#[allow(dead_code)]
++mod elf;
++#[allow(dead_code)]
++mod preempt;
++#[allow(dead_code)]
++mod process;
++#[allow(dead_code)]
++mod sync;
++#[allow(dead_code)]
++mod tls;
++#[allow(dead_code)]
++mod usermode;
+ // Mission D3. Declared so the kernel image contains and links the real
+ // scheduler, stack manager and context-switch assembly; they only RUN under the
+ // `euk_d3_demo` cfg (see d3_demo.rs). The normal boot path is unchanged.
+@@ -110,7 +127,12 @@ extern "C" fn euk_trap_dispatch(frame: &mut frame::TrapFrame) {
+     #[cfg(euk_irq)]
+     if let Some(v) = frame.vector_u8() {
+         if irq::is_external_vector(v) && CONTROLLER_READY.load(core::sync::atomic::Ordering::Acquire) {
++            // D5: the handler runs inside irq_enter/irq_leave; the interrupt-EXIT step (which may
++            // switch threads) runs afterwards, on this thread's own stack, if a hook is installed.
++            let _ = preempt::irq_enter();
+             dispatch_irq(v);
++            let _ = preempt::irq_leave();
++            preempt::run_exit_hook();
+             return;
+         }
+     }
+diff --git a/ExileKernel/src/kthread.rs b/ExileKernel/src/kthread.rs
+index 74e1ce6d..8893bdd2 100644
+--- a/ExileKernel/src/kthread.rs
++++ b/ExileKernel/src/kthread.rs
+@@ -40,6 +40,12 @@ pub enum Error {
+     Memory,
+     /// A switch was planned but its bookkeeping was never completed.
+     SwitchInProgress,
++    /// A blocking operation was attempted from interrupt context.
++    InterruptContext,
++    /// A blocking operation was attempted while preemption is disabled.
++    PreemptDisabled,
++    /// The preemption-disable depth would overflow or underflow.
++    PreemptCount,
+     /// Internal inconsistency; treat as fatal.
+     Corrupt,
+ }
+diff --git a/ExileKernel/src/sched.rs b/ExileKernel/src/sched.rs
+index 93bb2858..23339156 100644
+--- a/ExileKernel/src/sched.rs
++++ b/ExileKernel/src/sched.rs
+@@ -499,6 +499,40 @@ impl<const N: usize> Scheduler<N> {
+         Ok(())
+     }
+ 
++    /// Sets the priority-inheritance floor of `h` (0 clears it). Used by the lock layer
++    /// (`sync.rs`). A Ready thread is requeued at its new effective level; lowering a Running
++    /// thread's level requests a reschedule when a more urgent thread is waiting; a raised
++    /// level on a Ready thread can preempt the current one. Idle threads are refused.
++    pub fn set_inherited(&mut self, h: Handle, level: usize) -> Result<(), Error> {
++        if level >= PRIORITY_LEVELS {
++            return Err(Error::BadPriority);
++        }
++        let t = self.table.get(h)?;
++        if t.is_idle() {
++            return Err(Error::IsIdle);
++        }
++        if t.inherited as usize == level {
++            return Ok(());
++        }
++        let state = t.state();
++        if state == State::Ready {
++            self.queues.remove(h.index())?;
++        }
++        let t = self.table.get_mut(h)?;
++        t.inherited = level as u8;
++        if state == State::Ready {
++            let new_level = t.effective_level();
++            self.queues.push_back(h.index(), new_level)?;
++            self.check_preempt(h);
++        } else if state == State::Running {
++            let own = t.effective_level();
++            if self.queues.highest_level().is_some_and(|l| l > own) {
++                self.need_resched = true;
++            }
++        }
++        Ok(())
++    }
++
+     /// Succeeds only if `reap(h)` would: the thread is `Terminated`, is not the
+     /// current thread and has finished switching away (`on_cpu` is false).
+     /// Changes nothing, so callers can do fallible work (such as scrubbing the
+diff --git a/ExileKernel/src/thread.rs b/ExileKernel/src/thread.rs
+index 6868ce8d..78e92a0c 100644
+--- a/ExileKernel/src/thread.rs
++++ b/ExileKernel/src/thread.rs
+@@ -138,6 +138,9 @@ pub struct Thread {
+     pub(crate) priority: Priority,
+     /// Anti-starvation boost added to `priority` while waiting in Ready.
+     pub(crate) boost: u8,
++    /// Priority-inheritance floor (Mission D5, sync.rs): a level >= this value is used while the
++    /// thread holds a lock that a more urgent thread waits for. 0 = none.
++    pub(crate) inherited: u8,
+     pub(crate) block_reason: BlockReason,
+     pub(crate) wake_reason: WakeReason,
+     /// A wake-up arrived while Running; the next `block` must not sleep.
+@@ -161,6 +164,7 @@ impl Thread {
+             state: State::New,
+             priority,
+             boost: 0,
++            inherited: 0,
+             block_reason: BlockReason::None,
+             wake_reason: WakeReason::None,
+             wake_pending: false,
+@@ -217,10 +221,17 @@ impl Thread {
+         if self.is_idle() {
+             0
+         } else {
+-            (self.priority.level() + self.boost as usize).min(PRIORITY_LEVELS - 1)
++            (self.priority.level() + self.boost as usize)
++                .max(self.inherited as usize)
++                .min(PRIORITY_LEVELS - 1)
+         }
+     }
+ 
++    /// Inherited priority floor (0 when none).
++    pub fn inherited_level(&self) -> usize {
++        self.inherited as usize
++    }
++
+     pub(crate) fn set_state(&mut self, to: State) -> Result<(), Error> {
+         if !self.state.can_become(to) {
+             return Err(Error::InvalidTransition {

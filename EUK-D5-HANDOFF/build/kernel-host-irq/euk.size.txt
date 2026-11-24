@@ -1,0 +1,2 @@
+   text	   data	    bss	    dec	    hex	filename
+  42303	    248	 164000	 206551	  326d7	/home/claude/d5-handoff/build/kernel-host-irq/euk.elf

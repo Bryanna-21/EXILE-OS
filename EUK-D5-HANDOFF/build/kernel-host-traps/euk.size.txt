@@ -1,0 +1,2 @@
+   text	   data	    bss	    dec	    hex	filename
+  29469	    200	 152689	 182358	  2c856	/home/claude/d5-handoff/build/kernel-host-traps/euk.elf

@@ -1,0 +1,139 @@
+
+/home/claude/d5-handoff/build/kernel-host-default/entry.o:     file format elf64-x86-64
+
+
+Disassembly of section .text.boot:
+
+0000000000000000 <_start>:
+   0:	fa                   	cli
+   1:	fc                   	cld
+   2:	bc 00 00 00 00       	mov    $0x0,%esp
+   7:	a3 00 00 00 00 89 1d 	movabs %eax,0x1d8900000000
+   e:	00 00 
+  10:	00 00                	add    %al,(%rax)
+  12:	66 ba f9 03          	mov    $0x3f9,%dx
+  16:	31 c0                	xor    %eax,%eax
+  18:	ee                   	out    %al,(%dx)
+  19:	66 ba fb 03          	mov    $0x3fb,%dx
+  1d:	b0 80                	mov    $0x80,%al
+  1f:	ee                   	out    %al,(%dx)
+  20:	66 ba f8 03          	mov    $0x3f8,%dx
+  24:	b0 01                	mov    $0x1,%al
+  26:	ee                   	out    %al,(%dx)
+  27:	66 ba f9 03          	mov    $0x3f9,%dx
+  2b:	30 c0                	xor    %al,%al
+  2d:	ee                   	out    %al,(%dx)
+  2e:	66 ba fb 03          	mov    $0x3fb,%dx
+  32:	b0 03                	mov    $0x3,%al
+  34:	ee                   	out    %al,(%dx)
+  35:	81 3d 00 00 00 00 02 	cmpl   $0x2badb002,0x0(%rip)        # 3f <_start+0x3f>
+  3c:	b0 ad 2b 
+  3f:	0f 85 e1 00 00 00    	jne    126 <bad_magic>
+  45:	9c                   	pushf
+  46:	58                   	pop    %rax
+  47:	89 c1                	mov    %eax,%ecx
+  49:	35 00 00 20 00       	xor    $0x200000,%eax
+  4e:	50                   	push   %rax
+  4f:	9d                   	popf
+  50:	9c                   	pushf
+  51:	58                   	pop    %rax
+  52:	51                   	push   %rcx
+  53:	9d                   	popf
+  54:	31 c8                	xor    %ecx,%eax
+  56:	a9 00 00 20 00       	test   $0x200000,%eax
+  5b:	0f 84 cc 00 00 00    	je     12d <bad_cpu>
+  61:	b8 01 00 00 00       	mov    $0x1,%eax
+  66:	0f a2                	cpuid
+  68:	81 e2 68 00 00 06    	and    $0x6000068,%edx
+  6e:	81 fa 68 00 00 06    	cmp    $0x6000068,%edx
+  74:	0f 85 b3 00 00 00    	jne    12d <bad_cpu>
+  7a:	b8 00 00 00 80       	mov    $0x80000000,%eax
+  7f:	0f a2                	cpuid
+  81:	3d 01 00 00 80       	cmp    $0x80000001,%eax
+  86:	0f 82 a1 00 00 00    	jb     12d <bad_cpu>
+  8c:	b8 01 00 00 80       	mov    $0x80000001,%eax
+  91:	0f a2                	cpuid
+  93:	81 e2 00 00 10 20    	and    $0x20100000,%edx
+  99:	81 fa 00 00 10 20    	cmp    $0x20100000,%edx
+  9f:	0f 85 88 00 00 00    	jne    12d <bad_cpu>
+  a5:	bf 00 00 00 00       	mov    $0x0,%edi
+  aa:	b9 00 0c 00 00       	mov    $0xc00,%ecx
+  af:	31 c0                	xor    %eax,%eax
+  b1:	f3 ab                	rep stos %eax,%es:(%rdi)
+  b3:	b8 00 00 00 00       	mov    $0x0,%eax
+  b8:	83 c8 03             	or     $0x3,%eax
+  bb:	a3 00 00 00 00 b8 00 	movabs %eax,0xb800000000
+  c2:	00 00 
+  c4:	00 83 c8 03 a3 00    	add    %al,0xa303c8(%rbx)
+  ca:	00 00                	add    %al,(%rax)
+  cc:	00 31                	add    %dh,(%rcx)
+  ce:	c9                   	leave
+  cf:	89 c8                	mov    %ecx,%eax
+  d1:	c1 e0 15             	shl    $0x15,%eax
+  d4:	0d 83 00 00 00       	or     $0x83,%eax
+  d9:	89 04 cd 00 00 00 00 	mov    %eax,0x0(,%rcx,8)
+  e0:	41 81 f9 00 02 00 00 	cmp    $0x200,%r9d
+  e7:	75 e6                	jne    cf <_start+0xcf>
+  e9:	0f 01 15 00 00 00 00 	lgdt   0x0(%rip)        # f0 <_start+0xf0>
+  f0:	0f 20 e0             	mov    %cr4,%rax
+  f3:	0d 20 06 00 00       	or     $0x620,%eax
+  f8:	0f 22 e0             	mov    %rax,%cr4
+  fb:	b8 00 00 00 00       	mov    $0x0,%eax
+ 100:	0f 22 d8             	mov    %rax,%cr3
+ 103:	b9 80 00 00 c0       	mov    $0xc0000080,%ecx
+ 108:	0f 32                	rdmsr
+ 10a:	0d 00 09 00 00       	or     $0x900,%eax
+ 10f:	0f 30                	wrmsr
+ 111:	0f 20 c0             	mov    %cr0,%rax
+ 114:	83 e0 fb             	and    $0xfffffffb,%eax
+ 117:	0d 02 00 01 80       	or     $0x80010002,%eax
+ 11c:	0f 22 c0             	mov    %rax,%cr0
+ 11f:	ea                   	(bad)
+ 120:	00 00                	add    %al,(%rax)
+ 122:	00 00                	add    %al,(%rax)
+ 124:	08 00                	or     %al,(%rax)
+
+0000000000000126 <bad_magic>:
+ 126:	be 00 00 00 00       	mov    $0x0,%esi
+ 12b:	eb 05                	jmp    132 <fail32>
+
+000000000000012d <bad_cpu>:
+ 12d:	be 00 00 00 00       	mov    $0x0,%esi
+
+0000000000000132 <fail32>:
+ 132:	ac                   	lods   %ds:(%rsi),%al
+ 133:	84 c0                	test   %al,%al
+ 135:	74 1d                	je     154 <exit32>
+ 137:	88 c3                	mov    %al,%bl
+ 139:	b9 a0 86 01 00       	mov    $0x186a0,%ecx
+ 13e:	66 ba fd 03          	mov    $0x3fd,%dx
+ 142:	ec                   	in     (%dx),%al
+ 143:	a8 20                	test   $0x20,%al
+ 145:	75 04                	jne    14b <fail32+0x19>
+ 147:	e2 f5                	loop   13e <fail32+0xc>
+ 149:	eb e7                	jmp    132 <fail32>
+ 14b:	66 ba f8 03          	mov    $0x3f8,%dx
+ 14f:	88 d8                	mov    %bl,%al
+ 151:	ee                   	out    %al,(%dx)
+ 152:	eb de                	jmp    132 <fail32>
+
+0000000000000154 <exit32>:
+ 154:	f4                   	hlt
+ 155:	eb fd                	jmp    154 <exit32>
+
+0000000000000157 <long_entry>:
+ 157:	66 b8 10 00          	mov    $0x10,%ax
+ 15b:	8e d8                	mov    %eax,%ds
+ 15d:	8e c0                	mov    %eax,%es
+ 15f:	8e d0                	mov    %eax,%ss
+ 161:	31 c0                	xor    %eax,%eax
+ 163:	8e e0                	mov    %eax,%fs
+ 165:	8e e8                	mov    %eax,%gs
+ 167:	48 8d 25 00 00 00 00 	lea    0x0(%rip),%rsp        # 16e <long_entry+0x17>
+ 16e:	48 31 ed             	xor    %rbp,%rbp
+ 171:	8b 3d 00 00 00 00    	mov    0x0(%rip),%edi        # 177 <long_entry+0x20>
+ 177:	8b 35 00 00 00 00    	mov    0x0(%rip),%esi        # 17d <long_entry+0x26>
+ 17d:	e8 00 00 00 00       	call   182 <long_entry+0x2b>
+ 182:	fa                   	cli
+ 183:	f4                   	hlt
+ 184:	eb fc                	jmp    182 <long_entry+0x2b>

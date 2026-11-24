@@ -1,0 +1,9 @@
+WARNING: unpinned rustc: rustc 1.97.0 (2d8144b78 2026-07-07) - not the verified reproducible toolchain
+WARNING: EUK_TARGET=host - built against the host target libraries, not x86_64-unknown-none
++ gcc -m64 -c -ffreestanding -fno-pie /home/claude/bryanna-21/exile-os/ExileKernel/src/arch/x86_64/entry.S -o /home/claude/d5-handoff/build/kernel-host-traps/entry.o
++ gcc -m64 -c -ffreestanding -fno-pie /home/claude/bryanna-21/exile-os/ExileKernel/src/arch/x86_64/exceptions.S -o /home/claude/d5-handoff/build/kernel-host-traps/exceptions.o
++ rustc --edition=2024 --crate-type staticlib -C panic=abort -C opt-level=2 -C relocation-model=static -C no-redzone=yes -C debuginfo=0 --remap-path-prefix /home/claude/bryanna-21/exile-os/ExileKernel=EUK --cfg euk_host_mem --cfg euk_traps /home/claude/bryanna-21/exile-os/ExileKernel/src/kernel.rs -o /home/claude/d5-handoff/build/kernel-host-traps/kernel.a
++ ld -nostdlib --gc-sections --build-id=none -z max-page-size=0x1000 -T /home/claude/bryanna-21/exile-os/ExileKernel/src/arch/x86_64/linker.ld /home/claude/d5-handoff/build/kernel-host-traps/entry.o /home/claude/d5-handoff/build/kernel-host-traps/exceptions.o /home/claude/d5-handoff/build/kernel-host-traps/kernel.a -o /home/claude/d5-handoff/build/kernel-host-traps/euk.elf
++ python3 /home/claude/bryanna-21/exile-os/ExileKernel/scripts/check.py /home/claude/d5-handoff/build/kernel-host-traps/euk.elf
+ELF64 / Multiboot / entry / static linkage checks PASS
+exit=0

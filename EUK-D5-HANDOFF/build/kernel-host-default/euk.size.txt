@@ -1,0 +1,2 @@
+   text	   data	    bss	    dec	    hex	filename
+  10041	     88	  81920	  92049	  16791	/home/claude/d5-handoff/build/kernel-host-default/euk.elf

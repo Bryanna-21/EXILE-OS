@@ -1,0 +1,439 @@
+# EXILE-OS — D4/D5: EUK PROCESS & SCHEDULING SUBSYSTEM
+## FULL IMPLEMENTATION, INTEGRATION, TESTING & SEVEN-FILE DELIVERY
+
+You are the lead kernel engineer responsible for building the remaining process-management and scheduling capabilities of the Exile Unified Kernel (EUK).
+
+This is an implementation mission.
+
+You are building a cohesive kernel subsystem, not conducting an inspection, writing a proposal, or producing disconnected code samples.
+
+Your final product must be a functioning extension of the existing EUK kernel, integrated with the existing D1–D3 thread and scheduler implementation and the C3 interrupt/timer infrastructure.
+
+Your final delivery must contain exactly seven new implementation files in one ZIP archive.
+
+---
+
+# 1. PRODUCT OBJECTIVE
+
+Build the EUK Process & Scheduling Subsystem.
+
+The completed subsystem must provide:
+
+- Preemptive kernel-thread scheduling.
+- Kernel synchronization and wait management.
+- Process abstraction and lifecycle management.
+- Isolated per-process address spaces.
+- User-mode execution.
+- ELF64 executable loading.
+- Per-thread TLS.
+- Reliable process/thread resource management.
+- Scheduler and process stress testing.
+
+The result must behave like a coherent operating-system subsystem.
+
+Do not implement seven unrelated modules that merely compile independently.
+
+---
+
+# 2. EXISTING IMPLEMENTATION — PRESERVE AND EXTEND
+
+D1–D3 already provide substantial functionality.
+
+Existing functionality includes:
+
+- Kernel thread structures and lifecycle.
+- Thread creation and destruction.
+- Initial kernel stacks and contexts.
+- Priority-based ready queues.
+- Cooperative scheduling.
+- Yield, block, sleep, wake and join operations.
+- x86-64 context-switch assembly.
+- Kernel stack allocation and reclamation.
+- Basic spinlock synchronization.
+- Scheduler accounting and demonstration code.
+
+C3 provides the interrupt and timer infrastructure.
+
+Reuse the existing implementation wherever possible.
+
+Do not recreate existing functionality under different names.
+
+Do not replace working scheduler or context-switch code merely to simplify integration.
+
+Inspect the actual source interfaces before implementing anything.
+
+---
+
+# 3. BUILD THE SEVEN CORE MODULES
+
+Create the following seven new implementation files.
+
+## FILE 1 — `src/preempt.rs`
+
+Build the hardware-driven preemption subsystem.
+
+Required functionality:
+
+- Timer interrupt integration.
+- Scheduler preemption requests.
+- Safe rescheduling from interrupt-return paths.
+- Preemption-disable and preemption-enable mechanisms.
+- Interrupt-safe scheduler interaction.
+- Integration with C3 IRQ and timer infrastructure.
+- Prevention of unsafe context switches inside critical sections.
+- Single-CPU correctness, with clearly defined SMP limitations.
+
+The kernel must be able to switch runnable threads without requiring the running thread to voluntarily yield.
+
+## FILE 2 — `src/sync.rs`
+
+Build the kernel synchronization subsystem.
+
+Required functionality:
+
+- Kernel mutexes.
+- Semaphores.
+- Condition variables.
+- Wait queues.
+- Blocking synchronization operations.
+- Wake-up and timeout handling where supported.
+- Lock ownership tracking.
+- Lock-order rules.
+- Deadlock detection or explicit deadlock-prevention checks.
+- Priority inversion handling and priority inheritance where applicable.
+- Interrupt-context restrictions.
+
+Synchronization must integrate with the existing scheduler and thread lifecycle.
+
+## FILE 3 — `src/process.rs`
+
+Build the process-management subsystem.
+
+Required functionality:
+
+- Process control block.
+- Process identifiers and generation-safe handles.
+- Process lifecycle.
+- Process creation.
+- Process termination and cleanup.
+- Parent/child relationships.
+- Thread ownership within processes.
+- Process exit status.
+- Process events or a carefully designed signal-equivalent mechanism.
+- Resource accounting.
+- Configurable resource limits.
+- Safe handling of process termination while threads are blocked or runnable.
+
+A process must be a real kernel abstraction, not merely a renamed thread.
+
+## FILE 4 — `src/address_space.rs`
+
+Build per-process virtual address-space management.
+
+Required functionality:
+
+- Address-space abstraction.
+- Address-space creation and destruction.
+- Virtual memory region tracking.
+- Page mapping and unmapping.
+- Permission enforcement.
+- User/kernel address separation.
+- Address-space activation and switching.
+- Mapping ownership and cleanup.
+- Validation of user addresses.
+- Protection against invalid or overlapping mappings.
+
+Integrate with the existing physical memory and paging infrastructure.
+
+Do not pretend address-space isolation exists if the implementation only tracks virtual addresses in metadata.
+
+## FILE 5 — `src/usermode.rs`
+
+Build user-mode execution support.
+
+Required functionality:
+
+- x86-64 Ring 3 transition.
+- User stack initialization.
+- User register/context initialization.
+- Privilege-level transition.
+- Syscall entry and return path.
+- Safe transfer of control between kernel and user execution.
+- User pointer validation.
+- Protection against returning to invalid user contexts.
+- Process termination on unrecoverable user execution faults.
+
+Integrate with the existing GDT, IDT, interrupt and context-switch architecture.
+
+## FILE 6 — `src/elf.rs`
+
+Build the ELF64 executable loader.
+
+Required functionality:
+
+- ELF64 header validation.
+- Architecture and executable-type validation.
+- Program-header parsing.
+- PT_LOAD segment processing.
+- Segment bounds validation.
+- Alignment validation.
+- Memory permission enforcement.
+- Zero-initialized BSS handling.
+- Entry-point validation.
+- User stack and initial execution-context preparation.
+- Rejection of malformed and malicious executable images.
+
+The loader must construct a real executable process image using the address-space subsystem.
+
+Do not simply parse ELF headers and claim executable loading is complete.
+
+## FILE 7 — `src/tls.rs`
+
+Build per-thread thread-local storage.
+
+Required functionality:
+
+- TLS layout representation.
+- TLS allocation and initialization.
+- Per-thread TLS ownership.
+- Thread-specific TLS data.
+- x86-64 FS/GS base management as appropriate.
+- TLS context-switch integration.
+- TLS cleanup during thread destruction.
+- Bounds and alignment validation.
+
+TLS must remain isolated between threads and must survive context switches correctly.
+
+---
+
+# 4. INTEGRATE THE SEVEN MODULES INTO ONE SYSTEM
+
+The seven new modules must be connected to the existing kernel.
+
+Extend existing source files where necessary.
+
+Expected integration points include:
+
+- `src/sched.rs`
+- `src/dispatch.rs`
+- `src/thread.rs`
+- `src/kernel.rs`
+- `src/arch/x86_64/switch.rs`
+- Existing GDT and IDT modules.
+- Existing paging and physical-memory modules.
+- C3 IRQ, APIC, IOAPIC and timer infrastructure.
+
+The list is not restrictive. Use the actual repository architecture.
+
+Required system flow:
+
+1. Kernel initializes process and scheduler infrastructure.
+2. A process is created.
+3. Its address space is established.
+4. An ELF executable is loaded.
+5. A user stack and initial context are created.
+6. A process-owned thread is initialized.
+7. TLS is prepared.
+8. The scheduler selects the thread.
+9. The kernel enters user mode.
+10. Timer interrupts trigger safe preemption.
+11. Threads synchronize, block, wake and resume.
+12. Syscalls and faults return control safely to the kernel.
+13. Process termination releases threads, TLS, address spaces and owned resources.
+
+The system must have explicit ownership and cleanup rules.
+
+---
+
+# 5. ENGINEERING AND SAFETY REQUIREMENTS
+
+- Use Rust and the existing EUK architecture.
+- Preserve no_std compatibility.
+- Avoid unnecessary dependencies.
+- Do not introduce placeholder implementations.
+- Do not fake hardware behavior in production code.
+- Use test doubles only in tests.
+- Validate all untrusted addresses, lengths and executable metadata.
+- Avoid integer overflow in memory calculations.
+- Handle allocation failures.
+- Define lock ordering.
+- Prevent scheduler re-entry and unsafe interrupt-context switching.
+- Document architecture-specific assumptions.
+- Keep unsupported SMP functionality explicitly documented rather than pretending it works.
+
+Do not install tools or packages without approval.
+
+Preserve existing user changes and unrelated branches.
+
+---
+
+# 6. TESTING AND VALIDATION
+
+Add meaningful tests for all seven modules.
+
+Required test categories:
+
+### Scheduler and preemption
+- Timer-triggered preemption.
+- Context-switch correctness.
+- Preemption-disable behavior.
+- Critical-section protection.
+- Fairness and starvation.
+
+### Synchronization
+- Mutex ownership.
+- Semaphore contention.
+- Condition-variable wakeups.
+- Wait-queue behavior.
+- Lock-order violations.
+- Deadlock prevention.
+- Priority inversion.
+
+### Process management
+- Creation and termination.
+- Parent/child lifecycle.
+- Multiple threads per process.
+- Resource cleanup.
+- Invalid process handles.
+- Resource limits.
+
+### Address spaces
+- Mapping and unmapping.
+- Permission violations.
+- Address-space switching.
+- Overlapping mappings.
+- Invalid ranges.
+- Cleanup and ownership.
+
+### User mode
+- Initial Ring 3 context.
+- User stack validation.
+- Syscall transitions.
+- Invalid user pointers.
+- Fault handling.
+
+### ELF
+- Valid ELF executable.
+- Invalid headers.
+- Malformed program headers.
+- Out-of-range segments.
+- Alignment failures.
+- Invalid entry points.
+- BSS initialization.
+- Permission enforcement.
+
+### TLS
+- Initialization.
+- Thread isolation.
+- Context-switch persistence.
+- Destruction.
+- Invalid layout rejection.
+
+### System stress
+- Many runnable threads.
+- Repeated process creation and termination.
+- Scheduler fairness.
+- Contention.
+- Block/wake races.
+- Resource exhaustion.
+- Long-running scheduling stress.
+
+Run all relevant host tests, no_std checks, and kernel build configurations.
+
+If hardware or emulator testing is unavailable, state that explicitly. Never fabricate results.
+
+---
+
+# 7. SEVEN-FILE DELIVERY PACKAGE
+
+The final ZIP must contain exactly these seven new implementation files:
+
+1. `preempt.rs`
+2. `sync.rs`
+3. `process.rs`
+4. `address_space.rs`
+5. `usermode.rs`
+6. `elf.rs`
+7. `tls.rs`
+
+Archive layout:
+
+- No nested directories.
+- No duplicate files.
+- No temporary files.
+- No build caches.
+- No unrelated source files.
+
+The archive must contain exactly seven files.
+
+The ZIP is a delivery package containing the seven new source modules. Integration changes to existing kernel files must remain in the working repository and must not be discarded merely to satisfy the archive count.
+
+Create a separate concise delivery report outside the ZIP if necessary.
+
+Before delivery:
+
+- Verify all seven files exist.
+- Verify all seven files are non-empty.
+- Verify the ZIP contains exactly seven entries.
+- Verify the archive can be extracted.
+- Verify the archived files match the tested source files.
+- Provide the actual ZIP download link.
+
+---
+
+# 8. GIT RULES
+
+Work in a dedicated D-subsystem implementation branch.
+
+Do not modify `main` directly.
+
+Do not overwrite A2, C3 or other mission work.
+
+Do not commit, push, merge or create a pull request without explicit authorization.
+
+The ZIP delivery is mandatory regardless of Git publishing status.
+
+---
+
+# 9. COMPLETION CRITERIA
+
+This mission is complete only when:
+
+- All seven modules have real implementations.
+- The modules are integrated into the existing EUK architecture.
+- Existing D1–D3 functionality remains intact.
+- C3 interrupt/timer infrastructure is correctly integrated.
+- Tests pass.
+- Required kernel builds succeed.
+- The seven-file ZIP is generated and verified.
+- The user receives the ZIP.
+
+Do not declare success merely because the seven files compile individually.
+
+The deliverable is a functioning integrated process and scheduling subsystem.
+
+---
+
+# 10. FINAL REPORT
+
+Provide:
+
+1. Implemented functionality.
+2. Seven new source files.
+3. Existing integration files modified.
+4. Test results.
+5. Build results.
+6. Hardware/emulator validation status.
+7. Remaining limitations.
+8. Exact ZIP filename.
+9. Download link.
+
+## FINAL INSTRUCTION
+
+BUILD THE SUBSYSTEM.
+
+Do not spend the mission producing inspection reports or speculative architecture documents.
+
+Reuse the existing kernel, implement the missing functionality, integrate it, test it, and deliver the seven verified source files as one ZIP archive.
+
+The objective is a working operating-system subsystem, not seven impressive-looking filenames.

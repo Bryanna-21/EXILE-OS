@@ -1,0 +1,692 @@
+# EXILE-OS — D5 COMPLETE INTEGRATION AND KERNEL VALIDATION
+## Mission: Finish Process Scheduling, Synchronization, Processes, Address Spaces and Usermode
+
+You are the implementation agent working on EXILE-OS, an x86-64 operating system kernel.
+
+Your assignment is to finish integrating the existing D5 implementation into the canonical EXILE-OS repository, close the remaining engineering gaps, connect the functionality to the real kernel execution paths, and validate the result.
+
+This is an implementation mission, not a planning exercise.
+
+You are expected to inspect, modify, build, test, debug and finish the work.
+
+---
+
+# 1. AUTHORITATIVE PROJECT LOCATIONS
+
+**Canonical repository:**
+
+`C:\Users\USER\Downloads\EXILE-OS`
+
+**D5 source archive:**
+
+`C:\Users\USER\Downloads\EUK-D5-process-scheduling.zip`
+
+**Current canonical branch:** `main`
+
+**Current canonical commit:** `71c40024`
+
+The repository was inspected on 24 November 2026.
+
+The initial inspection established:
+
+- The D5 ZIP contains seven Rust modules.
+- The ZIP passes integrity verification.
+- The canonical repository is on `main`.
+- `main` was synchronized with `origin/main` at `71c40024`.
+- The canonical working tree was clean at inspection time.
+- Existing kernel infrastructure already includes threads, scheduling, runqueues, kernel threads, interrupts, timers and memory management.
+
+Do not assume the repository is still unchanged when you start. Verify its current state first.
+
+# 2. CRITICAL: D5 IS ALREADY BUILT
+
+The seven D5 modules have already been implemented and host-tested.
+
+They are supplied in the ZIP archive:
+
+1. `preempt.rs`
+2. `sync.rs`
+3. `process.rs`
+4. `address_space.rs`
+5. `usermode.rs`
+6. `elf.rs`
+7. `tls.rs`
+
+The existing implementation has the following confidence assessments:
+
+| Module | Existing score | Existing work |
+|---|---:|---|
+| preempt.rs | 7/10 | Timer-preemption logic, non-preemptible sections, blocking restrictions and real-stack switching tests |
+| sync.rs | 8/10 | Mutexes, semaphores, wait queues, condition variables, lock ordering, priority inheritance and stress tests |
+| process.rs | 7/10 | Process ownership, lifecycle, parent-child relationships, resource limits, termination and cleanup |
+| address_space.rs | 7/10 | x86-64 address-space management, page-table operations, permission enforcement and cleanup |
+| usermode.rs | 5/10 | Ring 3 transition logic, system calls, user-pointer validation and fault handling |
+| elf.rs | 8/10 | ELF validation, loading, BSS initialization, rollback and corrupted-input testing |
+| tls.rs | 7/10 | Per-thread TLS, isolation, FS/GS context handling and cleanup |
+
+The reported overall confidence is approximately 7/10.
+
+These scores are confidence assessments of the existing implementation, not test coverage percentages.
+
+The existing host-side tests include:
+
+- Sixteen synchronization tests.
+- Randomized synchronization stress testing.
+- Real-stack context-switch tests.
+- Process resource-leak stress tests.
+- ELF corruption testing involving approximately 4,000 deliberately malformed inputs.
+- Address-space and TLS isolation and cleanup tests.
+
+Preserve this work.
+
+## NON-NEGOTIABLE RULE
+
+DO NOT rebuild the seven modules from scratch.
+
+DO NOT replace working D5 implementations with simpler versions.
+
+DO NOT discard their tests.
+
+DO NOT recreate functionality merely because the existing EXILE-OS kernel has older or overlapping implementations.
+
+Your responsibility is to integrate the existing D5 implementation into the existing kernel architecture, resolve genuine incompatibilities, complete missing hardware-dependent functionality and validate everything.
+
+Only rewrite a component when the existing implementation genuinely cannot integrate safely.
+
+# 3. EXISTING EXILE-OS KERNEL INFRASTRUCTURE
+
+The existing kernel contains these relevant source files:
+
+- `ExileKernel/src/thread.rs`
+- `ExileKernel/src/sched.rs`
+- `ExileKernel/src/runqueue.rs`
+- `ExileKernel/src/kthread.rs`
+- `ExileKernel/src/kstack.rs`
+- `ExileKernel/src/timer.rs`
+- `ExileKernel/src/traps.rs`
+- `ExileKernel/src/irq.rs`
+- `ExileKernel/src/idt.rs`
+- `ExileKernel/src/gdt.rs`
+- `ExileKernel/src/cpu.rs`
+- `ExileKernel/src/memory.rs`
+- `ExileKernel/src/frame.rs`
+- `ExileKernel/src/early_alloc.rs`
+- `ExileKernel/src/bootinfo.rs`
+- `ExileKernel/src/kernel.rs`
+- `ExileKernel/src/spin.rs`
+
+Additional infrastructure includes:
+
+- APIC and IOAPIC support.
+- HPET and PIT timers.
+- Physical memory allocation.
+- Kernel stack management.
+- Interrupt and trap handling.
+- ACPI MADT processing.
+- Existing kernel thread and scheduler infrastructure.
+
+These files must be inspected before deciding how D5 should be connected.
+
+Do not create duplicate scheduler, thread, timer, memory or interrupt systems.
+
+# 4. PHASE ONE — SOURCE EXTRACTION AND ENGINEERING AUDIT
+
+Start by inspecting the archive and repository.
+
+Verify:
+
+- All seven D5 files exist.
+- Archive integrity.
+- File sizes and line counts.
+- Module declarations and imports.
+- Dependencies on existing D5 abstractions.
+- Existing tests and test support.
+- Assembly files and architecture-specific code.
+- Compiler and target assumptions.
+
+Extract the archive into a temporary staging directory outside the canonical source tree.
+
+Do not immediately overwrite or copy files into `src`.
+
+Inspect the complete contents of all seven modules.
+
+Create an internal integration map identifying:
+
+1. D5 functionality already implemented.
+2. Existing EXILE-OS functionality that overlaps.
+3. APIs that need adapters.
+4. Missing functionality.
+5. Architecture-specific dependencies.
+6. Existing tests that can be reused.
+7. Hardware paths that need emulator validation.
+
+Inspect:
+
+- `Cargo.toml`
+- `Cargo.lock`, if present.
+- `rust-toolchain.toml` or equivalent pinned-toolchain configuration.
+- Target JSON files.
+- Linker scripts.
+- Build scripts.
+- Assembly entry points.
+- Existing test scripts.
+- QEMU configuration.
+- CI workflows.
+
+Do not stop after producing the integration map. Proceed into implementation.
+
+# 5. PHASE TWO — INTEGRATE ALL SEVEN MODULES
+
+Integrate each existing D5 module into the canonical kernel.
+
+## 5.1 preempt.rs — Preemptive scheduling
+
+Preserve the existing D5 implementation.
+
+Integrate it with:
+
+- Existing scheduler.
+- Existing thread structures.
+- Existing runqueue.
+- Timer infrastructure.
+- IRQ handling.
+- Trap and interrupt frames.
+- Kernel stack management.
+
+Requirements:
+
+- Timer interrupts must be able to request scheduling.
+- A thread that never voluntarily yields must not monopolize the CPU.
+- Non-preemptible sections must be respected.
+- Blocking operations must be rejected when blocking is unsafe.
+- Interrupt state must be handled correctly.
+- Context switches must preserve execution state.
+- Nested interrupt and preemption conditions must be handled safely.
+
+Verify that the timer interrupt actually reaches the scheduling decision and that the context switch is safe.
+
+## 5.2 sync.rs — Kernel synchronization
+
+Preserve existing D5 synchronization logic and tests.
+
+Integrate:
+
+- Mutexes.
+- Semaphores.
+- Wait queues.
+- Condition variables.
+- Lock-order enforcement.
+- Deadlock prevention.
+- Priority inheritance.
+
+Requirements:
+
+- Blocking locks must cooperate with the scheduler.
+- Wakeups must safely move threads into runnable state.
+- Interrupt-context restrictions must be enforced.
+- Lock ownership must remain consistent through thread termination.
+- Priority inheritance must propagate and be reversed correctly.
+- Synchronization must remain safe under preemption.
+
+Do not implement fake blocking using busy loops.
+
+## 5.3 process.rs — Process lifecycle
+
+Preserve the existing process model.
+
+Integrate process ownership with:
+
+- Kernel threads.
+- Address spaces.
+- ELF loading.
+- Memory limits.
+- Parent-child relationships.
+- Exit status.
+- Resource cleanup.
+
+Requirements:
+
+- Process creation must establish valid ownership.
+- Threads must belong to the correct process.
+- Process termination must handle active threads safely.
+- No thread may continue accessing freed process resources.
+- Child and parent lifecycle transitions must be correct.
+- All resources must be reclaimed exactly once.
+- Failed creation must roll back partially allocated resources.
+
+## 5.4 address_space.rs — Virtual memory and isolation
+
+Integrate with existing physical-frame allocation and page-table infrastructure.
+
+Requirements:
+
+- Correct x86-64 page-table management.
+- Correct user/kernel permission separation.
+- Read, write and execute permissions must be enforced.
+- Address-space ownership must be explicit.
+- Page-table memory must be reclaimed safely.
+- Shared kernel mappings must remain correct.
+- User mappings must not expose kernel memory.
+- Mapping and unmapping failures must roll back correctly.
+
+Implement and validate actual CR3 switching.
+
+Do not claim address-space switching is operational merely because the page-table code compiles.
+
+## 5.5 usermode.rs — Ring 3 and system calls
+
+This is a high-risk component.
+
+Preserve existing validation and fault-handling logic.
+
+Integrate:
+
+- GDT.
+- IDT.
+- TSS and privilege-transition stack configuration.
+- Trap handling.
+- Syscall entry and return.
+- User-pointer validation.
+- Process termination on fatal user faults.
+
+Requirements:
+
+- Correct privilege transition from Ring 0 to Ring 3.
+- Correct stack configuration.
+- Correct interrupt and syscall entry.
+- Correct register preservation.
+- Correct return to user mode.
+- Safe system-call argument validation.
+- Invalid user pointers must not permit kernel memory access.
+- Fatal user faults must terminate the affected process safely.
+
+Inspect the existing assembly carefully.
+
+Compilation of the assembly is not proof that Ring 3 works.
+
+## 5.6 elf.rs — Executable loading
+
+Preserve existing ELF validation and malformed-input tests.
+
+Integrate the loader with:
+
+- Process creation.
+- Address-space management.
+- Physical-frame allocation.
+- User stack creation.
+- User entry-point setup.
+- Process lifecycle and rollback.
+
+Requirements:
+
+- Validate ELF headers and program headers.
+- Reject malformed and unsupported inputs.
+- Enforce segment permissions.
+- Initialize BSS correctly.
+- Prevent invalid mappings.
+- Prevent user/kernel mapping violations.
+- Roll back all allocations when loading fails.
+- Ensure the entry point and stack are valid before entering user mode.
+
+## 5.7 tls.rs — Thread-local storage
+
+Integrate existing TLS logic with:
+
+- Thread creation.
+- Thread destruction.
+- Context switching.
+- CPU initialization.
+- FS/GS register management.
+- Relevant model-specific registers.
+
+Requirements:
+
+- Each thread must receive the correct TLS context.
+- Switching threads must switch TLS state correctly.
+- FS/GS state must not leak between threads.
+- Destruction must reclaim TLS resources.
+- CPU-local and thread-local data must remain distinct.
+
+Validate the actual register operations where QEMU permits.
+
+# 6. PHASE THREE — CLOSE REMAINING ARCHITECTURAL GAPS
+
+The original D5 implementation has known limitations.
+
+These are not optional documentation tasks. Investigate and implement the missing functionality where necessary.
+
+## 6.1 FPU/SSE context preservation
+
+FPU/SSE state is not currently preserved across preemption.
+
+Implement correct floating-point and SIMD context management.
+
+Investigate:
+
+- CPU feature detection.
+- CR0 and CR4 configuration.
+- XSAVE/FXSAVE availability.
+- Required alignment.
+- Per-thread state allocation.
+- Context save and restore.
+- Lazy versus eager state switching.
+- Interrupt and exception interactions.
+
+Choose the safest implementation compatible with the kernel's CPU target.
+
+Do not enable unsupported instructions.
+
+Test that two independently scheduled threads cannot corrupt one another's floating-point or SIMD state.
+
+## 6.2 Timer and interrupt integration
+
+Verify the complete path:
+
+Hardware timer → interrupt entry → trap handling → preemption decision → scheduler → context switch → interrupt return.
+
+Ensure the interrupt frame and stack are correct.
+
+## 6.3 CR3 and TLB handling
+
+Verify:
+
+- CR3 switching.
+- Page-table ownership.
+- TLB invalidation.
+- Address-space lifetime.
+- Correct handling of kernel mappings.
+- Safe process termination.
+
+## 6.4 Ring 3 and syscall assembly
+
+Verify:
+
+- User-mode entry.
+- System-call entry.
+- System-call return.
+- Register preservation.
+- Stack transitions.
+- Fault handling.
+- Correct privilege levels.
+
+## 6.5 Process and thread teardown
+
+Audit concurrent termination.
+
+A process must not free:
+
+- An address space still in use.
+- A kernel stack still executing.
+- TLS state still referenced by a CPU.
+- Synchronization objects with active waiters.
+- Page tables still active on another CPU.
+
+If SMP is not fully supported, explicitly document the supported CPU model and enforce safe restrictions rather than pretending SMP teardown is complete.
+
+# 7. PHASE FOUR — REAL KERNEL BOOT-PATH INTEGRATION
+
+Connect D5 to actual kernel initialization.
+
+The final architecture should support this logical lifecycle:
+
+1. Boot the kernel.
+2. Initialize physical memory management.
+3. Initialize virtual memory infrastructure.
+4. Initialize CPU and architecture state.
+5. Initialize interrupt handling.
+6. Initialize timer infrastructure.
+7. Initialize scheduler and runqueues.
+8. Initialize synchronization infrastructure.
+9. Create initial kernel threads.
+10. Start scheduling.
+11. Create a process.
+12. Create its address space.
+13. Load an ELF executable.
+14. Create the process's initial thread.
+15. Enter user mode.
+16. Execute system calls.
+17. Handle user faults.
+18. Terminate the process.
+19. Reclaim all resources.
+
+Respect initialization dependencies.
+
+Do not initialize a subsystem before its prerequisites exist.
+
+Keep the existing boot sequence operational.
+
+Do not break the already integrated A2 physical allocator or C3 interrupt/timer functionality.
+
+# 8. PHASE FIVE — TESTING AND VALIDATION
+
+Testing must cover both the existing host-side logic and the real kernel runtime.
+
+## 8.1 Pinned Rust toolchain
+
+Use the repository's pinned compiler.
+
+Do not silently substitute the installed latest Rust version.
+
+Run the appropriate:
+
+- `cargo fmt --check`
+- `cargo check`
+- `cargo build`
+- `cargo test`
+- Target-specific build commands.
+- Existing project validation scripts.
+
+Use the actual repository configuration and target.
+
+## 8.2 Existing D5 tests
+
+Preserve and execute all existing tests.
+
+Do not delete, weaken or bypass them.
+
+Retain the randomized synchronization stress test, real-stack tests, process leak tests and ELF corruption tests.
+
+## 8.3 Regression tests
+
+Run existing tests for:
+
+- Physical memory allocation.
+- Kernel stacks.
+- Kernel threads.
+- Scheduler.
+- Interrupt handling.
+- Timer subsystem.
+- Trap handling.
+- Boot sequence.
+
+## 8.4 QEMU validation
+
+Use the existing QEMU build and test infrastructure.
+
+Validate, where technically supported:
+
+1. Kernel boots successfully.
+2. Timer interrupts fire.
+3. Preemption occurs.
+4. Multiple kernel threads execute.
+5. Blocking and waking work.
+6. Mutex and semaphore behavior.
+7. Priority inheritance.
+8. Process creation.
+9. ELF loading.
+10. Address-space switching.
+11. Ring 3 entry.
+12. System-call round trips.
+13. Invalid user-pointer handling.
+14. User-mode fault termination.
+15. TLS isolation.
+16. FPU/SSE context preservation.
+17. Process termination and resource reclamation.
+
+Use serial logs, debug output, QEMU exit codes and test assertions.
+
+A successful build is not an emulator test.
+
+A QEMU boot is not proof that all seven modules work.
+
+Record exactly what was exercised.
+
+## 8.5 Hardware limitations
+
+If a feature cannot be tested in QEMU, explain precisely why.
+
+Separate results into:
+
+- Host-tested.
+- Compiled.
+- Boot-tested.
+- Emulator-tested.
+- Hardware-unverified.
+
+Never describe compiled-only assembly as runtime-validated.
+
+# 9. PHASE SIX — FIX, REBUILD AND VERIFY
+
+Do not stop at the first compiler error.
+
+Investigate the root cause.
+
+Fix integration problems systematically.
+
+After every significant change:
+
+- Run formatting.
+- Run relevant tests.
+- Rebuild.
+- Check for regressions.
+
+Do not hide failures.
+
+Do not downgrade compiler settings.
+
+Do not remove tests to achieve a green build.
+
+Do not introduce placeholder functions that falsely imply completion.
+
+Do not leave TODOs in critical execution paths while reporting the feature as finished.
+
+If an unavoidable limitation remains, document it accurately.
+
+# 10. ENGINEERING AND GIT SAFETY RULES
+
+These rules are mandatory.
+
+1. Work in the canonical `EXILE-OS` repository.
+2. Preserve the current `main` branch.
+3. Do not commit.
+4. Do not push.
+5. Do not create pull requests.
+6. Do not modify remote branches.
+7. Do not force-push.
+8. Do not use `git reset`.
+9. Do not use `git clean`.
+10. Do not force-remove worktrees.
+11. Do not discard existing uncommitted work.
+12. Do not overwrite user backups.
+13. Do not delete unrelated repository files.
+14. Do not make destructive changes without preserving the original material.
+15. Do not modify unrelated subsystems merely for cosmetic cleanup.
+
+Before implementation:
+
+- Verify Git branch.
+- Verify working-tree status.
+- Verify archive checksum.
+- Create an appropriate D5 integration backup.
+- Preserve the original ZIP.
+- Record the starting commit.
+
+If the repository has unexpected changes, inspect and preserve them before proceeding.
+
+All implementation changes must remain local and uncommitted.
+
+# 11. COMPLETION CRITERIA
+
+D5 is not complete simply because the seven modules have been copied into the source directory.
+
+Completion requires:
+
+- All seven modules integrated.
+- Existing D5 functionality preserved.
+- Dependencies resolved.
+- Module declarations updated.
+- Existing kernel interfaces connected.
+- Scheduler and timer preemption integrated.
+- Synchronization integrated with real thread blocking.
+- Process lifecycle integrated.
+- Address-space management connected to physical memory.
+- CR3 switching implemented and validated.
+- ELF loading connected to process creation.
+- Ring 3 and system calls integrated.
+- TLS connected to context switching.
+- FPU/SSE context preservation addressed.
+- Pinned Rust toolchain validation completed.
+- Existing regression tests pass.
+- QEMU boot validation completed.
+- Supported runtime paths tested.
+- Remaining limitations documented.
+
+If any criterion cannot be met, state exactly what remains and why.
+
+# 12. REQUIRED FINAL REPORT
+
+At completion, provide:
+
+## A. Implementation summary
+List the functionality integrated and completed.
+
+## B. Changed files
+List all added, modified and deleted files, with a brief explanation.
+
+## C. Architecture
+Explain how D5 connects to the existing scheduler, thread, memory, interrupt and process infrastructure.
+
+## D. Build results
+Include exact compiler version, target and build results.
+
+## E. Test results
+List existing D5 tests, regression tests and their results.
+
+## F. QEMU results
+List each emulator test, what it exercised and whether it passed.
+
+## G. Remaining issues
+List every unresolved issue honestly.
+
+## H. Confidence scores
+Reassess all seven modules individually out of 10 based on actual evidence.
+
+Do not increase scores simply because the code compiles.
+
+## I. Git status
+Show:
+
+- Current branch.
+- Starting commit.
+- Final working-tree status.
+- Changed file summary.
+- Confirmation that no commits were created.
+- Confirmation that nothing was pushed.
+
+# FINAL INSTRUCTION
+
+Your mission is to FINISH D5.
+
+Do not rebuild completed modules.
+Do not spend the assignment producing another lengthy planning report.
+Do not stop after copying files.
+Do not stop after a successful compile.
+Do not claim hardware functionality without testing it.
+
+Inspect the existing implementation, integrate it into EXILE-OS, connect it to the actual kernel, close the missing architecture work, run the tests, debug failures and validate the runtime in QEMU.
+
+Work through the phases until the implementation is complete or a genuine technical blocker prevents further progress.
+
+When blocked, preserve all work, document the exact blocker and continue with independent tasks that can still be completed.
+
+**Deliver a working, locally integrated and validated D5 kernel. No commit. No push.**
