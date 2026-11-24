@@ -152,4 +152,61 @@ subprocess.run(
     check=True,
 )
 
-print("ALL A1 + C1 + C3 + D1-D3 HOST TESTS PASSED", flush=True)
+
+# Mission D5: process/address-space/user-mode foundations. This is a separate
+# host-test crate so the D5 modules retain their real crate-level names and use
+# the actual D1-D3/C3 dependencies. No D5 module is added to kernel.rs here.
+d5_modules = {
+    # C3 dependencies used by preemption and user-mode support.
+    "frame": "src/frame.rs",
+    "cpu": "src/cpu.rs",
+    "gdt": "src/gdt.rs",
+    "irq": "src/irq.rs",
+    "timer": "src/timer.rs",
+    # D1-D3 scheduler and context-switch dependencies.
+    "thread": "src/thread.rs",
+    "runqueue": "src/runqueue.rs",
+    "sched": "src/sched.rs",
+    "spin": "src/spin.rs",
+    "kstack": "src/kstack.rs",
+    "context": "src/arch/x86_64/context.rs",
+    "switch": "src/arch/x86_64/switch.rs",
+    "kthread": "src/kthread.rs",
+    "dispatch": "src/dispatch.rs",
+    # D5 modules; declared at crate root to preserve crate:: references.
+    "address_space": "src/d5/address_space.rs",
+    "elf": "src/d5/elf.rs",
+    "preempt": "src/d5/preempt.rs",
+    "process": "src/d5/process.rs",
+    "sync": "src/d5/sync.rs",
+    "tls": "src/d5/tls.rs",
+    "usermode": "src/d5/usermode.rs",
+}
+d5_decls = "".join(
+    f'#[path = "{root / path}"]\npub mod {name};\n'
+    for name, path in d5_modules.items()
+)
+
+print("== Host tests: D5 (address spaces, ELF, preemption, processes, sync, TLS, user mode)", flush=True)
+d5_root = build_dir / "d5_host_root.rs"
+d5_root.write_text(d5_decls)
+subprocess.run(
+    [rustc, "--edition=2024", "--test", str(d5_root), "-o", str(build_dir / "d5-tests")],
+    check=True,
+)
+subprocess.run([str(build_dir / "d5-tests")], check=True)
+
+# Compile-time validation only. This does not activate address spaces, syscall
+# entry, or ring-3 execution. Hardware-specific instructions are compiled only.
+print("== no_std compile check: D5 (warnings are errors)", flush=True)
+d5_nostd = build_dir / "d5_nostd_root.rs"
+d5_nostd.write_text("#![no_std]\n" + d5_decls)
+subprocess.run(
+    [
+        rustc, "--edition=2024", "--crate-type=lib", "--emit=metadata",
+        "-D", "warnings", str(d5_nostd), "-o", str(build_dir / "d5_nostd.rmeta"),
+    ],
+    check=True,
+)
+
+print("ALL A1 + C1 + C3 + D1-D3 + D5 HOST TESTS PASSED", flush=True)

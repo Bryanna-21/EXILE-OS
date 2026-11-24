@@ -42,6 +42,12 @@ pub enum Error {
     SwitchInProgress,
     /// Internal inconsistency; treat as fatal.
     Corrupt,
+    /// Per-thread preemption nesting counter overflowed or underflowed.
+    PreemptCount,
+    /// An operation requiring thread context was attempted in interrupt context.
+    InterruptContext,
+    /// Blocking was attempted while preemption was disabled.
+    PreemptDisabled,
 }
 
 impl From<thread::Error> for Error {

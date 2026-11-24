@@ -138,6 +138,8 @@ pub struct Thread {
     pub(crate) priority: Priority,
     /// Anti-starvation boost added to `priority` while waiting in Ready.
     pub(crate) boost: u8,
+    /// Highest donated priority from threads blocked on owned resources.
+    pub(crate) inherited: u8,
     pub(crate) block_reason: BlockReason,
     pub(crate) wake_reason: WakeReason,
     /// A wake-up arrived while Running; the next `block` must not sleep.
@@ -161,6 +163,7 @@ impl Thread {
             state: State::New,
             priority,
             boost: 0,
+            inherited: 0,
             block_reason: BlockReason::None,
             wake_reason: WakeReason::None,
             wake_pending: false,
@@ -212,12 +215,19 @@ impl Thread {
         (self.entry, self.arg)
     }
 
-    /// Queue level currently used for this thread (base priority plus boost).
+    /// Highest priority donated by threads waiting on this thread's resources.
+    pub fn inherited_level(&self) -> u8 {
+        self.inherited
+    }
+
+    /// Queue level: the higher of base-plus-aging priority and inherited priority.
     pub fn effective_level(&self) -> usize {
         if self.is_idle() {
             0
         } else {
-            (self.priority.level() + self.boost as usize).min(PRIORITY_LEVELS - 1)
+            (self.priority.level() + self.boost as usize)
+                .max(self.inherited as usize)
+                .min(PRIORITY_LEVELS - 1)
         }
     }
 

@@ -488,14 +488,52 @@ impl<const N: usize> Scheduler<N> {
             let level = t.effective_level();
             self.queues.push_back(h.index(), level)?;
             self.check_preempt(h);
-        } else if state == State::Running
-            && self
-                .queues
-                .highest_level()
-                .is_some_and(|l| l > prio.level())
-        {
-            self.need_resched = true;
+        } else if state == State::Running {
+            let effective = t.effective_level();
+            if self.queues.highest_level().is_some_and(|l| l > effective) {
+                self.need_resched = true;
+            }
         }
+        Ok(())
+    }
+
+    /// Updates the priority donated to a thread by its blocked dependants.
+    ///
+    /// Aging boost and inherited priority are independent: dispatch may reset
+    /// the former, but must never erase the latter.
+    pub fn set_inherited(&mut self, h: Handle, level: u8) -> Result<(), Error> {
+        if level as usize >= crate::thread::PRIORITY_LEVELS {
+            return Err(Error::BadPriority);
+        }
+        if self.table.get(h)?.is_idle() {
+            return Err(Error::IsIdle);
+        }
+
+        let state = self.table.get(h)?.state();
+        if state == State::Ready {
+            self.queues.remove(h.index())?;
+        }
+
+        let now = self.now;
+        let t = self.table.get_mut(h)?;
+        t.inherited = level;
+
+        match state {
+            State::Ready => {
+                t.ready_since = now;
+                let effective = t.effective_level();
+                self.queues.push_back(h.index(), effective)?;
+                self.check_preempt(h);
+            }
+            State::Running => {
+                let effective = t.effective_level();
+                if self.queues.highest_level().is_some_and(|l| l > effective) {
+                    self.need_resched = true;
+                }
+            }
+            _ => {}
+        }
+
         Ok(())
     }
 
@@ -903,6 +941,100 @@ mod tests {
         assert!(s.need_resched(), "running thread lowered below a ready one");
         assert_eq!(run(&mut s).next, a);
         assert_eq!(s.set_priority(a, Priority::IDLE), Err(Error::IsIdle));
+    }
+
+    #[test]
+    fn inherited_priority_raise_and_drop_requeues_ready_thread() {
+        let mut s = setup();
+        let a = s.spawn(p(2), 0, 0).unwrap();
+        let b = s.spawn(p(3), 0, 0).unwrap();
+
+        assert_eq!(s.queues.level_of(a.index()), Some(2));
+        s.set_inherited(a, 6).unwrap();
+        assert_eq!(s.thread(a).unwrap().inherited_level(), 6);
+        assert_eq!(s.thread(a).unwrap().effective_level(), 6);
+        assert_eq!(s.queues.level_of(a.index()), Some(6));
+        s.check_invariants().unwrap();
+
+        assert_eq!(s.set_inherited(a, 1), Ok(()));
+        assert_eq!(s.thread(a).unwrap().effective_level(), 2);
+        assert_eq!(s.queues.level_of(a.index()), Some(2));
+        s.check_invariants().unwrap();
+
+        assert_eq!(run(&mut s).next, b);
+    }
+
+    #[test]
+    fn withdrawing_running_inheritance_requests_reschedule() {
+        let mut s = setup();
+        let a = s.spawn(p(4), 0, 0).unwrap();
+        let b = s.spawn(p(3), 0, 0).unwrap();
+
+        // Start a first; b remains ready at level 3.
+        assert_eq!(run(&mut s).next, a);
+
+        // Donation keeps a above b even after its base priority is lowered.
+        s.set_inherited(a, 6).unwrap();
+        assert!(!s.need_resched());
+
+        s.set_priority(a, p(2)).unwrap();
+        assert!(
+            !s.need_resched(),
+            "inheritance still protects running thread"
+        );
+
+        // Removing the donation exposes b as the higher-priority ready thread.
+        s.set_inherited(a, 1).unwrap();
+        assert!(s.need_resched(), "withdrawal exposes higher ready thread");
+        assert_eq!(run(&mut s).next, b);
+        s.check_invariants().unwrap();
+    }
+
+    #[test]
+    fn inherited_priority_survives_dispatch_while_aging_boost_resets() {
+        let mut s = setup();
+        let a = s.spawn(p(2), 0, 0).unwrap();
+        let b = s.spawn(p(4), 0, 0).unwrap();
+
+        // Simulate an accumulated anti-starvation boost before dispatch.
+        s.table.get_mut(a).unwrap().boost = 3;
+        s.set_inherited(a, 6).unwrap();
+
+        assert_eq!(s.thread(a).unwrap().effective_level(), 6);
+        assert_eq!(s.queues.level_of(a.index()), Some(6));
+
+        assert_eq!(run(&mut s).next, a);
+        let t = s.thread(a).unwrap();
+        assert_eq!(t.boost, 0);
+        assert_eq!(t.inherited_level(), 6);
+        assert_eq!(t.effective_level(), 6);
+
+        // The inherited level continues to govern requeue after dispatch.
+        assert_eq!(run(&mut s).next, a);
+        assert_eq!(s.thread(a).unwrap().inherited_level(), 6);
+        assert_eq!(s.thread(a).unwrap().boost, 0);
+        s.check_invariants().unwrap();
+
+        // Keep the second handle live so this also exercises a competing queue.
+        assert_eq!(s.thread(b).unwrap().state(), Ready);
+    }
+
+    #[test]
+    fn inherited_priority_rejects_invalid_idle_and_stale_handles() {
+        let mut s = setup();
+        let idle = s.idle().unwrap();
+        let a = s.spawn(p(2), 0, 0).unwrap();
+
+        assert_eq!(
+            s.set_inherited(a, PRIORITY_LEVELS as u8),
+            Err(Error::BadPriority)
+        );
+        assert_eq!(s.set_inherited(idle, 3), Err(Error::IsIdle));
+
+        s.kill(a, 0).unwrap();
+        s.reap(a).unwrap();
+        assert_eq!(s.set_inherited(a, 3), Err(Error::Stale));
+        s.check_invariants().unwrap();
     }
 
     #[test]
