@@ -9,6 +9,7 @@ and validated-handoff tests.
 import os
 import pathlib
 import subprocess
+import shutil
 import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -28,15 +29,42 @@ modules = {
 with tempfile.TemporaryDirectory(prefix="euk-a1-") as directory:
     directory = pathlib.Path(directory)
     root = directory / "a1_host.rs"
+    def rust_source_path(path):
+        resolved = str(ROOT / path)
+        converter = shutil.which("cygpath")
+        if converter:
+            resolved = subprocess.check_output(
+                [converter, "-m", resolved], text=True
+            ).strip()
+        return resolved
+
     declarations = "".join(
-        f'#[path = "{ROOT / path}"]\npub mod {name};\n'
+        f'#[path = "{rust_source_path(path)}"]\npub mod {name};\n'
         for name, path in modules.items()
     )
     root.write_text("#![allow(dead_code)]\n" + declarations)
-    binary = directory / "a1-tests"
+    binary = directory / "a1-tests.exe"
+    compiler_env = os.environ.copy()
+    native_temp = subprocess.check_output(
+        ["cygpath", "-w", tempfile.gettempdir()], text=True
+    ).strip()
+    compiler_env["TMP"] = native_temp
+    compiler_env["TEMP"] = native_temp
+    compiler_env["TMPDIR"] = native_temp
+
     subprocess.run(
-        [rustc, "--edition=2024", "--test", "-D", "warnings", str(root), "-o", str(binary)],
+        [
+            rustc,
+            "--target", "x86_64-pc-windows-gnu",
+            "--edition=2024",
+            "--test",
+            "-D", "warnings",
+            "-C", "linker=x86_64-w64-mingw32-gcc",
+            str(root),
+            "-o", str(binary),
+        ],
         check=True,
+        env=compiler_env,
     )
     subprocess.run([str(binary)], check=True)
 

@@ -21,7 +21,9 @@ pub enum Error {
 }
 
 impl From<BootInfoError> for Error {
-    fn from(value: BootInfoError) -> Self { Self::BootInfo(value) }
+    fn from(value: BootInfoError) -> Self {
+        Self::BootInfo(value)
+    }
 }
 
 pub struct ValidatedBoot<'a> {
@@ -44,11 +46,10 @@ impl<'a> ValidatedBoot<'a> {
         if output.len() < MAX_OUT.min(regions.len().saturating_mul(2)) {
             return Err(Error::Normalize(NormalizeError::TooMany));
         }
-        let count = memmap_norm::normalize_mem_regions(regions, output)
-            .map_err(Error::Normalize)?;
+        let count =
+            memmap_norm::normalize_mem_regions(regions, output).map_err(Error::Normalize)?;
         let normalized = &output[..count];
-        memmap_norm::check_normalized(normalized)
-            .map_err(Error::InvalidNormalizedMap)?;
+        memmap_norm::check_normalized(normalized).map_err(Error::InvalidNormalizedMap)?;
         if normalized
             .iter()
             .filter(|interval| interval.kind == memmap_norm::Kind::Usable)
@@ -58,7 +59,11 @@ impl<'a> ValidatedBoot<'a> {
         {
             return Err(Error::NoUsableMemory);
         }
-        Ok(Self { info, regions, normalized })
+        Ok(Self {
+            info,
+            regions,
+            normalized,
+        })
     }
 
     pub fn usable_ranges(&self) -> impl Iterator<Item = PhysRange> + '_ {
@@ -90,14 +95,20 @@ mod tests {
     }
 
     fn region(start: u64, size: u64, kind: u32) -> MemRegion {
-        MemRegion { start, size, kind, _pad: 0 }
+        MemRegion {
+            start,
+            size,
+            kind,
+            _pad: 0,
+        }
     }
 
     #[test]
     fn validates_and_normalizes_before_exposing_usable_ranges() {
         let regions = [region(0x1000, 0x9000, 1), region(0x3000, 0x1000, 2)];
         let mut output = [Interval::EMPTY; MAX_OUT];
-        let boot = ValidatedBoot::validate(&info(regions.len()), &regions, &mut output).unwrap();
+        let boot_info = info(regions.len());
+        let boot = ValidatedBoot::validate(&boot_info, &regions, &mut output).unwrap();
         let ranges: Vec<_> = boot.usable_ranges().collect();
         assert_eq!(ranges.len(), 2);
         assert_eq!(ranges[0].start(), 0x1000);
@@ -134,9 +145,9 @@ mod tests {
         ));
         let regions = [region(0x1000, 0x1000, 2)];
         let mut output = [Interval::EMPTY; MAX_OUT];
-        assert_eq!(
+        assert!(matches!(
             ValidatedBoot::validate(&info(1), &regions, &mut output),
             Err(Error::NoUsableMemory)
-        );
+        ));
     }
 }
