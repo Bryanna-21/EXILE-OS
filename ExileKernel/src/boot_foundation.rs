@@ -24,8 +24,6 @@ impl From<BootInfoError> for Error {
     fn from(value: BootInfoError) -> Self { Self::BootInfo(value) }
 }
 
-/// Validated, normalized handoff data. The contained slices remain borrowed from
-/// caller-owned storage and are never accessed before validation completes.
 pub struct ValidatedBoot<'a> {
     pub info: &'a BootInfo,
     pub regions: &'a [MemRegion],
@@ -33,18 +31,13 @@ pub struct ValidatedBoot<'a> {
 }
 
 impl<'a> ValidatedBoot<'a> {
-    /// Validate the complete logical handoff and normalize the memory map.
-    ///
-    /// The caller must ensure `info` and `regions` came from a bounded read of the
-    /// loader's physical handoff storage. This function intentionally accepts slices,
-    /// not physical addresses, so it cannot accidentally dereference untrusted RAM.
     pub fn validate(
         info: &'a BootInfo,
         regions: &'a [MemRegion],
         output: &'a mut [Interval],
     ) -> Result<Self, Error> {
         info.validate().map_err(Error::BootInfo)?;
-        if info.memmap_count as usize != regions.len() {
+        if info.memmap_count != regions.len() as u64 {
             return Err(Error::Regions(BootInfoError::BadTotalSize));
         }
         crate::bootinfo::validate_regions(regions).map_err(Error::Regions)?;
