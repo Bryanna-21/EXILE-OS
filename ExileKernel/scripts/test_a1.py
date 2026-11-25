@@ -3,7 +3,8 @@
 
 This complements scripts/test.py without changing the legacy Multiboot boot path.
 It compiles the real no_std modules as one host test crate, then executes the
-BootInfo, range, normalization, reservation, and validated-handoff tests.
+BootInfo, range, normalization, reservation, early-allocation, physical-handoff,
+and validated-handoff tests.
 """
 import os
 import pathlib
@@ -18,6 +19,9 @@ modules = {
     "memory": "src/memory.rs",
     "range": "src/range.rs",
     "memmap_norm": "src/memmap_norm.rs",
+    "reserve": "src/reserve.rs",
+    "early_alloc": "src/early_alloc.rs",
+    "phys_handoff": "src/phys_handoff.rs",
     "boot_foundation": "src/boot_foundation.rs",
 }
 
