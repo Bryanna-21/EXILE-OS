@@ -766,11 +766,11 @@ mod real_tests {
     const SLOTS: u64 = 6;
     const STACK: u64 = 64 * 1024;
 
-    extern "C" fn first_run() {
+    extern "sysv64" fn first_run() {
         K.with(|k| k.complete_switch().expect("complete_switch"));
     }
 
-    extern "C" fn exit_hook(status: i32) -> ! {
+    extern "sysv64" fn exit_hook(status: i32) -> ! {
         // SAFETY: single-threaded cooperative host scenario; hooks installed;
         // K is a static.
         unsafe {
@@ -816,10 +816,10 @@ mod real_tests {
     fn logged() -> Vec<String> {
         LOG.lock().unwrap().clone()
     }
-    fn fp(f: extern "C" fn(u64) -> i32) -> u64 {
+    fn fp(f: extern "sysv64" fn(u64) -> i32) -> u64 {
         f as *const () as usize as u64
     }
-    fn spawn(f: extern "C" fn(u64) -> i32, arg: u64, prio: u8) -> Handle {
+    fn spawn(f: extern "sysv64" fn(u64) -> i32, arg: u64, prio: u8) -> Handle {
         K.with(|k| {
             k.create(ThreadParams {
                 entry: fp(f),
@@ -829,7 +829,7 @@ mod real_tests {
             .unwrap()
         })
     }
-    fn idle_with(f: extern "C" fn(u64) -> i32) {
+    fn idle_with(f: extern "sysv64" fn(u64) -> i32) {
         K.with(|k| k.create_idle(fp(f), 0).unwrap());
     }
     /// Verifies the running thread's locals live inside its own owned stack.
@@ -856,7 +856,7 @@ mod real_tests {
         }
     }
     /// Default idle: reap, stop when only the idle thread is left, else tick+yield.
-    extern "C" fn idle(_: u64) -> i32 {
+    extern "sysv64" fn idle(_: u64) -> i32 {
         loop {
             let live = K.with(|k| {
                 reap(k);
@@ -895,7 +895,7 @@ mod real_tests {
         });
     }
 
-    extern "C" fn ping_pong(arg: u64) -> i32 {
+    extern "sysv64" fn ping_pong(arg: u64) -> i32 {
         let name = if arg == 0 { 'A' } else { 'B' };
         check_on_own_stack();
         for i in 0..3 {
@@ -933,7 +933,7 @@ mod real_tests {
         assert!(K.with(|k| k.switch_count()) >= 7);
     }
 
-    extern "C" fn waiter(_: u64) -> i32 {
+    extern "sysv64" fn waiter(_: u64) -> i32 {
         log("W0");
         // SAFETY: cooperative single-CPU scenario.
         let out = unsafe { block_current(&K, BlockReason::Event(1)) }.unwrap();
@@ -942,7 +942,7 @@ mod real_tests {
         log(format!("W1 {out:?} {why:?}"));
         0
     }
-    extern "C" fn waker(_: u64) -> i32 {
+    extern "sysv64" fn waker(_: u64) -> i32 {
         log("S0");
         let w = HANDLES.lock().unwrap()[0];
         let o = wake(&K, w).unwrap();
@@ -969,7 +969,7 @@ mod real_tests {
         assert_clean(3);
     }
 
-    extern "C" fn sleeper(arg: u64) -> i32 {
+    extern "sysv64" fn sleeper(arg: u64) -> i32 {
         let start = K.with(|k| k.sched().now());
         // SAFETY: cooperative single-CPU scenario.
         unsafe { sleep_current(&K, arg) }.unwrap();
@@ -989,7 +989,7 @@ mod real_tests {
         assert_clean(3);
     }
 
-    extern "C" fn low(_: u64) -> i32 {
+    extern "sysv64" fn low(_: u64) -> i32 {
         log("L0");
         spawn(high, 0, 6); // publishing a higher-priority thread requests a reschedule
         let need = K.with(|k| k.sched().need_resched());
@@ -998,7 +998,7 @@ mod real_tests {
         log(format!("L1 need={need} preempted={preempted}"));
         0
     }
-    extern "C" fn high(_: u64) -> i32 {
+    extern "sysv64" fn high(_: u64) -> i32 {
         log("H");
         0
     }
@@ -1013,7 +1013,7 @@ mod real_tests {
         assert_clean(3);
     }
 
-    extern "C" fn tag(arg: u64) -> i32 {
+    extern "sysv64" fn tag(arg: u64) -> i32 {
         log(format!("t{arg}"));
         0
     }
@@ -1030,7 +1030,7 @@ mod real_tests {
         assert_clean(6);
     }
 
-    extern "C" fn joiner(_: u64) -> i32 {
+    extern "sysv64" fn joiner(_: u64) -> i32 {
         log("J0");
         let target = HANDLES.lock().unwrap()[0];
         // SAFETY: cooperative single-CPU scenario.
@@ -1039,7 +1039,7 @@ mod real_tests {
         log(format!("J1 {out:?} {status:?}"));
         0
     }
-    extern "C" fn target_thread(_: u64) -> i32 {
+    extern "sysv64" fn target_thread(_: u64) -> i32 {
         log("T0");
         // SAFETY: cooperative single-CPU scenario.
         unsafe { yield_now(&K) }.unwrap();
@@ -1060,13 +1060,13 @@ mod real_tests {
         assert_clean(3);
     }
 
-    extern "C" fn blocker(arg: u64) -> i32 {
+    extern "sysv64" fn blocker(arg: u64) -> i32 {
         // SAFETY: cooperative single-CPU scenario.
         unsafe { block_current(&K, BlockReason::Event(arg as u32)) }.unwrap();
         MISC.fetch_add(1, Ordering::SeqCst);
         0
     }
-    extern "C" fn idle_wake_all(_: u64) -> i32 {
+    extern "sysv64" fn idle_wake_all(_: u64) -> i32 {
         loop {
             let (live, blocked) = K.with(|k| {
                 reap(k);
@@ -1118,7 +1118,7 @@ mod real_tests {
         assert_clean(6);
     }
 
-    extern "C" fn churn(arg: u64) -> i32 {
+    extern "sysv64" fn churn(arg: u64) -> i32 {
         for _ in 0..(arg % 3) {
             // SAFETY: cooperative single-CPU scenario.
             unsafe { yield_now(&K) }.unwrap();
@@ -1127,7 +1127,7 @@ mod real_tests {
         arg as i32
     }
     const TOTAL: u64 = 400;
-    extern "C" fn idle_churn(_: u64) -> i32 {
+    extern "sysv64" fn idle_churn(_: u64) -> i32 {
         let mut next = 0u64;
         loop {
             let live = K.with(|k| {
@@ -1188,7 +1188,7 @@ mod real_tests {
     fn real_sleep_state_does_not_leak_a_wakeup_to_other_threads() {
         // A sleeper that is explicitly woken early reports Cancelled and the
         // woken-early thread resumes without waiting for the deadline.
-        extern "C" fn long_sleeper(_: u64) -> i32 {
+        extern "sysv64" fn long_sleeper(_: u64) -> i32 {
             // SAFETY: cooperative single-CPU scenario.
             unsafe { sleep_current(&K, 1_000_000) }.unwrap();
             let me = K.with(|k| k.sched().current().unwrap());
@@ -1196,7 +1196,7 @@ mod real_tests {
             log(format!("woke {why:?}"));
             0
         }
-        extern "C" fn canceller(_: u64) -> i32 {
+        extern "sysv64" fn canceller(_: u64) -> i32 {
             let s = HANDLES.lock().unwrap()[0];
             log(format!("{:?}", wake(&K, s).unwrap()));
             0

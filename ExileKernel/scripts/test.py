@@ -47,7 +47,7 @@ a2_modules = (
     "reserve", "early_alloc", "phys_handoff",
 )
 a2_decls = "".join(
-    f'#[path = "{root / "src" / (module + ".rs")}"]\npub mod {module};\n'
+    f'#[path = "{(root / "src" / (module + ".rs")).as_posix()}"]\npub mod {module};\n'
     for module in a2_modules
 )
 
@@ -87,7 +87,7 @@ d3_modules = {
     "dispatch": "src/dispatch.rs",
 }
 decls = "".join(
-    f'#[path = "{root / path}"]\npub mod {name};\n' for name, path in d3_modules.items()
+    f'#[path = "{(root / path).as_posix()}"]\npub mod {name};\n' for name, path in d3_modules.items()
 )
 
 print("== Host tests: D1-D3 (scheduler, stacks, real context switch)", flush=True)
@@ -129,7 +129,7 @@ c3_modules = {
     "hpet": "src/hpet.rs",
 }
 c3_decls = "".join(
-    f'#[path = "{root / path}"]\npub mod {name};\n' for name, path in c3_modules.items()
+    f'#[path = "{(root / path).as_posix()}"]\npub mod {name};\n' for name, path in c3_modules.items()
 )
 
 print("== Host tests: C3 (irq, pic, acpi/madt, apic, ioapic, timer, pit, hpet)", flush=True)
@@ -183,7 +183,7 @@ d5_modules = {
     "usermode": "src/d5/usermode.rs",
 }
 d5_decls = "".join(
-    f'#[path = "{root / path}"]\npub mod {name};\n'
+    f'#[path = "{(root / path).as_posix()}"]\npub mod {name};\n'
     for name, path in d5_modules.items()
 )
 
@@ -209,4 +209,44 @@ subprocess.run(
     check=True,
 )
 
-print("ALL A1 + C1 + C3 + D1-D3 + D5 HOST TESTS PASSED", flush=True)
+
+# Mission A4-A5: bounded FDT, CPU topology and page-permission foundations.
+# These modules are independently testable and must also compile without std/alloc.
+a4a5_modules = ("fdt", "topology", "page_perms")
+
+for module in a4a5_modules:
+    source = root / "src" / f"{module}.rs"
+    binary = build_dir / f"a4a5-{module}-tests"
+
+    if not source.is_file():
+        raise SystemExit(f"Missing A4-A5 module: {source}")
+
+    print(f"== Host tests: A4-A5 {module}.rs", flush=True)
+    subprocess.run(
+        [rustc, "--edition=2024", "--test", "-D", "warnings",
+         str(source), "-o", str(binary)],
+        check=True,
+    )
+    subprocess.run([str(binary)], check=True)
+
+a4a5_decls = "".join(
+    f'#[path = "{(root / "src" / (module + ".rs")).as_posix()}"]' + chr(10)
+    + f"pub mod {module};" + chr(10)
+    for module in a4a5_modules
+)
+
+print("== no_std compile check: A4-A5 (warnings are errors)", flush=True)
+a4a5_nostd = build_dir / "a4a5_nostd_root.rs"
+a4a5_nostd.write_text(
+    "#![no_std]" + chr(10) + "#![deny(warnings)]" + chr(10) + a4a5_decls,
+    encoding="utf-8",
+)
+subprocess.run(
+    [rustc, "--edition=2024", "--crate-type=lib", "--emit=metadata",
+     "-D", "warnings", str(a4a5_nostd), "-o", str(build_dir / "a4a5_nostd.rmeta")],
+    check=True,
+)
+
+print("A4-A5 HOST TESTS AND no_std COMPILE CHECK PASSED", flush=True)
+
+print("ALL A1 + C1 + C3 + D1-D3 + D5 + A4-A5 HOST TESTS AND no_std CHECKS PASSED", flush=True)
