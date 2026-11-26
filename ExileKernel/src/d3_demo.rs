@@ -100,11 +100,11 @@ fn ok<T, E>(r: Result<T, E>, what: &str) -> T {
     }
 }
 
-extern "C" fn first_run() {
+extern "sysv64" fn first_run() {
     ok(KERNEL.with(|k| k.complete_switch()), "D3 complete_switch");
 }
 
-extern "C" fn exit_hook(status: i32) -> ! {
+extern "sysv64" fn exit_hook(status: i32) -> ! {
     // SAFETY: single CPU, interrupts never enabled, KERNEL is a static, hooks
     // installed, no spinlock held here.
     unsafe {
@@ -124,7 +124,7 @@ extern "C" fn exit_hook(status: i32) -> ! {
     }
 }
 
-extern "C" fn t1(_: u64) -> i32 {
+extern "sysv64" fn t1(_: u64) -> i32 {
     serial("EUK D3 T1 start\n");
     // SAFETY (all dispatch calls below): single CPU, IF clear, static kernel.
     ok(unsafe { dispatch::yield_now(&KERNEL) }, "D3 yield");
@@ -140,7 +140,7 @@ extern "C" fn t1(_: u64) -> i32 {
     0
 }
 
-extern "C" fn t2(_: u64) -> i32 {
+extern "sysv64" fn t2(_: u64) -> i32 {
     serial("EUK D3 T2 start\n");
     ok(unsafe { dispatch::yield_now(&KERNEL) }, "D3 yield");
     serial("EUK D3 T2 resumed after yield\n");
@@ -153,7 +153,7 @@ extern "C" fn t2(_: u64) -> i32 {
     5
 }
 
-extern "C" fn idle(_: u64) -> i32 {
+extern "sysv64" fn idle(_: u64) -> i32 {
     let mut iterations = 0u32;
     loop {
         let live = KERNEL.with(|k| {
@@ -201,7 +201,7 @@ extern "C" fn idle(_: u64) -> i32 {
     }
 }
 
-fn entry(f: extern "C" fn(u64) -> i32) -> u64 {
+fn entry(f: extern "sysv64" fn(u64) -> i32) -> u64 {
     f as *const () as usize as u64
 }
 

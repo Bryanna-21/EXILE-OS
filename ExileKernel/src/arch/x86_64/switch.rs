@@ -25,7 +25,7 @@
 //! The hooks are installed once with `install_hooks`. They are plain function
 //! pointers, not Rust closures, and are read by the trampoline from statics.
 //!
-//! Unsafe: only the two `extern "C"` calls below. Their contracts are on the
+//! Unsafe: only the two `extern "sysv64"` calls below. Their contracts are on the
 //! wrappers.
 use core::arch::global_asm;
 use core::sync::atomic::{AtomicUsize, Ordering};
@@ -34,9 +34,9 @@ pub static FIRST_RUN_HOOK: AtomicUsize = AtomicUsize::new(0);
 pub static EXIT_HOOK: AtomicUsize = AtomicUsize::new(0);
 
 /// Runs on a new thread's own stack before its function starts.
-pub type FirstRunHook = extern "C" fn();
+pub type FirstRunHook = extern "sysv64" fn();
 /// Runs when a thread function returns; receives its return value. Never returns.
-pub type ExitHook = extern "C" fn(i32) -> !;
+pub type ExitHook = extern "sysv64" fn(i32) -> !;
 
 /// Installs the trampoline hooks. Must happen before any thread created with
 /// `trampoline_address()` is first switched to.
@@ -53,7 +53,6 @@ global_asm!(
     ".text",
     ".p2align 4",
     ".global euk_switch_context",
-    ".type euk_switch_context,@function",
     "euk_switch_context:",
     "    push rbx",
     "    push rbp",
@@ -70,10 +69,8 @@ global_asm!(
     "    pop rbp",
     "    pop rbx",
     "    ret",
-    ".size euk_switch_context, . - euk_switch_context",
     ".p2align 4",
     ".global euk_thread_trampoline",
-    ".type euk_thread_trampoline,@function",
     "euk_thread_trampoline:",
     "    sub rsp, 8",
     "    mov rax, qword ptr [rip + {first}]",
@@ -84,12 +81,11 @@ global_asm!(
     "    mov rax, qword ptr [rip + {exit}]",
     "    call rax",
     "    ud2",
-    ".size euk_thread_trampoline, . - euk_thread_trampoline",
     first = sym FIRST_RUN_HOOK,
     exit = sym EXIT_HOOK,
 );
 
-unsafe extern "C" {
+unsafe extern "sysv64" {
     fn euk_switch_context(prev_sp_slot: *mut u64, next_sp: u64);
     fn euk_thread_trampoline();
 }
@@ -166,7 +162,7 @@ mod tests {
         }
     }
 
-    unsafe extern "C" {
+    unsafe extern "sysv64" {
         fn euk_test_regcheck(slot: *mut u64, next_sp: u64) -> u32;
         fn euk_test_clobber_and_switch(slot: *mut u64, next_sp: u64);
         fn euk_test_probe_entry();
@@ -247,7 +243,7 @@ mod tests {
     static SCRATCH_SP: AtomicU64 = AtomicU64::new(0);
     static EXIT_STATUS: AtomicU64 = AtomicU64::new(u64::MAX);
 
-    extern "C" fn exit_back_to_boot(status: i32) -> ! {
+    extern "sysv64" fn exit_back_to_boot(status: i32) -> ! {
         EXIT_STATUS.store(status as u32 as u64, Ordering::SeqCst);
         // SAFETY: BOOT_SP was written by the test's own switch into this thread
         // and that context is suspended; SCRATCH_SP is a valid slot.
@@ -255,14 +251,14 @@ mod tests {
         unreachable!("boot context never resumes an exited thread");
     }
 
-    extern "C" fn noop_hook() {}
+    extern "sysv64" fn noop_hook() {}
 
     #[test]
     fn trampoline_address_is_a_real_nonnull_text_address() {
         let a = trampoline_address();
         assert_ne!(a, 0);
         assert!(context::is_canonical(a));
-        let f: extern "C" fn() = noop_hook;
+        let f: extern "sysv64" fn() = noop_hook;
         assert_ne!(a, f as usize as u64);
     }
 
@@ -283,7 +279,7 @@ mod tests {
         // B inspects A's suspended frame and then trashes every callee-saved reg.
         static FRAME_SEEN: [AtomicU64; 7] = [const { AtomicU64::new(0) }; 7];
         static A_SLOT: AtomicU64 = AtomicU64::new(0);
-        extern "C" fn b_entry(_arg: u64) -> i32 {
+        extern "sysv64" fn b_entry(_arg: u64) -> i32 {
             let sp = A_SLOT.load(Ordering::SeqCst);
             for (i, w) in FRAME_SEEN.iter().enumerate() {
                 // SAFETY: A's frame (7 words) is live on A's host stack; A is
@@ -322,10 +318,12 @@ mod tests {
     fn first_run_calls_hook_then_entry_with_abi_alignment_then_exit_hook() {
         let _g = guard();
         install_hooks(
-            // SAFETY: euk_test_probe_hook is an asm function with the extern "C"
+            // SAFETY: euk_test_probe_hook is an asm function with the extern "sysv64"
             // `fn()` signature (it only records rsp and returns).
             unsafe {
-                core::mem::transmute::<unsafe extern "C" fn(), FirstRunHook>(euk_test_probe_hook)
+                core::mem::transmute::<unsafe extern "sysv64" fn(), FirstRunHook>(
+                    euk_test_probe_hook,
+                )
             },
             exit_back_to_boot,
         );
@@ -384,7 +382,7 @@ mod tests {
         install_hooks(noop_hook, exit_back_to_boot);
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         static PEER_SP: AtomicU64 = AtomicU64::new(0);
-        extern "C" fn peer(_a: u64) -> i32 {
+        extern "sysv64" fn peer(_a: u64) -> i32 {
             // Locals that must survive each suspension on this stack.
             let mut local = [0u64; 8];
             for i in 0..50_000u64 {
