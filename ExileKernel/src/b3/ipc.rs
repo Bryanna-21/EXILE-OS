@@ -550,6 +550,7 @@ impl<const N: usize, const O: usize, const C: usize, const Q: usize> IpcDomain<N
             self.done[wi] = Some((w.handle, Done::Received(d)));
             self.stats.handoffs += 1;
             self.stats.sent += 1;
+            self.stats.received += 1;
             s.wake(w.handle)?;
             return Ok(SendOutcome::Sent);
         }
@@ -1002,6 +1003,8 @@ mod tests {
         }
         assert_eq!(d.waiting_threads(), 0);
         assert_eq!(d.stats().handoffs, 1);
+        assert_eq!(d.stats().sent, 1);
+        assert_eq!(d.stats().received, 1);
         d.check_invariants(&s).unwrap();
     }
 

@@ -140,6 +140,25 @@ fn fail(e: i64) -> Abi {
     Abi::Done(e)
 }
 
+/// Copies a received delivery to user memory. If the copy fails after a
+/// capability was rebound to the receiver, close that newly delivered handle.
+fn write_delivery<S: IpcService, M: UserMemory>(
+    svc: &mut S,
+    mem: &mut M,
+    out: u64,
+    d: crate::ipc_message::Delivery,
+) -> i64 {
+    match mem.copy_to_user(out, &d.encode()) {
+        Ok(()) => 0,
+        Err(e) => {
+            if let Some(cap) = d.cap {
+                let _ = svc.close(cap);
+            }
+            e as i64
+        }
+    }
+}
+
 /// Executes one IPC syscall. `args.nr` must satisfy [`owns`]; anything else is `ENOSYS`
 /// (-38), so a dispatcher that forwards unknown numbers gets the standard answer.
 pub fn handle<S: IpcService, M: UserMemory>(svc: &mut S, mem: &mut M, args: &SyscallArgs) -> Abi {
@@ -177,10 +196,7 @@ pub fn handle<S: IpcService, M: UserMemory>(svc: &mut S, mem: &mut M, args: &Sys
                 return fail(e);
             }
             match svc.recv(a[0], block) {
-                Ok(RecvOutcome::Received(d)) => match mem.copy_to_user(a[1], &d.encode()) {
-                    Ok(()) => Abi::Done(0),
-                    Err(e) => fail(e as i64),
-                },
+                Ok(RecvOutcome::Received(d)) => Abi::Done(write_delivery(svc, mem, a[1], d)),
                 Ok(RecvOutcome::Blocked) => Abi::Blocked(Pending::Recv { out: a[1] }),
                 Err(e) => fail(errno(&e)),
             }
@@ -217,16 +233,16 @@ pub fn handle<S: IpcService, M: UserMemory>(svc: &mut S, mem: &mut M, args: &Sys
 
 /// Finishes a syscall that returned [`Abi::Blocked`], once the thread has run again and
 /// `IpcDomain::resume` produced `r`. Writes the user output buffer and returns the RAX value.
-pub fn complete<M: UserMemory>(mem: &mut M, p: Pending, r: Result<Resume, IpcError>) -> i64 {
+pub fn complete<S: IpcService, M: UserMemory>(
+    svc: &mut S,
+    mem: &mut M,
+    p: Pending,
+    r: Result<Resume, IpcError>,
+) -> i64 {
     match (p, r) {
         (_, Err(e)) => errno(&e),
         (Pending::Send, Ok(Resume::Sent)) => 0,
-        (Pending::Recv { out }, Ok(Resume::Received(d))) => {
-            match mem.copy_to_user(out, &d.encode()) {
-                Ok(()) => 0,
-                Err(e) => e as i64,
-            }
-        }
+        (Pending::Recv { out }, Ok(Resume::Received(d))) => write_delivery(svc, mem, out, d),
         (Pending::Wait { out }, Ok(Resume::Signalled(w))) => {
             match mem.copy_to_user(out, &w.to_le_bytes()) {
                 Ok(()) => 0,
@@ -297,12 +313,16 @@ mod tests {
 
     struct Mem {
         bytes: Vec<u8>,
+        fail_copy_to_user: bool,
+        failed_copy: Option<Vec<u8>>,
     }
 
     impl Mem {
         fn new() -> Self {
             Self {
                 bytes: std::vec![0; SIZE],
+                fail_copy_to_user: false,
+                failed_copy: None,
             }
         }
         fn put(&mut self, at: u64, b: &[u8]) {
@@ -333,6 +353,10 @@ mod tests {
         }
         fn copy_to_user(&mut self, d: u64, src: &[u8]) -> Result<(), SyscallError> {
             self.check(d, src.len() as u64, true)?;
+            if self.fail_copy_to_user {
+                self.failed_copy = Some(src.to_vec());
+                return Err(SyscallError::Fault);
+            }
             self.put(d, src);
             Ok(())
         }
@@ -384,6 +408,26 @@ mod tests {
             },
             m,
             &args(nr, a),
+        )
+    }
+
+    fn complete_for(
+        d: &mut D,
+        s: &mut S,
+        m: &mut Mem,
+        owner: u64,
+        p: Pending,
+        r: Result<Resume, E>,
+    ) -> i64 {
+        complete(
+            &mut Bound {
+                dom: d,
+                sched: s,
+                owner,
+            },
+            m,
+            p,
+            r,
         )
     }
 
@@ -808,7 +852,7 @@ mod tests {
         );
         run_until(&mut s, hs[0]);
         let r = d.resume(hs[0]);
-        assert_eq!(complete(&mut m, pending, r), 0);
+        assert_eq!(complete_for(&mut d, &mut s, &mut m, 1, pending, r), 0);
         let raw: [u8; WIRE_OUT] = m.get(out, WIRE_OUT).try_into().unwrap();
         let got = Delivery::decode(&raw).unwrap();
         assert_eq!((got.label, got.data()), (77, &[9u64][..]));
@@ -846,7 +890,7 @@ mod tests {
         );
         run_until(&mut s, hs[0]);
         let r = d.resume(hs[0]);
-        assert_eq!(complete(&mut m, pending, r), 0);
+        assert_eq!(complete_for(&mut d, &mut s, &mut m, 1, pending, r), 0);
         assert_eq!(d.queued(1, ep), Ok(4));
 
         // a blocked WAIT whose notification is closed completes with EPIPE
@@ -862,29 +906,128 @@ mod tests {
         );
         run_until(&mut s, hs[0]);
         let r = d.resume(hs[0]);
-        assert_eq!(complete(&mut m, pending, r), EPIPE);
+        assert_eq!(complete_for(&mut d, &mut s, &mut m, 1, pending, r), EPIPE);
         // mismatched completion is refused rather than guessed
         assert_eq!(
-            complete(&mut m, Pending::Send, Ok(Resume::Signalled(1))),
+            complete_for(
+                &mut d,
+                &mut s,
+                &mut m,
+                1,
+                Pending::Send,
+                Ok(Resume::Signalled(1))
+            ),
             EIO
         );
         assert_eq!(
-            complete(&mut m, Pending::Wait { out: BASE }, Ok(Resume::Sent)),
+            complete_for(
+                &mut d,
+                &mut s,
+                &mut m,
+                1,
+                Pending::Wait { out: BASE },
+                Ok(Resume::Sent)
+            ),
             EIO
         );
         assert_eq!(
-            complete(&mut m, Pending::Recv { out: BASE }, Err(E::Interrupted)),
+            complete_for(
+                &mut d,
+                &mut s,
+                &mut m,
+                1,
+                Pending::Recv { out: BASE },
+                Err(E::Interrupted)
+            ),
             EINTR
         );
         // a bad out pointer at completion time is reported, not ignored
         assert_eq!(
-            complete(
+            complete_for(
+                &mut d,
+                &mut s,
                 &mut m,
+                1,
                 Pending::Wait { out: 0x10 },
                 Ok(Resume::Signalled(1))
             ),
             EFAULT
         );
+    }
+
+    #[test]
+    fn failed_immediate_receive_copyout_closes_delivered_capability() {
+        let (mut s, mut d, hs, mut m) = setup(1);
+        run_until(&mut s, hs[0]);
+
+        let ep = val(sys(&mut d, &mut s, &mut m, 1, SYS_EP_CREATE, [0; 3])) as u64;
+        let payload = val(sys(&mut d, &mut s, &mut m, 1, SYS_EP_CREATE, [0; 3])) as u64;
+        let ep2 = d.grant(1, ep, 2, Rights::RECV).unwrap();
+
+        m.put(
+            BASE,
+            &UserMessage::new(91, &[], Some(payload)).unwrap().encode(),
+        );
+        assert_eq!(
+            val(sys(&mut d, &mut s, &mut m, 1, SYS_SEND, [ep, BASE, 0])),
+            0
+        );
+
+        m.fail_copy_to_user = true;
+        assert_eq!(
+            val(sys(
+                &mut d,
+                &mut s,
+                &mut m,
+                2,
+                SYS_RECV,
+                [ep2, BASE + 0x200, FLAG_NONBLOCK]
+            )),
+            EFAULT
+        );
+
+        let raw: [u8; WIRE_OUT] = m.failed_copy.take().unwrap().try_into().unwrap();
+        let delivered = Delivery::decode(&raw).unwrap().cap.unwrap();
+        assert!(d.caps().lookup(2, delivered, Rights::NONE).is_err());
+    }
+
+    #[test]
+    fn failed_blocked_receive_completion_closes_delivered_capability() {
+        let (mut s, mut d, hs, mut m) = setup(2);
+        run_until(&mut s, hs[0]);
+
+        let ep = val(sys(&mut d, &mut s, &mut m, 1, SYS_EP_CREATE, [0; 3])) as u64;
+        let payload = val(sys(&mut d, &mut s, &mut m, 1, SYS_EP_CREATE, [0; 3])) as u64;
+        let ep2 = d.grant(1, ep, 2, Rights::RECV).unwrap();
+        let out = BASE + 0x200;
+
+        let pending = match sys(&mut d, &mut s, &mut m, 2, SYS_RECV, [ep2, out, 0]) {
+            Abi::Blocked(p) => p,
+            other => panic!("{other:?}"),
+        };
+
+        run_until(&mut s, hs[1]);
+        m.put(
+            BASE,
+            &UserMessage::new(92, &[], Some(payload)).unwrap().encode(),
+        );
+        assert_eq!(
+            val(sys(&mut d, &mut s, &mut m, 1, SYS_SEND, [ep, BASE, 0])),
+            0
+        );
+
+        run_until(&mut s, hs[0]);
+        let resumed = d.resume(hs[0]);
+
+        m.fail_copy_to_user = true;
+        assert_eq!(
+            complete_for(&mut d, &mut s, &mut m, 2, pending, resumed),
+            EFAULT
+        );
+
+        let raw: [u8; WIRE_OUT] = m.failed_copy.take().unwrap().try_into().unwrap();
+        let delivered = Delivery::decode(&raw).unwrap().cap.unwrap();
+        assert!(d.caps().lookup(2, delivered, Rights::NONE).is_err());
     }
 
     #[test]
