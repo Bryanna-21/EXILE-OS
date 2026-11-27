@@ -7,6 +7,16 @@ mod gdt;
 mod idt;
 mod memory;
 
+// E3 virtual-memory foundation and its shared primitives.
+#[allow(dead_code)]
+mod page_perms;
+#[allow(dead_code)]
+mod frame_alloc;
+#[allow(dead_code)]
+mod virt_addr;
+#[allow(dead_code)]
+mod e3;
+
 // Mission A2: early physical-memory allocator and reservation contracts.
 #[allow(dead_code)]
 mod early_alloc;
