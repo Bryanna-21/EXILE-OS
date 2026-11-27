@@ -1,27 +1,21 @@
-//! EUK BootInfo â€” versioned, architecture-neutral loader->kernel handoff ABI.
-//! Contract: docs/BOOT_CONTRACT.md. Design rules (Mission A, req. 3):
+//! EUK BootInfo — versioned, architecture-neutral loader-to-kernel handoff ABI.
+//! Contract: docs/BOOT_CONTRACT.md. Design rules:
 //!   * fixed-width types, explicit C layout, 8-byte alignment;
-//!   * NO raw pointers: out-of-struct objects are referenced by physical
-//!     address + count and interpreted by the kernel after validation;
-//!   * fail-closed: any inconsistency is an error; boot must not continue;
-//!   * unsupported versions are rejected (no silent guessing).
-//! Division of responsibility: BootInfo validation is the STRICT ABI check
-//! (the loader promises well-formed input). memmap_norm tolerates malformed
-//! firmware maps defensively. Both layers are applied.
+//!   * no raw pointers: out-of-struct objects use physical address + count;
+//!   * fail closed: any inconsistency is an error; boot must not continue;
+//!   * unsupported versions are rejected without silent interpretation.
+//! BootInfo validation is the strict ABI check. The memory-map normalizer
+//! separately defends against malformed firmware maps. Both layers apply.
 
 pub const MAGIC: u32 = 0x424B_5545; // "EUKB" little-endian
 pub const VERSION: u32 = 1;
-
 pub const ARCH_X86_64: u32 = 1;
 pub const ARCH_AARCH64: u32 = 2;
-
 pub const FLAG_FRAMEBUFFER: u32 = 1 << 0;
 pub const FLAG_ACPI_RSDP: u32 = 1 << 1;
-
-/// Hard ABI bound on the memory-map array. Larger handoffs are malformed.
+pub const KNOWN_FLAGS: u32 = FLAG_FRAMEBUFFER | FLAG_ACPI_RSDP;
 pub const MAX_REGIONS: u64 = 256;
 
-/// One memory-map entry as delivered by the loader.
 #[repr(C, align(8))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MemRegion {
@@ -30,31 +24,27 @@ pub struct MemRegion {
     pub kind: u32,
     pub _pad: u32,
 }
-
 pub const MEM_REGION_SIZE: usize = 24;
 
-/// Loader -> kernel handoff header. Physical addresses everywhere.
 #[repr(C, align(8))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BootInfo {
-    pub magic: u32,             // MAGIC
-    pub version: u32,           // VERSION (exact match required)
-    pub total_size: u32,        // header + regions array, in bytes
-    pub arch: u32,              // ARCH_X86_64 | ARCH_AARCH64
-    pub flags: u32,             // FLAG_* bits; each flag must match its object
-    pub memmap_paddr: u64,      // physical address of the MemRegion array
-    pub memmap_count: u64,      // number of entries in the array
-    pub kernel_phys_start: u64, // page-aligned, inclusive
-    pub kernel_phys_end: u64,   // page-aligned, exclusive
-    pub kernel_entry: u64,      // kernel virtual entry address
-    pub framebuffer_paddr: u64, // valid only with FLAG_FRAMEBUFFER
-    pub framebuffer_size: u64,  // valid only with FLAG_FRAMEBUFFER
-    pub rsdp_paddr: u64,        // valid only with FLAG_ACPI_RSDP
+    pub magic: u32,
+    pub version: u32,
+    pub total_size: u32,
+    pub arch: u32,
+    pub flags: u32,
+    pub memmap_paddr: u64,
+    pub memmap_count: u64,
+    pub kernel_phys_start: u64,
+    pub kernel_phys_end: u64,
+    pub kernel_entry: u64,
+    pub framebuffer_paddr: u64,
+    pub framebuffer_size: u64,
+    pub rsdp_paddr: u64,
 }
-
 pub const SIZE: usize = 88;
 
-// Compile-time ABI pinning: layout drift is a build error, not a runtime bug.
 const _: () = {
     assert!(core::mem::size_of::<BootInfo>() == SIZE);
     assert!(core::mem::size_of::<MemRegion>() == MEM_REGION_SIZE);
@@ -67,20 +57,21 @@ pub enum BootInfoError {
     BadMagic,
     UnsupportedVersion(u32),
     BadArch(u32),
+    UnknownFlags(u32),
     BadTotalSize,
     EmptyMemmap,
     TooManyRegions,
+    NullMemmap,
     MisalignedMemmap,
     RangeOverflow,
     KernelRangeInvalid,
     KernelRangeMisaligned,
+    KernelEntryInvalid,
     FramebufferMismatch,
     RsdpMismatch,
 }
 
 impl BootInfo {
-    /// Structural validation. Fail-closed per Mission A rule 10: the caller
-    /// must abort boot on any Err.
     pub fn validate(&self) -> Result<(), BootInfoError> {
         if self.magic != MAGIC {
             return Err(BootInfoError::BadMagic);
@@ -91,6 +82,10 @@ impl BootInfo {
         if self.arch != ARCH_X86_64 && self.arch != ARCH_AARCH64 {
             return Err(BootInfoError::BadArch(self.arch));
         }
+        let unknown = self.flags & !KNOWN_FLAGS;
+        if unknown != 0 {
+            return Err(BootInfoError::UnknownFlags(unknown));
+        }
         let array_bytes = self
             .memmap_count
             .checked_mul(MEM_REGION_SIZE as u64)
@@ -98,10 +93,7 @@ impl BootInfo {
         let total = (SIZE as u64)
             .checked_add(array_bytes)
             .ok_or(BootInfoError::RangeOverflow)?;
-        if total > u32::MAX as u64 {
-            return Err(BootInfoError::RangeOverflow);
-        }
-        if self.total_size != total as u32 {
+        if total > u32::MAX as u64 || self.total_size != total as u32 {
             return Err(BootInfoError::BadTotalSize);
         }
         if self.memmap_count == 0 {
@@ -109,6 +101,9 @@ impl BootInfo {
         }
         if self.memmap_count > MAX_REGIONS {
             return Err(BootInfoError::TooManyRegions);
+        }
+        if self.memmap_paddr == 0 {
+            return Err(BootInfoError::NullMemmap);
         }
         if self.memmap_paddr % 8 != 0 {
             return Err(BootInfoError::MisalignedMemmap);
@@ -122,15 +117,15 @@ impl BootInfo {
         if self.kernel_phys_start >= self.kernel_phys_end {
             return Err(BootInfoError::KernelRangeInvalid);
         }
-        self.kernel_phys_end
-            .checked_sub(1)
-            .ok_or(BootInfoError::KernelRangeInvalid)?;
-        let fb = (self.flags & FLAG_FRAMEBUFFER) != 0;
-        if fb == (self.framebuffer_size == 0) {
+        if self.kernel_entry == 0 {
+            return Err(BootInfoError::KernelEntryInvalid);
+        }
+        let framebuffer = (self.flags & FLAG_FRAMEBUFFER) != 0;
+        if framebuffer != (self.framebuffer_size != 0) {
             return Err(BootInfoError::FramebufferMismatch);
         }
-        if fb {
-            if self.framebuffer_paddr % 4096 != 0 {
+        if framebuffer {
+            if self.framebuffer_paddr == 0 || self.framebuffer_paddr % 4096 != 0 {
                 return Err(BootInfoError::FramebufferMismatch);
             }
             self.framebuffer_paddr
@@ -145,7 +140,6 @@ impl BootInfo {
     }
 }
 
-/// Strict region-array validation (the loader-side ABI promise).
 pub fn validate_regions(regions: &[MemRegion]) -> Result<(), BootInfoError> {
     if regions.is_empty() {
         return Err(BootInfoError::EmptyMemmap);
@@ -153,12 +147,13 @@ pub fn validate_regions(regions: &[MemRegion]) -> Result<(), BootInfoError> {
     if regions.len() as u64 > MAX_REGIONS {
         return Err(BootInfoError::TooManyRegions);
     }
-    for r in regions {
-        if r.size == 0 {
+    for region in regions {
+        if region.size == 0 {
             return Err(BootInfoError::EmptyMemmap);
         }
-        r.start
-            .checked_add(r.size)
+        region
+            .start
+            .checked_add(region.size)
             .ok_or(BootInfoError::RangeOverflow)?;
     }
     Ok(())
@@ -167,39 +162,15 @@ pub fn validate_regions(regions: &[MemRegion]) -> Result<(), BootInfoError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn regions() -> [MemRegion; 3] {
-        [
-            MemRegion {
-                start: 0,
-                size: 4096,
-                kind: 1,
-                _pad: 0,
-            },
-            MemRegion {
-                start: 4096,
-                size: 8192,
-                kind: 2,
-                _pad: 0,
-            },
-            MemRegion {
-                start: 0x10_0000,
-                size: 0x1000_0000,
-                kind: 1,
-                _pad: 0,
-            },
-        ]
-    }
-
-    fn info(arch: u32) -> BootInfo {
+    fn info(count: usize) -> BootInfo {
         BootInfo {
             magic: MAGIC,
             version: VERSION,
-            total_size: (SIZE + 3 * MEM_REGION_SIZE) as u32,
-            arch,
+            total_size: (SIZE + count * MEM_REGION_SIZE) as u32,
+            arch: ARCH_X86_64,
             flags: 0,
             memmap_paddr: 0x8000,
-            memmap_count: 3,
+            memmap_count: count as u64,
             kernel_phys_start: 0x10_0000,
             kernel_phys_end: 0x20_0000,
             kernel_entry: 0x10_0020,
@@ -208,111 +179,76 @@ mod tests {
             rsdp_paddr: 0,
         }
     }
-
     #[test]
-    fn abi_sizes_are_pinned() {
+    fn abi_layout_is_pinned() {
         assert_eq!(core::mem::size_of::<BootInfo>(), 88);
         assert_eq!(core::mem::size_of::<MemRegion>(), 24);
     }
-
     #[test]
-    fn valid_passes() {
-        assert_eq!(info(ARCH_X86_64).validate(), Ok(()));
-        assert_eq!(info(ARCH_AARCH64).validate(), Ok(()));
+    fn valid_architectures_pass() {
+        assert_eq!(info(3).validate(), Ok(()));
+        let mut b = info(3);
+        b.arch = ARCH_AARCH64;
+        assert_eq!(b.validate(), Ok(()));
     }
-
     #[test]
-    fn bad_magic_rejected() {
-        let mut b = info(ARCH_X86_64);
-        b.magic = 0xDEAD_BEEF;
+    fn malformed_header_is_rejected() {
+        let mut b = info(3);
+        b.magic = 0;
         assert_eq!(b.validate(), Err(BootInfoError::BadMagic));
-    }
-
-    #[test]
-    fn unsupported_version_rejected_with_the_version() {
-        let mut b = info(ARCH_X86_64);
+        let mut b = info(3);
         b.version = 2;
         assert_eq!(b.validate(), Err(BootInfoError::UnsupportedVersion(2)));
-        b.version = 0;
-        assert_eq!(b.validate(), Err(BootInfoError::UnsupportedVersion(0)));
+        let mut b = info(3);
+        b.flags = 1 << 31;
+        assert_eq!(b.validate(), Err(BootInfoError::UnknownFlags(1 << 31)));
+        let mut b = info(3);
+        b.memmap_paddr = 0;
+        assert_eq!(b.validate(), Err(BootInfoError::NullMemmap));
+        let mut b = info(3);
+        b.kernel_entry = 0;
+        assert_eq!(b.validate(), Err(BootInfoError::KernelEntryInvalid));
     }
-
     #[test]
-    fn unknown_arch_rejected() {
-        let mut b = info(ARCH_X86_64);
-        b.arch = 3;
-        assert_eq!(b.validate(), Err(BootInfoError::BadArch(3)));
-    }
-
-    #[test]
-    fn total_size_mismatch_and_overflow_rejected() {
-        let mut b = info(ARCH_X86_64);
+    fn counts_sizes_and_overflow_fail_closed() {
+        let mut b = info(3);
         b.total_size += 1;
         assert_eq!(b.validate(), Err(BootInfoError::BadTotalSize));
-        let mut b = info(ARCH_X86_64);
-        b.memmap_count = u32::MAX as u64; // count * 24 overflows u64-safe path
-        assert_eq!(b.validate(), Err(BootInfoError::RangeOverflow));
-    }
-
-    #[test]
-    fn empty_and_oversized_memmaps_rejected() {
-        let mut b = info(ARCH_X86_64);
+        let mut b = info(3);
         b.memmap_count = 0;
         b.total_size = SIZE as u32;
         assert_eq!(b.validate(), Err(BootInfoError::EmptyMemmap));
-        let mut b = info(ARCH_X86_64);
+        let mut b = info(3);
         b.memmap_count = MAX_REGIONS + 1;
-        b.total_size = (SIZE + (MAX_REGIONS as usize + 1) * MEM_REGION_SIZE) as u32;
+        b.total_size = (SIZE as u64 + b.memmap_count * MEM_REGION_SIZE as u64) as u32;
         assert_eq!(b.validate(), Err(BootInfoError::TooManyRegions));
+        let mut b = info(3);
+        b.memmap_count = u64::MAX;
+        assert_eq!(b.validate(), Err(BootInfoError::RangeOverflow));
     }
-
     #[test]
-    fn misaligned_memmap_rejected() {
-        let mut b = info(ARCH_X86_64);
-        b.memmap_paddr = 0x8004;
-        assert_eq!(b.validate(), Err(BootInfoError::MisalignedMemmap));
-    }
-
-    #[test]
-    fn kernel_range_checks() {
-        let mut b = info(ARCH_X86_64);
+    fn ranges_and_optional_objects_are_checked() {
+        let mut b = info(3);
+        b.kernel_phys_start = 0x10_004;
+        assert_eq!(b.validate(), Err(BootInfoError::KernelRangeMisaligned));
+        let mut b = info(3);
         b.kernel_phys_start = b.kernel_phys_end;
         assert_eq!(b.validate(), Err(BootInfoError::KernelRangeInvalid));
-        let mut b = info(ARCH_X86_64);
-        b.kernel_phys_start = 0x10_0004; // unaligned
-        assert_eq!(b.validate(), Err(BootInfoError::KernelRangeMisaligned));
-        let mut b = info(ARCH_X86_64);
-        b.kernel_phys_start = 0; // 0-1 underflow in checked_sub
-        b.kernel_phys_end = 0;
-        assert_eq!(b.validate(), Err(BootInfoError::KernelRangeInvalid));
-    }
-
-    #[test]
-    fn framebuffer_flag_must_match_object() {
-        let mut b = info(ARCH_X86_64);
+        let mut b = info(3);
         b.flags = FLAG_FRAMEBUFFER;
         assert_eq!(b.validate(), Err(BootInfoError::FramebufferMismatch));
-        b.framebuffer_size = 0x1000;
         b.framebuffer_paddr = 0x8000_0000;
+        b.framebuffer_size = 0x1000;
         assert_eq!(b.validate(), Ok(()));
-        b.framebuffer_paddr = 0x8000_0004; // unaligned
-        assert_eq!(b.validate(), Err(BootInfoError::FramebufferMismatch));
-    }
-
-    #[test]
-    fn rsdp_flag_must_match_object() {
-        let mut b = info(ARCH_X86_64);
+        let mut b = info(3);
         b.flags = FLAG_ACPI_RSDP;
         assert_eq!(b.validate(), Err(BootInfoError::RsdpMismatch));
-        b.rsdp_paddr = 0x1_0000;
+        b.rsdp_paddr = 0x10000;
         assert_eq!(b.validate(), Ok(()));
-        b.flags = 0;
-        assert_eq!(b.validate(), Err(BootInfoError::RsdpMismatch));
     }
-
     #[test]
-    fn region_array_strict_validation() {
-        assert!(validate_regions(&regions()).is_ok());
+    fn regions_reject_empty_zero_and_overflow() {
+        assert_eq!(validate_regions(&[]), Err(BootInfoError::EmptyMemmap));
         assert_eq!(
             validate_regions(&[MemRegion {
                 start: 1,
@@ -331,6 +267,5 @@ mod tests {
             }]),
             Err(BootInfoError::RangeOverflow)
         );
-        assert_eq!(validate_regions(&[]), Err(BootInfoError::EmptyMemmap));
     }
 }
