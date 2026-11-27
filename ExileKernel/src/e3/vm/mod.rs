@@ -1,0 +1,22 @@
+//! Bounded x86-64 four-level page-table management.
+pub mod audit;
+pub mod backend;
+pub mod entry;
+pub mod fault;
+pub mod frame_source;
+pub mod geometry;
+pub mod guard;
+pub mod huge_page;
+pub mod layout;
+pub mod map;
+pub mod region;
+pub mod space;
+pub mod table_store;
+pub mod tlb;
+pub mod translate;
+pub mod unmap;
+pub mod walk;
+pub mod x86_64;
+pub use audit::AuditReport;
+pub use geometry::{PAGE_SIZE, PageMode};
+pub use space::{MapOwnership, PageTableVm, VmConfig, VmCreateError, VmError};
