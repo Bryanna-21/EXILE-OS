@@ -1,5 +1,6 @@
 #![no_std]
 #![no_main]
+mod boot_foundation;
 mod bootinfo;
 mod cpu;
 mod frame;
