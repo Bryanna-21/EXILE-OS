@@ -73,6 +73,41 @@ mod spin;
 mod switch;
 #[allow(dead_code)]
 mod thread;
+
+// D6 and its D5 dependencies are compiled only for the explicit --d6 build.
+// They are not activated by the normal boot path.
+#[cfg(euk_d6)]
+#[allow(dead_code)]
+#[path = "d5/address_space.rs"]
+mod address_space;
+#[cfg(euk_d6)]
+#[allow(dead_code)]
+#[path = "d5/elf.rs"]
+mod elf;
+#[cfg(euk_d6)]
+#[allow(dead_code)]
+#[path = "d5/preempt.rs"]
+mod preempt;
+#[cfg(euk_d6)]
+#[allow(dead_code)]
+#[path = "d5/process.rs"]
+mod process;
+#[cfg(euk_d6)]
+#[allow(dead_code)]
+#[path = "d5/sync.rs"]
+mod sync;
+#[cfg(euk_d6)]
+#[allow(dead_code)]
+#[path = "d5/tls.rs"]
+mod tls;
+#[cfg(euk_d6)]
+#[allow(dead_code)]
+#[path = "d5/usermode.rs"]
+mod usermode;
+#[cfg(euk_d6)]
+#[allow(dead_code)]
+#[path = "d6/mod.rs"]
+mod d6;
 use core::arch::asm;
 use core::panic::PanicInfo;
 use memory::{Region, parse_map};
