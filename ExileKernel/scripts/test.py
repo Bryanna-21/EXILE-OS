@@ -8,9 +8,24 @@ mode; bare-metal behaviour is covered only by scripts/boot_test.py (QEMU).
 
 import os
 import pathlib
+import shutil
 import subprocess
 
 root = pathlib.Path(__file__).resolve().parents[1]
+
+def rust_path(path: pathlib.Path) -> str:
+    """Return a path literal that the selected host rustc can resolve."""
+    resolved = path.resolve()
+    cygpath = shutil.which("cygpath")
+    if cygpath:
+        return subprocess.run(
+            [cygpath, "-m", str(resolved)],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+    return resolved.as_posix()
+
 build_dir = pathlib.Path(os.environ.get("EUK_TEST_BUILD", root / "build"))
 build_dir.mkdir(parents=True, exist_ok=True)
 
@@ -47,7 +62,7 @@ a2_modules = (
     "reserve", "early_alloc", "phys_handoff",
 )
 a2_decls = "".join(
-    f'#[path = "{(root / "src" / (module + ".rs")).as_posix()}"]\npub mod {module};\n'
+    f'#[path = "{rust_path(root / "src" / (module + ".rs"))}"]\npub mod {module};\n'
     for module in a2_modules
 )
 
@@ -87,7 +102,7 @@ d3_modules = {
     "dispatch": "src/dispatch.rs",
 }
 decls = "".join(
-    f'#[path = "{(root / path).as_posix()}"]\npub mod {name};\n' for name, path in d3_modules.items()
+    f'#[path = "{rust_path(root / path)}"]\npub mod {name};\n' for name, path in d3_modules.items()
 )
 
 print("== Host tests: D1-D3 (scheduler, stacks, real context switch)", flush=True)
@@ -129,7 +144,7 @@ c3_modules = {
     "hpet": "src/hpet.rs",
 }
 c3_decls = "".join(
-    f'#[path = "{(root / path).as_posix()}"]\npub mod {name};\n' for name, path in c3_modules.items()
+    f'#[path = "{rust_path(root / path)}"]\npub mod {name};\n' for name, path in c3_modules.items()
 )
 
 print("== Host tests: C3 (irq, pic, acpi/madt, apic, ioapic, timer, pit, hpet)", flush=True)
@@ -183,7 +198,7 @@ d5_modules = {
     "usermode": "src/d5/usermode.rs",
 }
 d5_decls = "".join(
-    f'#[path = "{(root / path).as_posix()}"]\npub mod {name};\n'
+    f'#[path = "{rust_path(root / path)}"]\npub mod {name};\n'
     for name, path in d5_modules.items()
 )
 
@@ -230,7 +245,7 @@ for module in a4a5_modules:
     subprocess.run([str(binary)], check=True)
 
 a4a5_decls = "".join(
-    f'#[path = "{(root / "src" / (module + ".rs")).as_posix()}"]' + chr(10)
+    f'#[path = "{rust_path(root / "src" / (module + ".rs"))}"]' + chr(10)
     + f"pub mod {module};" + chr(10)
     for module in a4a5_modules
 )
@@ -250,3 +265,44 @@ subprocess.run(
 print("A4-A5 HOST TESTS AND no_std COMPILE CHECK PASSED", flush=True)
 
 print("ALL A1 + C1 + C3 + D1-D3 + D5 + A4-A5 HOST TESTS AND no_std CHECKS PASSED", flush=True)
+
+
+# Mission D6: namespaced capability, IPC, transfer, wait, service and driver tests.
+# D5 modules remain at crate root; D6 modules are isolated under crate::d6.
+d6_modules = (
+    "capability", "object", "handle", "ipc", "ipc_message",
+    "ipc_endpoint", "ipc_transfer", "ipc_wait", "service", "driver",
+)
+d6_decl = "pub mod d6 {\n" + "".join(
+    f'    #[path = "{rust_path(root / "src/d6" / (name + ".rs"))}"]\n'
+    f'    pub mod {name};\n'
+    for name in d6_modules
+) + "}\n"
+d6_decls = d5_decls + d6_decl
+
+print("== Host tests: D6 (namespaced; includes D5 dependencies)", flush=True)
+d6_root = build_dir / "d6_host_root.rs"
+d6_root.write_text(d6_decls)
+subprocess.run(
+    [rustc, "--edition=2024", "--test", str(d6_root),
+     "-o", str(build_dir / "d6-tests")],
+    check=True,
+)
+subprocess.run(
+    [str(build_dir / "d6-tests")],
+    check=True,
+    env={**os.environ, "RUST_MIN_STACK": "67108864"},
+)
+
+print("== no_std compile check: D6 + D5 dependencies", flush=True)
+d6_nostd = build_dir / "d6_nostd_root.rs"
+d6_nostd.write_text("#![no_std]\n" + d6_decls)
+subprocess.run(
+    [
+        rustc, "--edition=2024", "--crate-type=lib", "--emit=metadata",
+        "-D", "warnings", str(d6_nostd),
+        "-o", str(build_dir / "d6_nostd.rmeta"),
+    ],
+    check=True,
+)
+print("D6 host tests and no_std compilation passed.", flush=True)

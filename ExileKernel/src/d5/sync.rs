@@ -641,6 +641,25 @@ impl<const N: usize, const S: usize> SyncDomain<N, S> {
         Ok(n)
     }
 
+    /// Withdraws `h` from the wait queue or semaphore it is blocked on and makes it ready
+    /// (cancellation / timeout, used by D6 IPC). Mutex waits are refused (their priority
+    /// inheritance has its own protocol). Returns whether a wait was withdrawn; a stale record
+    /// is dropped and reported as `false`.
+    pub fn cancel_wait(&mut self, s: &mut Scheduler<N>, h: Handle) -> Result<bool, Error> {
+        let Some(w) = self.waits.get(h.index()).copied().flatten() else {
+            return Ok(false);
+        };
+        if let Ok(Obj::Mutex { .. }) = self.obj(w.obj) {
+            return Err(Error::WrongKind);
+        }
+        self.waits[h.index()] = None;
+        if !self.is_valid_waiter(s, &w) {
+            return Ok(false);
+        }
+        s.wake(h)?;
+        Ok(true)
+    }
+
     /// Condition-variable wait: atomically releases `mutex` (owned by the caller) and blocks on
     /// `cond`. Because both happen in one call (the scheduler lock is held and interrupts are
     /// off in the wrapper), a `cond_signal` issued after the unlock cannot be lost. After
