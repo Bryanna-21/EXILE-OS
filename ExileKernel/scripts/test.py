@@ -142,6 +142,7 @@ c3_modules = {
     "timer": "src/timer.rs",
     "pit": "src/pit.rs",
     "hpet": "src/hpet.rs",
+    "smp": "src/smp/mod.rs",
 }
 c3_decls = "".join(
     f'#[path = "{rust_path(root / path)}"]\npub mod {name};\n' for name, path in c3_modules.items()

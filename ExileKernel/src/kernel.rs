@@ -47,6 +47,9 @@ mod pic;
 mod pit;
 #[allow(dead_code)]
 mod timer;
+// Mission C4 SMP modules are compiled but remain opt-in; the default boot path stays BSP-only.
+#[allow(dead_code)]
+mod smp;
 // Mission D3. Declared so the kernel image contains and links the real
 // scheduler, stack manager and context-switch assembly; they only RUN under the
 // `euk_d3_demo` cfg (see d3_demo.rs). The normal boot path is unchanged.
