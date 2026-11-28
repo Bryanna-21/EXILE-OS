@@ -1,1 +1,3 @@
 add_subdirectory(SystemLog)
+add_subdirectory(HealthMonitor)
+add_subdirectory(StorageMonitor)
