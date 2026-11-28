@@ -13,7 +13,7 @@
 //! No allocation, no interior mutability; single CPU, callers serialise.
 #![allow(dead_code)]
 
-use crate::cap_rights::Kind;
+use super::cap_rights::Kind;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ObjError {

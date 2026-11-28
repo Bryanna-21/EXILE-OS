@@ -7,7 +7,7 @@
 //! the domain turn a full queue into sender back-pressure instead of data loss.
 #![allow(dead_code)]
 
-use crate::ipc_message::Message;
+use super::ipc_message::Message;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum QueueError {
