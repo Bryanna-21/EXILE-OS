@@ -1,6 +1,10 @@
 # EUK capabilities and bounded IPC (Mission B3)
 
 Milestone gate 5 of `ROADMAP.md` ("capability enforcement, IPC") as host-tested kernel code.
+> **Update (Mission B4):** the integration described under "What is not done" below now exists:
+> `src/b3` is declared in `kernel.rs` and linked, and the kernel glue (dispatch, blocking, resume,
+> lifecycle cleanup, init) is in `docs/B4_KERNEL_IPC_INTEGRATION.md`. It is still host-tested only.
+
 Everything here is **host-tested only**. It is **not declared in `kernel.rs`, not in the kernel
 image and not part of the normal boot path**; nothing has run under QEMU or on hardware.
 

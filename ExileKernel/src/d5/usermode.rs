@@ -476,7 +476,15 @@ pub fn handle_syscall<H: SyscallHost, M: UserMemory>(
     if let Err(e) = validate_return_frame(frame) {
         return FrameDisposition::Kill(e);
     }
-    match dispatch(host, mem, &SyscallArgs::from_frame(frame)) {
+    apply_outcome(frame, dispatch(host, mem, &SyscallArgs::from_frame(frame)))
+}
+
+/// Stores a syscall's outcome in the saved frame and chooses the way back to user mode: RAX is
+/// set, the frame is re-validated, and `Iret` is used instead of `Sysret` when TF is set. Shared
+/// by [`handle_syscall`] and the IPC-aware entry in `b3::syscall_dispatch`, so both return to
+/// user mode by exactly the same rules.
+pub fn apply_outcome(frame: &mut TrapFrame, outcome: SyscallOutcome) -> FrameDisposition {
+    match outcome {
         SyscallOutcome::Exit(s) => FrameDisposition::Exit(s),
         SyscallOutcome::Return(v) => {
             frame.rax = v as u64;

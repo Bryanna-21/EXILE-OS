@@ -29,9 +29,9 @@
 //! mission does not activate; see `docs/IPC_CAPABILITIES.md`.
 #![allow(dead_code)]
 
-use crate::cap_rights::Rights;
-use crate::ipc::{IpcDomain, IpcError, RecvOutcome, Resume, SendOutcome, WaitOutcome};
-use crate::ipc_message::{UserMessage, WIRE_IN, WIRE_OUT};
+use super::cap_rights::Rights;
+use super::ipc::{IpcDomain, IpcError, RecvOutcome, Resume, SendOutcome, WaitOutcome};
+use super::ipc_message::{UserMessage, WIRE_IN, WIRE_OUT};
 use crate::sched::Scheduler;
 use crate::usermode::{SyscallArgs, UserMemory, user_range_ok};
 
@@ -146,7 +146,7 @@ fn write_delivery<S: IpcService, M: UserMemory>(
     svc: &mut S,
     mem: &mut M,
     out: u64,
-    d: crate::ipc_message::Delivery,
+    d: super::ipc_message::Delivery,
 ) -> i64 {
     match mem.copy_to_user(out, &d.encode()) {
         Ok(()) => 0,
@@ -296,9 +296,9 @@ impl<const N: usize, const O: usize, const C: usize, const Q: usize> IpcService
 
 #[cfg(test)]
 mod tests {
+    use super::super::ipc::IpcError as E;
+    use super::super::ipc_message::{Delivery, MAX_WORDS};
     use super::*;
-    use crate::ipc::IpcError as E;
-    use crate::ipc_message::{Delivery, MAX_WORDS};
     use crate::thread::{Handle, Priority};
     use crate::usermode::SyscallError;
     extern crate std;

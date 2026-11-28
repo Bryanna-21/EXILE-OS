@@ -28,8 +28,8 @@
 //! table, generation-checked slots that are retired instead of wrapping. No allocation.
 #![allow(dead_code)]
 
-use crate::cap_rights::{Kind, Rights};
-use crate::kobject::ObjId;
+use super::cap_rights::{Kind, Rights};
+use super::kobject::ObjId;
 
 /// Reserved owner of capabilities carried by in-flight messages. No process may be this owner.
 pub const LIMBO: u64 = u64::MAX;
@@ -388,6 +388,19 @@ impl<const C: usize> CapTable<C> {
         n
     }
 
+    /// Subsystem shutdown: deletes every capability of every owner (including limbo).
+    /// Returns the count.
+    pub fn remove_all(&mut self) -> usize {
+        let mut n = 0;
+        for i in 0..C {
+            if self.slots[i].cap.is_some() {
+                self.remove_slot(i);
+                n += 1;
+            }
+        }
+        n
+    }
+
     /// Process teardown: closes everything `owner` holds. Returns the count.
     pub fn remove_owner(&mut self, owner: u64) -> usize {
         let mut n = 0;
@@ -449,8 +462,8 @@ impl<const C: usize> CapTable<C> {
 
 #[cfg(test)]
 mod tests {
+    use super::super::kobject::ObjTable;
     use super::*;
-    use crate::kobject::ObjTable;
 
     const A: u64 = 100;
     const B: u64 = 200;
@@ -801,6 +814,22 @@ mod tests {
         assert_eq!(w.caps.user_refs(o1), 0);
         assert_eq!(w.caps.user_refs(o2), 1);
         assert_eq!(w.caps.remove_owner(777), 0);
+    }
+
+    #[test]
+    fn remove_all_empties_the_table_and_invalidates_every_handle() {
+        let mut w = World::new();
+        let (_, r1) = w.endpoint(A);
+        let (_, r2) = w.endpoint(B);
+        let g = w.caps.derive(r1, A, Rights::SEND | Rights::GRANT).unwrap();
+        let l = w.caps.derive(g, LIMBO, Rights::SEND).unwrap();
+        assert_eq!(w.caps.remove_all(), 4);
+        assert_eq!(w.caps.live_count(), 0);
+        for c in [r1, r2, g, l] {
+            assert!(!w.caps.is_live(c));
+        }
+        assert_eq!(w.caps.remove_all(), 0);
+        w.caps.check_invariants().unwrap();
     }
 
     #[test]

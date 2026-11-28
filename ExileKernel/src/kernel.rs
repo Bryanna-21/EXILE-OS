@@ -105,6 +105,11 @@ mod tls;
 #[allow(dead_code)]
 #[path = "d5/usermode.rs"]
 mod usermode;
+// B3/B4 capability and IPC integration is compiled only with explicit --d6.
+#[cfg(euk_d6)]
+#[allow(dead_code)]
+mod b3;
+
 #[cfg(euk_d6)]
 #[allow(dead_code)]
 #[path = "d6/mod.rs"]

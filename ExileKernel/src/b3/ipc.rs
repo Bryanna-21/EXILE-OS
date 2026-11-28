@@ -37,12 +37,12 @@
 //! cross-CPU operation, no priority inheritance through IPC, no reply capabilities.
 #![allow(dead_code)]
 
-use crate::cap_rights::{Kind, Rights};
-use crate::cap_space::{CapError, CapRef, CapTable, LIMBO};
-use crate::ipc_endpoint::Endpoint;
-use crate::ipc_message::{Delivery, Message, MsgError, UserMessage};
-use crate::ipc_notify::Notify;
-use crate::kobject::{ObjError, ObjId, ObjTable};
+use super::cap_rights::{Kind, Rights};
+use super::cap_space::{CapError, CapRef, CapTable, LIMBO};
+use super::ipc_endpoint::Endpoint;
+use super::ipc_message::{Delivery, Message, MsgError, UserMessage};
+use super::ipc_notify::Notify;
+use super::kobject::{ObjError, ObjId, ObjTable};
 use crate::sched::{BlockOutcome, Scheduler};
 use crate::thread::{self, BlockReason, Handle, State};
 
@@ -402,7 +402,7 @@ impl<const N: usize, const O: usize, const C: usize, const Q: usize> IpcDomain<N
         kind: WaitKind,
         cur: Handle,
         owner: u64,
-        r: &crate::cap_space::Resolved,
+        r: &super::cap_space::Resolved,
         msg: Option<Message>,
     ) {
         self.seq += 1;
@@ -537,7 +537,7 @@ impl<const N: usize, const O: usize, const C: usize, const Q: usize> IpcDomain<N
         s: &mut Scheduler<N>,
         cur: Handle,
         owner: u64,
-        r: &crate::cap_space::Resolved,
+        r: &super::cap_space::Resolved,
         m: Message,
         block: bool,
     ) -> Result<SendOutcome, IpcError> {
@@ -750,6 +750,20 @@ impl<const N: usize, const O: usize, const C: usize, const Q: usize> IpcDomain<N
             self.done[i] = None;
         }
         self.sweep(s)
+    }
+
+    /// Subsystem shutdown: deletes every capability, destroys every object and wakes every
+    /// blocked thread with `Closed`. Returns the number of capabilities deleted. The domain is
+    /// empty afterwards and may be used again.
+    pub fn close_all(&mut self, s: &mut Scheduler<N>) -> Result<usize, IpcError> {
+        let n = self.caps.remove_all();
+        self.sweep(s)?;
+        Ok(n)
+    }
+
+    /// Whether the thread has a wait record in this domain.
+    pub fn is_waiting(&self, h: Handle) -> bool {
+        self.waits[h.index()].is_some_and(|w| w.handle == h)
     }
 
     // ---- diagnostics -----------------------------------------------------------------------
@@ -1470,6 +1484,40 @@ mod tests {
         assert_eq!(d.caps().limbo_count(), 0);
         assert_eq!(d.waiting_threads(), 0);
         d.check_invariants(&s).unwrap();
+    }
+
+    #[test]
+    fn close_all_destroys_everything_and_wakes_every_waiter_with_closed() {
+        let (mut s, mut d, hs) = setup(&[4, 4, 4]);
+        run_until(&mut s, hs[0]);
+        let ep = d.create_endpoint(A).unwrap();
+        let nf = d.create_notification(B).unwrap();
+        let payload = d.create_endpoint(A).unwrap();
+        d.send(
+            &mut s,
+            A,
+            ep,
+            &UserMessage::new(1, &[], Some(payload)).unwrap(),
+            false,
+        )
+        .unwrap();
+        assert_eq!(d.recv(&mut s, A, payload, true), Ok(RecvOutcome::Blocked));
+        run_until(&mut s, hs[1]);
+        assert_eq!(d.wait(&mut s, B, nf, true), Ok(WaitOutcome::Blocked));
+        run_until(&mut s, hs[2]);
+        assert!(d.is_waiting(hs[0]) && d.is_waiting(hs[1]) && !d.is_waiting(hs[2]));
+        assert_eq!(d.close_all(&mut s), Ok(4));
+        assert_eq!(
+            (d.live_objects(), d.waiting_threads(), d.caps().live_count()),
+            (0, 0, 0)
+        );
+        run_until(&mut s, hs[0]);
+        assert_eq!(d.resume(hs[0]), Err(IpcError::Closed));
+        run_until(&mut s, hs[1]);
+        assert_eq!(d.resume(hs[1]), Err(IpcError::Closed));
+        d.check_invariants(&s).unwrap();
+        assert_eq!(d.close_all(&mut s), Ok(0), "idempotent");
+        assert!(d.create_endpoint(A).is_ok(), "usable again");
     }
 
     #[test]

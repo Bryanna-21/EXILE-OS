@@ -13,7 +13,7 @@
 //! not be delivered (revoked in flight, or the receiver's table was full).
 #![allow(dead_code)]
 
-use crate::cap_space::CapRef;
+use super::cap_space::CapRef;
 
 pub const MAX_WORDS: usize = 4;
 pub const WIRE_IN: usize = 8 * (2 + MAX_WORDS + 1);
