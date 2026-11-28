@@ -10,8 +10,8 @@
 #include <chrono>
 #include <cerrno>
 #include <cstring>
-#include <dirent.h>
 #include <fstream>
+#include <dirent.h>
 #include <limits>
 #include <sstream>
 #include <sys/stat.h>
@@ -23,36 +23,28 @@ static bool parse_json_unsigned(std::string const& text, std::string const& key,
     auto position = text.find('"' + key + '"');
     if (position == std::string::npos)
         return false;
-    position = text.find(':', position);
+    position = text.find(':', position + key.size() + 2);
     if (position == std::string::npos)
         return false;
     ++position;
-    while (position < text.size() && (text[position] == ' ' || text[position] == '\t'))
+    while (position < text.size() && (text[position] == ' ' || text[position] == '\t' || text[position] == '\r' || text[position] == '\n'))
         ++position;
-    auto begin = text.data() + position;
-    auto end = text.data() + text.size();
+
     uint64_t parsed = 0;
-    auto result = std::from_chars(begin, end, parsed, 10);
-    if (result.ec != std::errc {} || result.ptr == begin)
+    auto result = std::from_chars(text.data() + position, text.data() + text.size(), parsed, 10);
+    if (result.ec != std::errc {} || result.ptr == text.data() + position)
         return false;
-
-    // Accept only a complete JSON integer token. A prefix such as `42garbage`
-    // must not be treated as a valid health measurement.
-    auto* trailing = result.ptr;
-    while (trailing != end && (*trailing == ' ' || *trailing == '\t'
-        || *trailing == '\n' || *trailing == '\r'))
-        ++trailing;
-    if (trailing != end && *trailing != ',' && *trailing != '}')
+    auto end = static_cast<size_t>(result.ptr - text.data());
+    while (end < text.size() && (text[end] == ' ' || text[end] == '\t' || text[end] == '\r' || text[end] == '\n'))
+        ++end;
+    if (end >= text.size() || (text[end] != ',' && text[end] != '}'))
         return false;
-
     value = parsed;
     return true;
 }
 
-static bool storage_directory_available(std::string const& path, size_t& count, bool& exceeded_bound)
+static bool storage_directory_available(std::string const& path, size_t& count)
 {
-    constexpr size_t maximum_inventory_entries = 256;
-    exceeded_bound = false;
     DIR* directory = opendir(path.c_str());
     if (!directory)
         return false;
@@ -69,14 +61,8 @@ static bool storage_directory_available(std::string const& path, size_t& count, 
             continue;
         std::string child = path + "/" + entry->d_name;
         struct stat st {};
-        if (stat(child.c_str(), &st) == 0 && S_ISDIR(st.st_mode)) {
-            if (count == maximum_inventory_entries) {
-                exceeded_bound = true;
-                closedir(directory);
-                return false;
-            }
+        if (stat(child.c_str(), &st) == 0 && S_ISDIR(st.st_mode))
             ++count;
-        }
     }
     closedir(directory);
     return saved_errno == 0;
@@ -140,16 +126,36 @@ bool HealthMonitor::observe(uint64_t now)
     std::vector<HealthObservation> observations;
     std::string error;
     if (!m_provider.observe(observations, error)) {
-        HealthReport report { Component::CriticalComponent, HealthState::Unknown,
-            Severity::Informational, now,
-            error.empty() ? "Health provider unavailable; no failure inferred" : error };
-        auto old = m_reports.find(report.component);
-        if (old == m_reports.end() || old->second.state != report.state || old->second.reason != report.reason) {
-            if (m_changes.size() < 512)
-                m_changes.push_back(report);
+        auto reason = error.empty()
+            ? std::string("Health provider unavailable; no component health can be confirmed")
+            : std::string("Health provider unavailable: ") + error;
+
+        // Do not leave previously healthy observations visible as current after
+        // the provider stops responding. Transition every retained component to
+        // Unknown, and record only state/reason changes so repeated failed polls
+        // cannot fill the bounded change queue with duplicates.
+        for (auto& [component, previous] : m_reports) {
+            HealthReport unavailable { component, HealthState::Unknown,
+                Severity::Informational, now, reason };
+            if ((previous.state != unavailable.state || previous.reason != unavailable.reason)
+                && m_changes.size() < 512)
+                m_changes.push_back(unavailable);
+            previous = std::move(unavailable);
         }
-        // Do not persist a synthetic failed-component entry: a later successful provider
-        // sample must be able to recover without inheriting a fabricated component failure.
+
+        HealthReport critical_component { Component::CriticalComponent, HealthState::Unknown,
+            Severity::Informational, now, reason };
+        auto [critical, inserted] = m_reports.try_emplace(Component::CriticalComponent, critical_component);
+        if (!inserted) {
+            if ((critical->second.state != critical_component.state
+                    || critical->second.reason != critical_component.reason)
+                && m_changes.size() < 512)
+                m_changes.push_back(critical_component);
+            critical->second = std::move(critical_component);
+        } else if (m_changes.size() < 512) {
+            m_changes.push_back(critical_component);
+        }
+
         m_overall = HealthState::Unknown;
         return false;
     }
@@ -169,7 +175,6 @@ bool HealthMonitor::observe(uint64_t now)
                 state = HealthState::Healthy;
         }
         HealthReport report { observation.component, state, severity_for(state), now, observation.reason };
-        // Duplicate component observations are ambiguous; preserve first and do not fabricate a state.
         if (next.contains(observation.component))
             continue;
         next.emplace(observation.component, std::move(report));
@@ -204,7 +209,6 @@ bool HealthMonitor::observe(uint64_t now)
             if (m_changes.size() < 512)
                 m_changes.push_back(report);
     }
-    // A previously observed component omitted from a successful sample becomes explicitly unknown.
     for (auto const& [component, old] : m_reports) {
         if (next.contains(component))
             continue;
@@ -264,24 +268,19 @@ bool SysfsHealthProvider::observe(std::vector<HealthObservation>& output, std::s
     }
 
     size_t devices = 0;
-    bool inventory_exceeded_bound = false;
-    if (storage_directory_available(m_storage_path, devices, inventory_exceeded_bound)) {
-        // Enumeration proves that inventory is readable, not that the devices are healthy.
-        // This sysfs interface does not expose SMART or media-health telemetry.
+    if (storage_directory_available(m_storage_path, devices)) {
+        // Enumeration proves only that sysfs currently lists devices. The kernel
+        // exposes capacity and command-set metadata, not a device health verdict.
         output.push_back({ Component::Storage, HealthState::Unknown,
             devices ? std::to_string(devices) + " storage device(s) enumerated; device health telemetry is unavailable"
                     : "Storage sysfs is readable but currently lists no storage devices; absence alone is not a device failure" });
     } else {
         output.push_back({ Component::Storage, HealthState::Unknown,
-            inventory_exceeded_bound
-                ? "Storage inventory exceeds the 256-device observation bound"
-                : "Storage device inventory unavailable at " + m_storage_path });
+            "Storage device inventory unavailable at " + m_storage_path });
     }
 
-    // There is no service-health IPC/registry contract in the inspected baseline. Do not
-    // infer process health from names or assume a service is failed because no status is published.
     output.push_back({ Component::SystemService, HealthState::Unknown,
-        "No service health reporting IPC/provider exists in this baseline" });
+        "No service health reporting registry/provider exists in this baseline" });
     output.push_back({ Component::ResourcePressure, HealthState::Unknown,
         "CPU/load and non-memory resource pressure telemetry are not exposed to this service" });
     output.push_back({ Component::CriticalComponent, HealthState::Unknown,
